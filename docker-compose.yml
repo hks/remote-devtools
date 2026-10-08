@@ -1,0 +1,36 @@
+name: remote-devtools
+
+services:
+  relay:
+    build: .
+    restart: unless-stopped
+    environment:
+      PORT: 8080
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-24}
+      PAIR_TOKEN_TTL_SEC: ${PAIR_TOKEN_TTL_SEC:-120}
+      HEARTBEAT_INTERVAL_SEC: ${HEARTBEAT_INTERVAL_SEC:-15}
+      MAX_PAYLOAD_MB: ${MAX_PAYLOAD_MB:-5}
+      MAX_SESSIONS: ${MAX_SESSIONS:-1000}
+    expose:
+      - "8080"
+
+  caddy:
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    depends_on:
+      relay:
+        condition: service_healthy
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+      - "${HTTPS_PORT:-8443}:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

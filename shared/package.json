@@ -1,0 +1,5 @@
+{
+  "name": "remote-devtools-shared",
+  "private": true,
+  "type": "module"
+}
