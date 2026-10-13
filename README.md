@@ -1,3 +1,5 @@
+![Remote DevTools](./docs/banner.webp)
+
 # Remote DevTools
 
 Uygulamadaki Developer Menu'yü bilgisayardan kullanmak için web arayüzü + WebSocket relay.
