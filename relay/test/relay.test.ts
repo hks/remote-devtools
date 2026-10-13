@@ -431,4 +431,22 @@ describe('relay timing', () => {
             await server.close();
         }
     });
+
+    it('applies setPublicUrl to later sessions', async () => {
+        const server = await startServer(baseConfig);
+        try {
+            server.relay.setPublicUrl('http://192.168.1.20:8787/');
+            const web = await connect(server.port, WS_PATH_WEB);
+            web.send('createSession');
+            assert.equal((await web.next('session')).payload.deviceWsUrl, `ws://192.168.1.20:8787${WS_PATH_DEVICE}`);
+            server.relay.setPublicUrl(null);
+            const other = await connect(server.port, WS_PATH_WEB);
+            other.send('createSession');
+            assert.equal((await other.next('session')).payload.deviceWsUrl, null);
+            web.close();
+            other.close();
+        } finally {
+            await server.close();
+        }
+    });
 });

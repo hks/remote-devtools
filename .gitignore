@@ -2,3 +2,9 @@ node_modules/
 dist/
 .env
 .idea/
+
+# Masaüstü paketleri
+desktop/release/
+
+# macOS
+.DS_Store

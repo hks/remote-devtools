@@ -32,6 +32,7 @@ devtools-web/
     test/                #   uçtan uca testler (npm test)
     scripts/             #   smoke.ts, fake-device.ts
   web/                   # Vite + React + TS
+  desktop/               # Electron: relay + web tek masaüstü uygulamasında (yalnızca yerel ağ)
   Dockerfile             # web build + relay → tek imaj
   docker-compose.yml     # relay + caddy (TLS)
   Caddyfile
@@ -118,6 +119,44 @@ cd devtools-web/web && npm run typecheck
 - macOS güvenlik duvarı Node'a gelen bağlantıları engelliyor olabilir.
 - Lokalde bağlantı `ws://` (şifresiz). iOS dev build'inde `NSAllowsLocalNetworking` açık olduğu için LAN IP'leri sorunsuz;
   LAN dışı bir `ws://` adresi ATS'e takılır → sunucu kurulumunu (wss) veya bir tünel (`cloudflared`, `ngrok`) kullan.
+
+---
+
+## Masaüstü uygulaması (Electron)
+
+Sunucu gerektirmeyen, yalnızca yerel ağda çalışan sürüm. Relay uygulamanın içinde çalışır; telefon ile bilgisayar
+aynı ağda olmalıdır. Sunucu kurulumundan bağımsızdır, ikisi birlikte kullanılabilir.
+
+**Paket üretmek** (Node 24+, macOS):
+
+```bash
+cd devtools-web/desktop && npm ci
+npm run dist
+```
+
+Çıktı `desktop/release/` altına yazılır: `RemoteDevTools-<v>-mac-arm64.dmg` ve `.zip`. Yalnızca Apple Silicon hedeflenir.
+İmzasız olduğu için ilk açılışta sağ tık → Aç kullanılmalı. "Hasarlı" uyarısı çıkarsa
+`xattr -cr "/Applications/Remote DevTools.app"` çalıştırılmalı.
+
+Windows (kurulumsuz `.exe`) ve Linux (`.AppImage`) yapılandırması `electron-builder.yml`'de duruyor ama şimdilik release'e
+dahil değil. Gerektiğinde `npx electron-builder --win` / `--linux` ile üretilebilir.
+
+İkon: `desktop/build/icon.png` (1024×1024).
+
+macOS paketleri yalnızca ad-hoc imzalıdır. Anahtar zincirindeki Apple sertifikaları bilerek kullanılmaz (`identity: null`).
+
+**Davranış:**
+
+- Relay `0.0.0.0:8787` adresinde dinler; port doluysa uyarı verir. Başka bir port için uygulamayı `DEVTOOLS_PORT` ortam değişkeniyle başlat.
+- QR'a yazılan adres, bilgisayarın LAN IP'sidir ve otomatik seçilir. Pencere başlığında görünür. Yanlış arayüz (VPN, Docker vb.)
+  seçildiyse **Ağ** menüsünden doğrusunu seç. IP değişirse adres güncellenir ve sayfa yenilenir.
+- Oturumlar, istekler ve loglar yalnızca bellekte tutulur; uygulama kapanınca hepsi unutulur.
+  Yeniden açıldığında telefonla tekrar QR okutularak eşleşilir.
+- İlk açılışta işletim sisteminin güvenlik duvarı gelen bağlantılara izin isteyebilir; izin verilmezse telefon bağlanamaz.
+
+**Geliştirme:** `cd devtools-web/desktop && npm ci && npm run setup` (bir kez), sonra `npm run start`.
+Bu komut web'i ve main process'i build edip Electron'u açar. Ayrı bir relay sürecine gerek yoktur:
+`src/main.ts`, `relay/src/server.ts`'i doğrudan içe aktarır ve esbuild ile bundle'lar.
 
 ---
 

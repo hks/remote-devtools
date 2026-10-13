@@ -1,0 +1,23 @@
+{
+  "name": "remote-devtools-desktop",
+  "productName": "Remote DevTools",
+  "version": "0.1.0",
+  "description": "Remote DevTools — relay + web arayüzü tek masaüstü uygulamasında (yalnızca yerel ağ)",
+  "private": true,
+  "type": "module",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "setup": "npm --prefix ../relay ci && npm --prefix ../web ci",
+    "build": "npm --prefix ../web run build && node scripts/bundle.mjs",
+    "start": "npm run build && electron .",
+    "typecheck": "tsc --noEmit",
+    "dist": "npm run setup && npm run build && electron-builder --mac"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.1",
+    "electron": "44.4.5",
+    "electron-builder": "26.15.3",
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2"
+  }
+}

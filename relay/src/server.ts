@@ -38,7 +38,18 @@ export async function startServer(config: RelayConfig): Promise<RunningServer> {
 
     const relay = attachRelay(server, config);
 
-    await new Promise<void>((resolve) => server.listen(config.port, config.host, resolve));
+    try {
+        await new Promise<void>((resolve, reject) => {
+            server.once('error', reject);
+            server.listen(config.port, config.host, () => {
+                server.off('error', reject);
+                resolve();
+            });
+        });
+    } catch (error) {
+        await relay.close();
+        throw error;
+    }
     const port = (server.address() as AddressInfo).port;
 
     return {
