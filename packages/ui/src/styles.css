@@ -363,8 +363,8 @@ button { font: inherit; color: inherit; }
 
 .statusbar-warn { color: var(--warn); }
 
-@media (max-width: 900px) {
-    /* Dar ekranda detay listenin üzerine tam genişlikte açılır. */
+/* Kenar çubuğu (248px) hesaba katılarak: liste alanı dar kalınca detay listenin üzerine tam genişlikte açılır. */
+@media (max-width: 1100px) {
     .network.has-detail .network-body { grid-template-columns: minmax(0, 1fr); position: relative; }
     .network.has-detail .detail { position: absolute; inset: 0; border-left: 0; z-index: 2; }
     .req-table .c-time { width: 0; }

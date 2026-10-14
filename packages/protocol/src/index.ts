@@ -47,7 +47,7 @@ export type Field =
     | { type: 'text'; label?: string; placeholder?: string; multiline?: boolean; default?: string; required?: boolean }
     | { type: 'number'; label?: string; min?: number; max?: number; step?: number; default?: number; required?: boolean }
     | { type: 'boolean'; label?: string; default?: boolean }
-    | { type: 'select'; label?: string; options: SelectOption[]; default?: string | number; required?: boolean }
+    | { type: 'select'; label?: string; options: readonly SelectOption[]; default?: string | number; required?: boolean }
     | { type: 'json'; label?: string; default?: unknown };
 
 /** Anahtar = argüman adı; sıra korunur. */
@@ -396,4 +396,54 @@ export function parseQrPayload(raw: string): QrPayload | null {
         // geçersiz JSON
     }
     return null;
+}
+
+// ─── Field DSL doğrulama ─────────────────────────────────────────────────────
+
+export type ArgsValidation = { ok: true; args: Record<string, unknown> } | { ok: false; errors: Record<string, string> };
+
+function optionValues(field: Extract<Field, { type: 'select' }>): (string | number)[] {
+    return field.options.map((o) => (typeof o === 'string' ? o : o.value));
+}
+
+/**
+ * Gelen argümanları alan tanımına göre doğrular. Eksik alanlara `default` uygulanır, tanımsız anahtarlar atılır.
+ * SDK'lar handler'ı çağırmadan önce kullanır; böylece UI dışından gelen (veya eski bir UI'ın gönderdiği) değerler de denetlenir.
+ */
+export function validateArgs(fields: Fields, input: unknown): ArgsValidation {
+    const source = typeof input === 'object' && input !== null && !Array.isArray(input) ? (input as Record<string, unknown>) : {};
+    const args: Record<string, unknown> = {};
+    const errors: Record<string, string> = {};
+
+    for (const [key, field] of Object.entries(fields)) {
+        let value = source[key];
+        if (value === undefined || value === null || value === '') {
+            if ('default' in field && field.default !== undefined) value = field.default;
+            else if (field.type === 'boolean') value = false;
+            else {
+                if ('required' in field && field.required) errors[key] = 'is required';
+                continue;
+            }
+        }
+        switch (field.type) {
+            case 'text':
+                if (typeof value !== 'string') errors[key] = 'must be a string';
+                break;
+            case 'number':
+                if (typeof value !== 'number' || !Number.isFinite(value)) errors[key] = 'must be a number';
+                else if (field.min !== undefined && value < field.min) errors[key] = `must be ≥ ${field.min}`;
+                else if (field.max !== undefined && value > field.max) errors[key] = `must be ≤ ${field.max}`;
+                break;
+            case 'boolean':
+                if (typeof value !== 'boolean') errors[key] = 'must be true or false';
+                break;
+            case 'select':
+                if (!optionValues(field).includes(value as string | number)) errors[key] = 'must be one of the options';
+                break;
+            case 'json':
+                break;
+        }
+        if (!(key in errors)) args[key] = value;
+    }
+    return Object.keys(errors).length ? {ok: false, errors} : {ok: true, args};
 }

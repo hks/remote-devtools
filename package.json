@@ -13,5 +13,8 @@
     "dev:relay": "pnpm --filter @himmetkaan/remote-devtools-relay dev",
     "dev:ui": "pnpm --filter @himmetkaan/remote-devtools-ui dev",
     "dev:example": "pnpm --filter @himmetkaan/remote-devtools-example-web dev"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
   }
 }

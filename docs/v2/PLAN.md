@@ -115,16 +115,16 @@ Swift, Kotlin ve Flutter SDK'ları ileride `sdks/` altına girer ve protokol sö
 
 ## 3. SDK (JS) API
 
-Çekirdek Faz 2'de yazıldı (`packages/sdk-js`). Modüller (`functionsModule`, `networkModule`…) Faz 4 ve 7'de gelecek;
-aşağıdaki modül kullanımı hedeflenen biçimdir.
+Çekirdek Faz 2'de, `functionsModule` ve `networkModule` Faz 4'te yazıldı (`packages/sdk-js`). Storage, State, Flags (Faz 7)
+ve paneller (Faz 8) henüz yok.
 
 ```ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {AppState, Platform} from 'react-native';
-import {RemoteDevTools, reactNativeLifecycle} from '@himmetkaan/remote-devtools';
+import {functionsModule, networkModule, RemoteDevTools, reactNativeLifecycle} from '@himmetkaan/remote-devtools';
 
-const functions = functionsModule();          // Faz 4
-const network = networkModule({autoCapture: true});
+const functions = functionsModule();
+const network = networkModule();               // RN'de XHR (fetch ve axios dahil) otomatik yakalanır
 
 const devtools = RemoteDevTools.init({
     enabled: showDevMenu,                      // G13: zorunlu; false iken her şey no-op
@@ -143,7 +143,7 @@ const devtools = RemoteDevTools.init({
 devtools.log.info('Logged in', {userId});
 devtools.updateMeta({userId: String(newUser.id)});
 
-functions.register({                           // Faz 4: modül referansı üzerinden
+functions.register({                           // modül referansı üzerinden; bağlıyken eklenirse UI hemen güncellenir
     id: 'rateUs.setDecision',
     title: 'Set Rate Us decision',
     group: 'Rate Us',
@@ -223,10 +223,13 @@ tamamlanana kadar v1 olarak çalışmaya devam eder.
 - Öne alınanlar (Faz 4'ten): Network ve Functions tab'larının UI tarafı v2'ye taşındı; field DSL form çizici yazıldı
 
 ### Faz 4 — Network + Functions modülleri (SDK tarafı)
-- [ ] SDK: `networkModule` — fetch/XHR otomatik yakalama (RN ve tarayıcı), axios adapter'ı, `network.record()`, body boyut sınırı + `bodyTruncated`
-- [ ] SDK: `functionsModule` — `register({id, title, args, handler})`, field DSL'e göre argüman doğrulama, `module.functions.invoke` → handler → `module.functions.result`
-- [ ] `examples/web` ve `fake-device` elle yazılmış fonksiyon modülü yerine `functionsModule` kullanır
-- [ ] SDK'nın yayınlanabilir build'i (ESM + `.d.ts`); Pembe Panjur entegrasyonu (Faz 5) için gerekli
+- [x] `networkModule()`: fetch ve XHR'ı otomatik yakalar (RN'de varsayılan sadece XHR, çünkü RN fetch'i XHR üzerinde çalışır); `axios(instance)` interceptor'ları; `record()` ile elle kayıt; `ignoreUrls`; gövde sınırı + `bodyTruncated`; HTTP ≥ 400 ve ağ hataları `error`; SDK'nın kendi keşif istekleri yakalanmaz; destroy'da yamalar geri alınır
+- [x] `functionsModule()`: `register({id, title, group, args, handler})` (tipli argümanlar), `unregister`, bağlıyken değişiklik `capabilities.update` ile gider; argümanlar handler'dan önce `validateArgs` ile doğrulanır
+- [x] `validateArgs` protokol paketinde (field DSL doğrulaması; varsayılanlar, bilinmeyen anahtarlar atılır); select seçenekleri `as const` kabul eder
+- [x] `examples/web` ve `fake-device` yerleşik modüllere geçti; örnekte ağ butonları ve çalışma anında fonksiyon ekleme/silme
+- [x] Yayınlanabilir build (protocol + SDK): `scripts/build-lib.ts` → ESM + CJS (ES2020, Hermes uyumlu) + `.d.ts`; `publishConfig` yayında `dist`'i gösterir. `pnpm pack` çıktısı boş bir projede ESM, CJS ve TypeScript ile doğrulandı
+- [x] 36 SDK testi (modüller: fetch, XHR, axios, manuel kayıt, kısaltma, history, keşfin yakalanmaması, fonksiyon doğrulama/hata/dinamik kayıt)
+- Not: paketler Faz 9'a kadar `private: true`; Pembe Panjur (Faz 5) `pnpm pack` tarball'larıyla kurulabilir
 
 ### Faz 5 — Pembe Panjur geçişi (referans entegrasyon)
 - [ ] mobile-app'e `@himmetkaan/remote-devtools` eklenmesi (`enabled: showDevMenu`)

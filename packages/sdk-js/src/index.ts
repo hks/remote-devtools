@@ -13,3 +13,9 @@ export type {EmitOptions, Logger, LogOptions, ModuleContext, RemoteModule} from 
 export {toSerializable} from './serialize.ts';
 export {defaultStorage, memoryStorage} from './storage.ts';
 export type {KeyValueStorage} from './storage.ts';
+export {functionsModule} from './modules/functions.ts';
+export type {FunctionDef, FunctionsModule} from './modules/functions.ts';
+export {networkModule} from './modules/network.ts';
+export type {ManualRequest, ManualResponse, NetworkModule, NetworkModuleOptions} from './modules/network.ts';
+export {validateArgs} from '@himmetkaan/remote-devtools-protocol';
+export type {CommandDef, Field, Fields} from '@himmetkaan/remote-devtools-protocol';

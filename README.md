@@ -69,6 +69,32 @@ Notlar:
 - UI hiçbir veriyi saklamaz; sayfa yenilenince loglar ve istekler gider (bağlantı öncesi kayıtlar için SDK'da `history`).
 - Bir tarayıcı = bir oturum; aynı tarayıcının sekmeleri oturumu paylaşır. Ayrı oturum için incognito pencere.
 
+### Uygulamaya bağlamak (JS SDK)
+
+```ts
+import {functionsModule, networkModule, RemoteDevTools} from '@himmetkaan/remote-devtools';
+
+const functions = functionsModule();
+const devtools = RemoteDevTools.init({
+    enabled: __DEV__,                       // false iken SDK hiçbir şey yapmaz
+    isDevelopment: __DEV__,                 // yerel relay'i bulup bağlanmak ister
+    app: {id: 'com.example.app', name: 'Example', version: '1.0.0'},
+    modules: [functions, networkModule()],  // Network ve Functions tab'ları
+});
+
+functions.register({
+    id: 'cache.clear',
+    title: 'Clear cache',
+    args: {scope: {type: 'select', options: ['images', 'all'], default: 'images'}},
+    handler: ({scope}) => cache.clear(scope),
+});
+devtools.log.info('Ready');
+```
+
+React Native için ek seçenekler (`storage: AsyncStorage`, `lifecycle: reactNativeLifecycle(AppState)`, `device`) ve tüm API:
+[docs/v2/PLAN.md §3](./docs/v2/PLAN.md). Paketler henüz npm'de değil; `pnpm --filter @himmetkaan/remote-devtools build` ve
+`pnpm pack` ile tarball üretilebilir.
+
 ---
 
 ## Lokal geliştirme

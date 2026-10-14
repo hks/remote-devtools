@@ -9,6 +9,7 @@
  *   bg / fg       → lifecycle: background / active
  *   log <mesaj>   → info log      warn <mesaj> / err <mesaj> / debug <mesaj>
  *   name <ad>     → `meta.user` alanını değiştirir (UI'a yeni hello gider)
+ *   net <url>     → fetch ile istek atar (Network tab'ında görünür)
  *   drop          → bağlantıyı kapat (eşleşme saklanır)
  *   resume        → kayıtlı eşleşmeyle yeniden bağlan
  *   unpair        → eşleşmeyi cihazdan kaldır
@@ -16,7 +17,7 @@
  */
 import {createInterface} from 'node:readline';
 import type {Lifecycle, LogLevel} from '@himmetkaan/remote-devtools-protocol';
-import {defineModule, type LifecycleSource, memoryStorage, ModuleError, RemoteDevTools} from '../src/index.ts';
+import {functionsModule, type LifecycleSource, memoryStorage, networkModule, RemoteDevTools} from '../src/index.ts';
 
 const USAGE = `Usage:
   node scripts/fake-device.ts qr '<QR JSON>'
@@ -44,29 +45,17 @@ function setLifecycle(state: Lifecycle) {
     for (const listener of lifecycleListeners) listener(state);
 }
 
-/** Faz 4'teki functions modülüne kadar örnek: `defineModule` ile elle yazılmış iki komut. */
-const demoFunctions = defineModule({
-    name: 'functions',
-    capabilities: () => ({
-        commands: [
-            {id: 'ping', title: 'Ping', description: 'Returns pong.', group: 'Demo'},
-            {
-                id: 'echo',
-                title: 'Echo',
-                description: 'Returns the given text.',
-                group: 'Demo',
-                args: {text: {type: 'text', label: 'Text', required: true}, times: {type: 'number', min: 1, max: 5, default: 1}},
-            },
-        ],
-    }),
-    setup(ctx) {
-        ctx.handle<{commandId: string; args: Record<string, unknown>}>('module.functions.invoke', ({commandId, args}) => {
-            console.log(`← invoke ${commandId}`, JSON.stringify(args));
-            if (commandId === 'ping') return 'pong';
-            if (commandId === 'echo') return Array.from({length: Number(args.times ?? 1)}, () => args.text);
-            throw new ModuleError('UNKNOWN_COMMAND', `Unknown command: ${commandId}`);
-        });
-    },
+const functions = functionsModule();
+const network = networkModule();
+
+functions.register({id: 'ping', title: 'Ping', description: 'Returns pong.', group: 'Demo', handler: () => 'pong'});
+functions.register({
+    id: 'echo',
+    title: 'Echo',
+    description: 'Returns the given text.',
+    group: 'Demo',
+    args: {text: {type: 'text', label: 'Text', required: true}, times: {type: 'number', min: 1, max: 5, default: 1}},
+    handler: ({text, times}) => Array.from({length: times}, () => text),
 });
 
 const devtools = RemoteDevTools.init({
@@ -79,7 +68,7 @@ const devtools = RemoteDevTools.init({
     lifecycle,
     history: {enabled: true},
     discovery: {localhost: {port: Number(arg1 ?? 8080), hosts: ['127.0.0.1']}},
-    modules: [demoFunctions],
+    modules: [functions, network],
 });
 
 let lastStatus = '';
@@ -102,11 +91,12 @@ createInterface({input: process.stdin}).on('line', (line) => {
     else if (cmd === 'fg') setLifecycle('active');
     else if (cmd in LOG_COMMANDS) devtools.log[LOG_COMMANDS[cmd]!](text || cmd, {example: true});
     else if (cmd === 'name') devtools.updateMeta({user: text});
+    else if (cmd === 'net') void fetch(text || 'https://example.com').then((r) => console.log(`  ${r.status} ${r.url}`), (e: Error) => console.log(`  ✖ ${e.message}`));
     else if (cmd === 'drop') devtools.connection.disconnect();
     else if (cmd === 'resume') devtools.connection.connect();
     else if (cmd === 'unpair') devtools.connection.unpair();
     else if (cmd === 'quit') {
         devtools.destroy();
         process.exit(0);
-    } else if (cmd) console.log('  commands: bg, fg, log/debug/warn/err <message>, name <text>, drop, resume, unpair, quit');
+    } else if (cmd) console.log('  commands: bg, fg, log/debug/warn/err <message>, name <text>, net <url>, drop, resume, unpair, quit');
 });

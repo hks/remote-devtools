@@ -1,4 +1,11 @@
 import {DISCOVERY_PATH, PROTOCOL_VERSION, WS_PATH_DEVICE} from '@himmetkaan/remote-devtools-protocol';
+import {ORIGINAL_FETCH} from './modules/network.ts';
+
+/** Network modülü fetch'i yamaladıysa orijinali: SDK'nın kendi istekleri Network tab'ına düşmesin. */
+function rawFetch(): typeof fetch {
+    const current = globalThis.fetch as typeof fetch & {[ORIGINAL_FETCH]?: typeof fetch};
+    return current[ORIGINAL_FETCH] ?? current;
+}
 
 /**
  * `isDevelopment` modunda bağlantı isteği gönderilebilecek relay'leri bulur.
@@ -36,7 +43,7 @@ export function localhostDiscovery(options: LocalhostDiscoveryOptions = {}): Dis
         const timer = setTimeout(abort, timeoutMs);
         signal.addEventListener('abort', abort);
         try {
-            const res = await fetch(`http://${host}:${port}${DISCOVERY_PATH}`, {signal: controller.signal});
+            const res = await rawFetch()(`http://${host}:${port}${DISCOVERY_PATH}`, {signal: controller.signal});
             if (!res.ok) return null;
             const info = (await res.json()) as DiscoveryInfo;
             if (info.name !== 'remote-devtools' || info.protocol !== PROTOCOL_VERSION || info.connectRequests === 'off') return null;

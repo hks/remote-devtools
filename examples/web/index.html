@@ -62,6 +62,18 @@
       </section>
 
       <section>
+        <h2>Network</h2>
+        <div class="row">
+          <button id="net-ok">GET relay /health</button>
+          <button id="net-404">GET 404</button>
+          <button id="net-post">POST httpbin.org</button>
+          <button id="net-fail">Unreachable host</button>
+          <button id="net-xhr">XMLHttpRequest</button>
+        </div>
+        <p class="muted"><code>networkModule()</code> captures fetch and XMLHttpRequest automatically.</p>
+      </section>
+
+      <section>
         <h2>State changed from the UI (Functions tab)</h2>
         <div class="row"><span id="counter">0</span> <span class="muted">counter</span></div>
         <div class="row">Greeting: <strong id="greeting">Hello!</strong></div>

@@ -1,4 +1,4 @@
-import {defineModule, ModuleError, RemoteDevTools} from '@himmetkaan/remote-devtools';
+import {functionsModule, ModuleError, networkModule, RemoteDevTools} from '@himmetkaan/remote-devtools';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -12,61 +12,86 @@ const render = () => {
     $('counter').textContent = String(counter);
 };
 
-/**
- * Faz 4'teki `functionsModule` gelene kadar `defineModule` ile yazılmış örnek fonksiyonlar.
- * Argümanlar field DSL ile tanımlanır; UI formu bundan çizer.
- */
-const functions = defineModule({
-    name: 'functions',
-    capabilities: () => ({
-        commands: [
-            {id: 'counter.increment', title: 'Increment counter', group: 'Counter', args: {by: {type: 'number', label: 'By', min: 1, max: 100, default: 1}}},
-            {id: 'counter.reset', title: 'Reset counter', group: 'Counter', confirm: 'Reset the counter to 0?', danger: true},
-            {
-                id: 'greeting.set',
-                title: 'Set greeting',
-                group: 'Page',
-                description: 'Changes the greeting text on the page.',
-                args: {
-                    text: {type: 'text', label: 'Text', required: true, placeholder: 'Hi there'},
-                    tone: {type: 'select', label: 'Tone', options: ['plain', 'excited', 'shouting'], default: 'plain', required: true},
-                    emoji: {type: 'boolean', label: 'Add emoji'},
-                },
-            },
-            {id: 'page.info', title: 'Page info', group: 'Page', description: 'Returns details about this page.'},
-            {id: 'echo.json', title: 'Echo JSON', group: 'Page', args: {value: {type: 'json', label: 'Value', default: {hello: 'world'}}}},
-            {id: 'fail', title: 'Always fails', group: 'Page', description: 'Shows how errors are reported.'},
-        ],
-    }),
-    setup(ctx) {
-        ctx.handle<{commandId: string; args: Record<string, any>}>('module.functions.invoke', ({commandId, args}) => {
-            switch (commandId) {
-                case 'counter.increment':
-                    counter += Number(args.by ?? 1);
-                    render();
-                    return {counter};
-                case 'counter.reset':
-                    counter = 0;
-                    render();
-                    return {counter};
-                case 'greeting.set': {
-                    let text = String(args.text);
-                    if (args.tone === 'excited') text += '!';
-                    if (args.tone === 'shouting') text = text.toUpperCase() + '!!!';
-                    if (args.emoji) text += ' 👋';
-                    $('greeting').textContent = text;
-                    return text;
-                }
-                case 'page.info':
-                    return {url: location.href, userAgent: navigator.userAgent, viewport: `${innerWidth}×${innerHeight}`};
-                case 'echo.json':
-                    return args.value;
-                case 'fail':
-                    throw new ModuleError('EXAMPLE_FAILURE', 'This command always fails');
-                default:
-                    throw new ModuleError('UNKNOWN_COMMAND', `Unknown command: ${commandId}`);
-            }
-        });
+const functions = functionsModule();
+const network = networkModule();
+
+functions.register({
+    id: 'counter.increment',
+    title: 'Increment counter',
+    group: 'Counter',
+    args: {by: {type: 'number', label: 'By', min: 1, max: 100, default: 1}},
+    handler: ({by}) => {
+        counter += by;
+        render();
+        return {counter};
+    },
+});
+
+functions.register({
+    id: 'counter.reset',
+    title: 'Reset counter',
+    group: 'Counter',
+    confirm: 'Reset the counter to 0?',
+    danger: true,
+    handler: () => {
+        counter = 0;
+        render();
+        return {counter};
+    },
+});
+
+functions.register({
+    id: 'greeting.set',
+    title: 'Set greeting',
+    group: 'Page',
+    description: 'Changes the greeting text on the page.',
+    args: {
+        text: {type: 'text', label: 'Text', required: true, placeholder: 'Hi there'},
+        tone: {type: 'select', label: 'Tone', options: ['plain', 'excited', 'shouting'], default: 'plain', required: true},
+        emoji: {type: 'boolean', label: 'Add emoji'},
+    },
+    handler: ({text, tone, emoji}) => {
+        let value = text;
+        if (tone === 'excited') value += '!';
+        if (tone === 'shouting') value = value.toUpperCase() + '!!!';
+        if (emoji) value += ' 👋';
+        $('greeting').textContent = value;
+        return value;
+    },
+});
+
+functions.register({
+    id: 'page.info',
+    title: 'Page info',
+    group: 'Page',
+    description: 'Returns details about this page.',
+    handler: () => ({url: location.href, userAgent: navigator.userAgent, viewport: `${innerWidth}×${innerHeight}`}),
+});
+
+functions.register({id: 'echo.json', title: 'Echo JSON', group: 'Page', args: {value: {type: 'json', label: 'Value', default: {hello: 'world'}}}, handler: ({value}) => value});
+
+functions.register({
+    id: 'fail',
+    title: 'Always fails',
+    group: 'Page',
+    description: 'Shows how errors are reported.',
+    handler: () => {
+        throw new ModuleError('EXAMPLE_FAILURE', 'This command always fails');
+    },
+});
+
+// Bağlıyken eklenen fonksiyon UI'da hemen görünür.
+let extraRegistered = false;
+functions.register({
+    id: 'functions.toggleExtra',
+    title: 'Toggle an extra function',
+    group: 'Dynamic',
+    description: 'Registers or removes another function at runtime.',
+    handler: () => {
+        if (extraRegistered) functions.unregister('dynamic.hello');
+        else functions.register({id: 'dynamic.hello', title: 'Hello from a dynamic function', group: 'Dynamic', handler: () => 'hello'});
+        extraRegistered = !extraRegistered;
+        return extraRegistered ? 'registered' : 'removed';
     },
 });
 
@@ -79,7 +104,7 @@ const devtools = RemoteDevTools.init({
     meta: {page: location.pathname, environment: 'example'},
     history: {enabled: true},
     captureConsole: ['warn', 'error'],
-    modules: [functions],
+    modules: [functions, network],
     debug: true,
 });
 
@@ -113,3 +138,17 @@ for (const button of document.querySelectorAll<HTMLButtonElement>('[data-log]'))
     button.onclick = () => devtools.log[level](`A ${level} message from the example page`, {clickedAt: new Date().toISOString()}, {tag: 'example'});
 }
 $('console').onclick = () => console.warn('console.warn from the example page', {captured: true});
+
+// ─── Ağ istekleri (Network tab'ı) ─────────────────────────────────────────────
+
+const relayHttp = () => $<HTMLInputElement>('relay').value.replace(/^ws/, 'http');
+$('net-ok').onclick = () => void fetch(`${relayHttp()}/health`).then((r) => r.json());
+$('net-404').onclick = () => void fetch(`${relayHttp()}/does-not-exist`).catch(() => {});
+$('net-post').onclick = () =>
+    void fetch('https://httpbin.org/post', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({counter})}).catch(() => {});
+$('net-fail').onclick = () => void fetch('http://127.0.0.1:1/unreachable').catch(() => {});
+$('net-xhr').onclick = () => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', `${relayHttp()}/discovery`);
+    xhr.send();
+};
