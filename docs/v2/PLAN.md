@@ -327,7 +327,7 @@ Son güncelleme: 2026-10-14. Tamamlanan: Faz 0–5, Faz 7; Faz 6'nın bir kısm�
 
 **Repolar**
 - relay-devtools (bu repo): `main` güncel ve push'lu; CI (typecheck, test, build, docker build) yeşil.
-  Faz 7 `feat/phase-7-modules` dalında (henüz push'lanmadı / birleştirilmedi).
+  Faz 7 `main`'e birleştirildi ve push'landı.
 - mobile-app (Pembe Panjur): `~/WebstormProjects/experimental/iphone-duo`, dal `hks/remote-devtools-v2` (push'lu, PR yok).
   Entegrasyon: `helpers/developer/remote/RemoteDevtools.ts` (SDK kurulumu), `RemoteFunctions.ts` (17 fonksiyon),
   `RemoteNetwork.ts` (axios kancaları → `network.record()`), `components/ui/developer/components/DeveloperRemotePanel.tsx`.
