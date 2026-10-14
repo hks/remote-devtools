@@ -69,8 +69,14 @@ const DEVICE_FORWARD = new Set<string>(DEVICE_TO_UI_TYPES);
 
 export type Relay = {
     store: SessionStore;
+    /** QR'a yazılan adresi değiştirir (ör. masaüstü uygulamada LAN IP'si değişince). Sonraki `session` mesajlarında geçerli olur. */
+    setPublicUrl(publicUrl: string | null): void;
     close(): Promise<void>;
 };
+
+function toDeviceWsUrl(publicUrl: string | null): string | null {
+    return publicUrl ? publicUrl.replace(/\/+$/, '').replace(/^http/, 'ws') + WS_PATH_DEVICE : null;
+}
 
 function isString(value: unknown, max = 512): value is string {
     return typeof value === 'string' && value.length > 0 && value.length <= max;
@@ -111,7 +117,7 @@ export function attachRelay(server: Server, config: RelayConfig): Relay {
     const pending = new Map<string, Pending>();
     const pairFailures = new FailureLimiter(config.pairFailureLimit, config.pairFailureWindowMs);
     const wss = new WebSocketServer({noServer: true, maxPayload: config.maxPayloadBytes});
-    const deviceWsUrl = config.publicUrl ? config.publicUrl.replace(/^http/, 'ws') + WS_PATH_DEVICE : null;
+    let deviceWsUrl = toDeviceWsUrl(config.publicUrl);
 
     // ─── Gönderim yardımcıları ───────────────────────────────────────────────
 
@@ -598,6 +604,9 @@ export function attachRelay(server: Server, config: RelayConfig): Relay {
 
     return {
         store,
+        setPublicUrl: (publicUrl) => {
+            deviceWsUrl = toDeviceWsUrl(publicUrl);
+        },
         close: () =>
             new Promise<void>((resolve) => {
                 clearInterval(heartbeat);

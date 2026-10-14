@@ -261,6 +261,13 @@ describe('development discovery', () => {
         });
     });
 
+    it('probes several ports and returns only live relays', async () => {
+        await withRelay({connectRequests: 'local'}, async ({port}) => {
+            const found = await localhostDiscovery({port: [1, port], hosts: ['127.0.0.1']}).find(new AbortController().signal);
+            assert.deepEqual(found, [`ws://127.0.0.1:${port}/ws/device`]);
+        });
+    });
+
     it('does not discover relays that refuse connect requests', async () => {
         await withRelay({connectRequests: 'off'}, async ({port}) => {
             const found = await localhostDiscovery({port, hosts: ['127.0.0.1']}).find(new AbortController().signal);

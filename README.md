@@ -40,6 +40,7 @@ packages/
 examples/
   web/                   # SDK'yı kullanan örnek web sayfası (pnpm dev:example)
 apps/
+  desktop/               # Electron: gömülü relay + UI tek masaüstü uygulamasında (pnpm dev:desktop / dist:desktop)
   server/                # docker imajı: Dockerfile (ui build + paketlenmiş relay), docker-compose.yml (relay + caddy), Caddyfile, .env.example
 docs/v2/                 # generic platform planı (v2)
 ```
@@ -169,6 +170,35 @@ node packages/relay/scripts/smoke.ts ws://127.0.0.1:8787   # çalışan bir rela
 - macOS güvenlik duvarı Node'a gelen bağlantıları engelliyor olabilir.
 - Lokalde bağlantı `ws://` (şifresiz). iOS dev build'inde `NSAllowsLocalNetworking` açık olduğu için LAN IP'leri sorunsuz;
   LAN dışı bir `ws://` adresi ATS'e takılır → sunucu kurulumunu (wss) veya bir tünel (`cloudflared`, `ngrok`) kullan.
+
+---
+
+## Masaüstü uygulaması (Electron, `apps/desktop`)
+
+Sunucu gerektirmeyen, yerel ağda çalışan sürüm. Relay uygulamanın içinde çalışır; cihaz ile bilgisayar aynı ağda olmalıdır.
+Sunucu kurulumundan bağımsızdır, ikisi birlikte kullanılabilir.
+
+```bash
+pnpm dev:desktop      # UI + main process'i build edip Electron'u açar
+```
+
+```bash
+pnpm dist:desktop     # apps/desktop/release/ altına .dmg ve .zip (yalnızca Apple Silicon)
+```
+
+Paketler şimdilik yalnızca ad-hoc imzalıdır (Developer ID imzası ve notarization Faz 6'da, bkz. [MACOS_RELEASE.md](./docs/v2/MACOS_RELEASE.md)).
+İlk açılışta sağ tık → Aç kullanılmalı; "hasarlı" uyarısı çıkarsa `xattr -cr "/Applications/Remote DevTools.app"`.
+
+**Davranış:**
+
+- Relay `0.0.0.0:8787` adresinde dinler; port doluysa uyarı verir. Başka bir port için `DEVTOOLS_PORT` ortam değişkeni.
+- QR'a yazılan adres bilgisayarın LAN IP'sidir, otomatik seçilir ve pencere başlığında görünür. Yanlış arayüz (VPN, Docker vb.)
+  seçildiyse **Network** menüsünden doğrusu seçilir; IP değişirse adres güncellenir.
+- `isDevelopment: true` olan uygulamalar (simülatör/emülatör, aynı ağdaki cihazlar) relay'i kendisi bulur ve bağlanmak ister;
+  UI'da onaylanır. SDK varsayılan olarak 8787 ve 8080 portlarını dener.
+- Yalnızca bağlantı bilgisi saklanır (`~/Library/Application Support/Remote DevTools/relay-state.json`: oturum, eşleşmeler,
+  onaylı cihazlar). Uygulama kapanıp açılınca cihazlar kayıtlı eşleşmeyle geri döner. Loglar ve istekler saklanmaz.
+- İlk açılışta macOS Yerel Ağ izni ve güvenlik duvarı izni isteyebilir; izin verilmezse cihazlar bağlanamaz.
 
 ---
 

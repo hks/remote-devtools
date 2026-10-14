@@ -183,6 +183,25 @@ describe('relay timing & limits', () => {
         });
     });
 
+    it('applies setPublicUrl to later sessions', async () => {
+        await withServer({}, async (server) => {
+            server.relay.setPublicUrl('http://192.168.1.20:8787/');
+            const first = await openUi(server.port);
+            assert.equal(first.session.deviceWsUrl, `ws://192.168.1.20:8787${WS_PATH_DEVICE}`);
+            server.relay.setPublicUrl(null);
+            const second = await openUi(server.port);
+            assert.equal(second.session.deviceWsUrl, null);
+            first.ui.close();
+            second.ui.close();
+        });
+    });
+
+    it('rejects when the port is already in use and releases its resources', async () => {
+        await withServer({}, async (server) => {
+            await assert.rejects(startServer({...testConfig, port: server.port}), {code: 'EADDRINUSE'});
+        });
+    });
+
     it('persists sessions, pairings and trusted devices to STATE_FILE across restarts', async () => {
         const dir = await mkdtemp(join(tmpdir(), 'relay-state-'));
         const stateFile = join(dir, 'state.json');

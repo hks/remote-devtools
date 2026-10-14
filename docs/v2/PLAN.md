@@ -246,14 +246,17 @@ tamamlanana kadar v1 olarak çalışmaya devam eder.
 - [ ] Bu noktada `main` dalına birleştirme ve v1'in kaldırılması
 
 ### Faz 6 — Desktop app (Electron, macOS arm64)
-- [ ] Electron iskeleti: main process'te gömülü relay (`createRelay`), renderer'da `packages/ui`
-- [ ] Port seçimi, LAN IP tespiti, QR'a doğru adresin yazılması
+- [x] Electron iskeleti: main process'te gömülü relay (`createRelay`), pencerede `packages/ui` (v1 desktop uygulaması `apps/desktop`'a taşındı)
+- [x] Sabit port (8787, `DEVTOOLS_PORT`), LAN IP tespiti ve arayüz seçimi (Network menüsü), QR'a doğru adres (`relay.setPublicUrl`)
+- [x] `connectRequests: 'local'`; SDK yerel keşfi varsayılan olarak 8787 ve 8080'i dener
+- [x] Bağlantı metadata'sının diskte saklanması (`relay-state.json`, `0600`) + kalıcı UI oturumu; veri saklanmaz
+- [x] electron-builder (pnpm monorepo ile): ad-hoc imzalı `.dmg` + `.zip`, paketlenmiş uygulama doğrulandı
 - [ ] mDNS yayını (`_remotedevtools._tcp`), ayarlardan açılıp kapatılabilir; macOS Yerel Ağ izni metinleri
 - [ ] `@himmetkaan/remote-devtools-mdns` paketi (`DiscoveryProvider`; RN: zeroconf + Expo config plugin); opsiyonel, varsayılan kapalı
-- [ ] Bağlantı metadata'sının diskte saklanması (oturum, eşleşmeler, onaylı cihazlar). Veri saklanmaz
 - [ ] İsteğe bağlı: gömülü relay yerine uzak (self-hosted) bir relay'e bağlanma modu
-- [ ] electron-builder: imzalama, notarization, `.dmg` + `.zip`, electron-updater (GitHub provider)
+- [ ] Developer ID imzası, notarization, electron-updater (GitHub provider)
 - [ ] GitHub Actions release iş akışı ([MACOS_RELEASE.md](./MACOS_RELEASE.md))
+- [ ] `appId` (`com.sociallift.remote-devtools`) açık kaynak yayından önce genel bir kimliğe çevrilmeli (kurulu uygulamanın kimliği değişir)
 
 ### Faz 7 — Storage, State, Flags modülleri
 - [ ] Storage: adapter arayüzü (`keys/get/set/remove/clear`); AsyncStorage, MMKV, localStorage adapter'ları; UI'da tablo, düzenleme ve silme (onaylı)

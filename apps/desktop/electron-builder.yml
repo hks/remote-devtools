@@ -1,0 +1,48 @@
+# Remote DevTools masaüstü paketleri — imzasız dağıtım (imzalı/notarize yayın: docs/v2/MACOS_RELEASE.md, Faz 6).
+appId: com.sociallift.remote-devtools
+productName: Remote DevTools
+artifactName: RemoteDevTools-${version}-${os}-${arch}.${ext}
+directories:
+  output: release
+  buildResources: build   # build/icon.png → tüm platformların ikonu
+files:
+  - dist/**
+  - package.json
+# Build edilmiş UI asar dışında durur; relay onu düz dosya olarak sunar.
+extraResources:
+  - from: ../../packages/ui/dist
+    to: ui
+    filter: ["**/*", "!**/*.map"]
+asar: true
+afterPack: scripts/after-pack.mjs
+
+mac:
+  target:
+    # Yalnızca Apple Silicon.
+    - target: dmg
+      arch: [arm64]
+    - target: zip
+      arch: [arm64]
+  category: public.app-category.developer-tools
+  # Sertifika ile imzalama kapalı: aksi halde anahtar zincirindeki herhangi bir Apple sertifikası otomatik seçilir.
+  # Apple Silicon için gereken ad-hoc imzayı scripts/after-pack.mjs atar.
+  identity: null
+  hardenedRuntime: false
+  extendInfo:
+    NSLocalNetworkUsageDescription: Remote DevTools connects to apps on devices in your local network.
+
+# Windows ve Linux şimdilik release'e dahil değil (npm scriptleri yalnızca --mac çağırır).
+# Yeniden açmak için: npx electron-builder --win / --linux
+win:
+  # Kurulumsuz tek .exe.
+  target:
+    - target: portable
+      arch: [x64]
+  # rcedit macOS/Linux'ta Wine ister; imzasız dağıtımda exe metadatası gerekmez.
+  signAndEditExecutable: false
+
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+  category: Development

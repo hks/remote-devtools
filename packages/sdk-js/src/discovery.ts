@@ -18,8 +18,8 @@ export type DiscoveryProvider = {
 };
 
 export type LocalhostDiscoveryOptions = {
-    /** Relay portu. */
-    port?: number;
+    /** Denenecek relay port(ları). Varsayılan: 8787 (desktop app) ve 8080 (`pnpm dev:relay`, Docker). */
+    port?: number | number[];
     /**
      * Denenecek host'lar. iOS simülatörü ve tarayıcı için `localhost`, Android emülatörü için `10.0.2.2`.
      * Expo'da fiziksel cihaz için Metro'nun host'u eklenebilir (ör. `Constants.expoConfig?.hostUri?.split(':')[0]`).
@@ -32,11 +32,11 @@ type DiscoveryInfo = { name?: string; protocol?: number; connectRequests?: strin
 
 /** Yerel relay'leri `GET /discovery` ile yoklar; bağlantı isteği kabul edenleri döner. */
 export function localhostDiscovery(options: LocalhostDiscoveryOptions = {}): DiscoveryProvider {
-    const port = options.port ?? 8080;
+    const ports = options.port === undefined ? [8787, 8080] : [options.port].flat();
     const hosts = options.hosts ?? ['localhost', '10.0.2.2'];
     const timeoutMs = options.timeoutMs ?? 1500;
 
-    async function probe(host: string, signal: AbortSignal): Promise<string | null> {
+    async function probe(host: string, port: number, signal: AbortSignal): Promise<string | null> {
         // AbortSignal.any / .timeout Hermes'te (React Native) olmayabilir.
         const controller = new AbortController();
         const abort = () => controller.abort();
@@ -59,7 +59,7 @@ export function localhostDiscovery(options: LocalhostDiscoveryOptions = {}): Dis
     return {
         name: 'localhost',
         async find(signal) {
-            const results = await Promise.all(hosts.map((host) => probe(host, signal)));
+            const results = await Promise.all(hosts.flatMap((host) => ports.map((port) => probe(host, port, signal))));
             return results.filter((url): url is string => url !== null);
         },
     };

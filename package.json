@@ -13,7 +13,9 @@
     "dev:relay": "pnpm --filter @himmetkaan/remote-devtools-relay dev",
     "dev:ui": "pnpm --filter @himmetkaan/remote-devtools-ui dev",
     "dev:example": "pnpm --filter @himmetkaan/remote-devtools-example-web dev",
-    "pack:sdk": "node scripts/pack-sdk.ts"
+    "pack:sdk": "node scripts/pack-sdk.ts",
+    "dev:desktop": "pnpm --filter @himmetkaan/remote-devtools-desktop start",
+    "dist:desktop": "pnpm --filter @himmetkaan/remote-devtools-desktop dist"
   },
   "devDependencies": {
     "esbuild": "0.28.2"
