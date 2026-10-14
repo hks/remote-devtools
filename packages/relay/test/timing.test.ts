@@ -46,26 +46,53 @@ describe('relay timing & limits', () => {
         });
     });
 
-    it('expires device pairings after their TTL, connected or not', async () => {
-        await withServer({devicePairingTtlMs: 150, gcIntervalMs: 40}, async ({port}) => {
+    it('never expires a connected device, but forgets a disconnected one after the idle TTL', async () => {
+        await withServer({deviceIdleTtlMs: 150, gcIntervalMs: 40}, async ({port}) => {
             const online = await pairedDevice(port);
             const offline = await pairedDevice(port, online);
             offline.device.close();
-            await online.ui.next('device.status');
+            assert.equal((await online.ui.next('device.status')).payload.state, 'disconnected');
 
-            assert.equal((await online.device.next('unpaired', 1000)).payload.reason, 'expired');
-            const statuses = [(await online.ui.next('device.status', 1000)).payload, (await online.ui.next('device.status', 1000)).payload];
-            assert.deepEqual(statuses.map((s) => s.state), ['unpaired', 'unpaired']);
+            const gone = (await online.ui.next('device.status', 1000)).payload;
+            assert.deepEqual([gone.deviceId, gone.state], [offline.deviceId, 'unpaired']);
+
+            // Bağlı cihaz, sessiz kalsa bile süresinin çok ötesinde eşleşmiş kalır.
+            await sleep(300);
+            await online.device.none('unpaired');
+            await online.ui.none('device.status');
 
             const late = await connect(port, WS_PATH_DEVICE);
             late.send('resume', {sessionId: offline.session.sessionId, deviceId: offline.deviceId, deviceSecret: offline.deviceSecret});
             assert.equal((await late.next('unpaired')).payload.reason, 'invalidSecret');
             online.ui.close();
+            online.device.close();
+        });
+    });
+
+    it('restarts the idle TTL on every reconnect', async () => {
+        await withServer({deviceIdleTtlMs: 150, gcIntervalMs: 20}, async ({port}) => {
+            const {ui, session, device, deviceId, deviceSecret} = await pairedDevice(port);
+            device.close();
+            await ui.next('device.status');
+
+            // Toplamda TTL'in çok üstünde süre geçer ama her kopuş arası TTL'den kısadır.
+            for (let i = 0; i < 4; i++) {
+                await sleep(80);
+                const again = await connect(port, WS_PATH_DEVICE);
+                again.send('resume', {sessionId: session.sessionId, deviceId, deviceSecret});
+                const resumed = (await again.next('resumed')).payload;
+                assert.ok(resumed.expiresAt > Date.now());
+                await sleep(80);
+                again.close();
+                await ui.next('device.status');
+                await ui.next('device.status');
+            }
+            ui.close();
         });
     });
 
     it('rejects resume of an expired pairing before GC runs', async () => {
-        await withServer({devicePairingTtlMs: 50}, async ({port}) => {
+        await withServer({deviceIdleTtlMs: 50}, async ({port}) => {
             const {ui, session, device, deviceId, deviceSecret} = await pairedDevice(port);
             device.close();
             await ui.next('device.status');

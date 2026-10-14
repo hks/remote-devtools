@@ -35,13 +35,13 @@ describe('loadConfig', () => {
     it('reads env vars with units', () => {
         const config = loadConfig({
             PORT: '9000',
-            DEVICE_PAIRING_TTL_HOURS: '2',
+            DEVICE_IDLE_TTL_MIN: '2',
             CONNECT_REQUESTS: 'local',
             TRUST_PROXY: 'true',
             PUBLIC_URL: 'https://x.example.com/',
         });
         assert.equal(config.port, 9000);
-        assert.equal(config.devicePairingTtlMs, 2 * 60 * 60 * 1000);
+        assert.equal(config.deviceIdleTtlMs, 2 * 60 * 1000);
         assert.equal(config.connectRequests, 'local');
         assert.equal(config.trustProxy, true);
         assert.equal(config.publicUrl, 'https://x.example.com');

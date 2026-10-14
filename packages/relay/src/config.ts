@@ -11,8 +11,11 @@ export type RelayConfig = {
     sessionTtlMs: number;
     /** QR token'ı ve 6 haneli kodun geçerlilik süresi. */
     pairingTtlMs: number;
-    /** Cihaz eşleşmesinin ömrü (eşleşme anından itibaren, kesin süre). Sonrasında `resume` reddedilir. */
-    devicePairingTtlMs: number;
+    /**
+     * Cihaz eşleşmesinin hareketsizlik süresi. Bağlıyken düşmez; her mesaj ve bağlantının kopması süreyi yeniden başlatır.
+     * Cihaz bu süre boyunca bağlanmazsa eşleşme unutulur ve `resume` reddedilir.
+     */
+    deviceIdleTtlMs: number;
     /** Bekleyen bağlantı isteğinin UI'da cevaplanma süresi. */
     connectRequestTtlMs: number;
     /**
@@ -45,7 +48,7 @@ export const defaultConfig: RelayConfig = {
     webDistDir: null,
     sessionTtlMs: 24 * 60 * 60 * 1000,
     pairingTtlMs: 120 * 1000,
-    devicePairingTtlMs: 24 * 60 * 60 * 1000,
+    deviceIdleTtlMs: 60 * 60 * 1000,
     connectRequestTtlMs: 120 * 1000,
     connectRequests: 'off',
     trustProxy: false,
@@ -94,7 +97,8 @@ function policy(env: Env, name: string, fallback: ConnectRequestPolicy): Connect
 }
 
 const SEC = 1000;
-const HOUR = 60 * 60 * SEC;
+const MIN = 60 * SEC;
+const HOUR = 60 * MIN;
 
 export function loadConfig(env: Env = process.env): RelayConfig {
     const d = defaultConfig;
@@ -105,7 +109,7 @@ export function loadConfig(env: Env = process.env): RelayConfig {
         webDistDir: str(env, 'WEB_DIST_DIR'),
         sessionTtlMs: num(env, 'SESSION_TTL_HOURS', d.sessionTtlMs, HOUR),
         pairingTtlMs: num(env, 'PAIR_TOKEN_TTL_SEC', d.pairingTtlMs, SEC),
-        devicePairingTtlMs: num(env, 'DEVICE_PAIRING_TTL_HOURS', d.devicePairingTtlMs, HOUR),
+        deviceIdleTtlMs: num(env, 'DEVICE_IDLE_TTL_MIN', d.deviceIdleTtlMs, MIN),
         connectRequestTtlMs: num(env, 'CONNECT_REQUEST_TTL_SEC', d.connectRequestTtlMs, SEC),
         connectRequests: policy(env, 'CONNECT_REQUESTS', d.connectRequests),
         trustProxy: bool(env, 'TRUST_PROXY', d.trustProxy),

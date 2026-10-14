@@ -98,7 +98,7 @@ export function attachRelay(server: Server, config: RelayConfig): Relay {
     const writer = config.stateFile ? createStateWriter(config.stateFile, () => store.export()) : null;
     const store = new SessionStore({
         pairingTtlMs: config.pairingTtlMs,
-        devicePairingTtlMs: config.devicePairingTtlMs,
+        deviceIdleTtlMs: config.deviceIdleTtlMs,
         sessionTtlMs: config.sessionTtlMs,
         maxSessions: config.maxSessions,
         maxDevicesPerSession: config.maxDevicesPerSession,
@@ -533,7 +533,7 @@ export function attachRelay(server: Server, config: RelayConfig): Relay {
                 session.uis.delete(ws);
                 store.touchUi(session);
             } else if (state.device && state.device.socket === ws) {
-                state.device.socket = null;
+                store.markDisconnected(state.device);
                 broadcastDeviceStatus(session, state.device, 'disconnected');
             }
         });

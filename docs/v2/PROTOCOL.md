@@ -85,7 +85,9 @@ type TrustedDevice = { deviceId: string; appId: string; name: string; trustedAt:
 - `deviceId`: SDK'nın kurulum başına ürettiği sabit kimlik, `[A-Za-z0-9_-]{8,128}`.
 - QR token'ı ve kod birlikte üretilir, **tek kullanımlıktır**; bir cihaz eşleşince ikisi de yenilenir.
 - Aynı `deviceId` ile yeniden eşleşme eski kaydın yerini alır; eski sır geçersiz olur, eski soket `4000` ile kapanır.
-- Eşleşme ömrü (`expiresAt`) kesin bir süredir; `resume` onu uzatmaz. Süre dolunca cihaz `unpaired{reason:'expired'}` alır.
+- Eşleşme **hareketsizlik süresiyle** düşer (`DEVICE_IDLE_TTL_MIN`, varsayılan 60 dk): cihaz bağlıyken düşmez; her mesaj ve
+  bağlantının kopması süreyi yeniden başlatır. `expiresAt` "şu an koparsa" eşleşmenin unutulacağı andır. Süresi dolmuş
+  eşleşmeyle `resume` yapan cihaz `unpaired{reason:'expired'}` alır.
 - `connect` isteği UI'ı açık olan tüm oturumlara gösterilir; ilk cevap geçerlidir. Aynı cihazdan yeni bir istek eskisini iptal eder.
 - Onaylı (trusted) bir cihaz, aynı `hello.app.id` ile `connect` gönderirse relay onay sormadan `paired` döner.
   Onay `deviceId` + `app.id` eşleşmesine dayanır; bu yüzden `CONNECT_REQUESTS` sadece güvenilen ağlarda açılmalıdır.

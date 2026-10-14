@@ -122,7 +122,7 @@ Sahte cihaz `ping` ve `echo` fonksiyonlarını bildirir ve `module.functions.inv
 **Testler:**
 
 ```bash
-pnpm typecheck && pnpm test                              # tüm paketler; relay'de 69 test
+pnpm typecheck && pnpm test                              # tüm paketler; relay'de 70 test
 ```
 
 ```bash
@@ -174,7 +174,7 @@ HTTPS_PORT=443
 | `HTTP_PORT` / `HTTPS_PORT` | `8080` / `8443` | Host'a açılan portlar (sunucuda 80/443) |
 | `SESSION_TTL_HOURS` | `24` | Hiçbir UI'ın bağlı olmadığı oturum bu süre sonra silinir; cihaz eşleşmeleri de düşer |
 | `PAIR_TOKEN_TTL_SEC` | `120` | QR token'ı ve 6 haneli kodun geçerlilik süresi (ikisi de tek kullanımlık) |
-| `DEVICE_PAIRING_TTL_HOURS` | `24` | Cihaz eşleşmesinin ömrü; uygulama yeniden açılınca bu süre içinde kendiliğinden bağlanır |
+| `DEVICE_IDLE_TTL_MIN` | `60` | Cihaz eşleşmesinin hareketsizlik süresi: bağlıyken düşmez; bağlantı koptuktan sonra bu süre içinde geri gelmezse unutulur |
 | `CONNECT_REQUESTS` | `off` | Kodsuz geliştirme bağlantıları (UI'dan onaylı): `off` · `local` (loopback/özel ağ) · `any` |
 | `CONNECT_REQUEST_TTL_SEC` | `120` | Bekleyen bağlantı isteğinin cevaplanma süresi |
 | `TRUST_PROXY` | `false` | İstemci adresini `X-Forwarded-For`'dan oku (compose'da `true`) |

@@ -30,7 +30,7 @@ Durum: `[ ]` yapılacak · `[~]` devam ediyor · `[x]` tamamlandı
 | G14 | Kalıcılık (UI) | UI hiçbir veriyi saklamaz, her şey bellektedir. v1'deki IndexedDB kalıcılığı kalkar. |
 | G15 | Kalıcılık (app) | Kontrol developer'dadır. `history` seçeneği açılırsa SDK bağlantı öncesindeki log/istekleri bellekte tamponlar ve bağlanınca gönderir. Varsayılan kapalı. v1'deki elle tetiklenen Sync butonu kalkar. |
 | G16 | Otomatik bağlanma | `isDevelopment: true` olan app ağdaki relay'i (mDNS/localhost) bulur ve **bağlantı isteği** gönderir. Desktop'ta Onayla/Reddet çıkar. Onaylanan cihazlar hatırlanır. |
-| G17 | Bağlantıyı hatırlama | QR veya kodla eşleşen app (production dahil) bağlantı bilgisini saklar. Uygulama öldürülüp açılsa da kaldığı yerden devam eder. Eşleşme **TTL** sonunda düşer (varsayılan 24 saat). Hem SDK'da hem relay'de ayarlanabilir. |
+| G17 | Bağlantıyı hatırlama | QR veya kodla eşleşen app (production dahil) bağlantı bilgisini saklar. Uygulama öldürülüp açılsa da kaldığı yerden devam eder. Eşleşme **kullanıldıkça uzayan** bir süreyle tutulur: bağlıyken düşmez, kullanım bırakılınca **1 saat** sonra unutulur. Relay'de ayarlanır. |
 | G18 | Pembe Panjur | Protokol v2'ye **kırıcı geçiş** yapılır. Pembe Panjur yeni JS SDK'nın ilk kullanıcısı olur, kendine özel komutlarını app tarafında tanımlar. v1 desteği kaldırılır. |
 | G21 | Paket adları | npm organizasyonu `@himmetkaan`. SDK: `@himmetkaan/remote-devtools`; diğerleri `@himmetkaan/remote-devtools-<ad>` (`-protocol`, `-relay`, `-ui`, `-mdns`, `-react-native-ui`). |
 | G20 | mDNS opsiyonel | mDNS keşfi çekirdeğe dahil değildir. SDK'da ayrı bir paketle (`@himmetkaan/remote-devtools-mdns`) gelir ve `discovery.mdns` ile açılır, **varsayılan kapalıdır**. Desktop'ta mDNS yayını ayarlardan kapatılabilir. mDNS olmadan da her yol (QR, kod, localhost) çalışır. |
@@ -103,8 +103,8 @@ Swift, Kotlin ve Flutter SDK'ları ileride `sdks/` altına girer ve protokol sö
 
 - **Hatırlama (G17):** Eşleşme sonrası SDK `{relayUrl, sessionId, deviceSecret, expiresAt}` bilgisini saklar
   (RN'de AsyncStorage veya SecureStore adapter'ı, web'de localStorage). Açılışta `resume` dener. TTL dolmuşsa
-  veya relay reddederse bilgiyi siler. Relay tarafında eşleşme TTL'i `DEVICE_PAIRING_TTL_HOURS` ile ayarlanır.
-  SDK'daki `pairingTtl` bu değeri sadece kısaltabilir.
+  veya relay reddederse bilgiyi siler. Relay tarafında hareketsizlik süresi `DEVICE_IDLE_TTL_MIN` (varsayılan 60) ile ayarlanır.
+  Cihaz bağlıyken eşleşme düşmez; her mesaj ve bağlantının kopması süreyi yeniden başlatır.
 - **Onaylı cihazlar (G16):** Desktop app onaylanan `deviceId` + app kimliğini hatırlar. Bu cihazlardan gelen
   sonraki isteklerde tekrar onay sorulmaz. Liste ayarlardan silinebilir.
 - **Relay yeniden başlatılınca:** Desktop app sadece **bağlantı metadata'sını** (oturum sırrı, eşleşmeler,
@@ -184,11 +184,11 @@ tamamlanana kadar v1 olarak çalışmaya devam eder.
 - [x] Relay: `module.*` mesajlarını içeriğine bakmadan iletme, boyut sınırı, cihaz başına hız sınırı
 - [x] Relay: 6 haneli kod ile eşleşme; QR ve kod tek kullanımlık, IP başına başarısız deneme sınırı
 - [x] Relay: `connect` → UI onayı → `paired` / `connect.rejected`; `CONNECT_REQUESTS=off|local|any`; onaylı cihaz listesi
-- [x] Relay: eşleşme TTL'i (`DEVICE_PAIRING_TTL_HOURS`, kesin süre), süresi dolunca `unpaired{reason:'expired'}`
+- [x] Relay: kayan eşleşme süresi (`DEVICE_IDLE_TTL_MIN`, varsayılan 60 dk; bağlıyken düşmez), süresi dolunca `unpaired{reason:'expired'}`
 - [x] Relay: `GET /discovery` (CORS açık)
 - [x] Relay: kütüphane olarak dışa açılması (`createRelay({...})`) + CLI (`main.ts`)
 - [x] Relay: bağlantı metadata'sının `STATE_FILE`'a yazılması (atomik, `0600`); desktop app bunu kullanacak
-- [x] Testler v2'ye taşındı: 69 test (çoklu cihaz, kod, onay, onaylı cihaz, TTL, hız sınırı, kalıcılık, IP sınıflandırma)
+- [x] Testler v2'ye taşındı: 70 test (çoklu cihaz, kod, onay, onaylı cihaz, TTL, hız sınırı, kalıcılık, IP sınıflandırma)
 - [x] `fake-device.ts` (qr / code / connect modları, örnek fonksiyonlar) ve `smoke.ts` v2'ye taşındı
 
 ### Faz 2 — JS SDK çekirdeği

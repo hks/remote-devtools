@@ -11,6 +11,7 @@ export type DeviceRecord = {
     deviceId: string;
     secret: string;
     pairedAt: number;
+    /** Bağlı değilken eşleşmenin unutulacağı an (son etkinlik + hareketsizlik süresi). */
     expiresAt: number;
     lastSeenAt: number | null;
     hello: Hello | null;
@@ -53,7 +54,7 @@ export type PersistedSession = {
 
 export type SessionStoreOptions = {
     pairingTtlMs: number;
-    devicePairingTtlMs: number;
+    deviceIdleTtlMs: number;
     sessionTtlMs: number;
     maxSessions: number;
     maxDevicesPerSession: number;
@@ -178,7 +179,7 @@ export class SessionStore {
             deviceId,
             secret: randomToken(),
             pairedAt: now,
-            expiresAt: now + this.#opts.devicePairingTtlMs,
+            expiresAt: now + this.#opts.deviceIdleTtlMs,
             lastSeenAt: now,
             hello: previous?.hello ?? null,
             lifecycle: null,
@@ -194,7 +195,7 @@ export class SessionStore {
         if (!session) return {ok: false, reason: 'sessionNotFound'};
         const device = session.devices.get(deviceId);
         if (!device || !safeEqual(device.secret, secret)) return {ok: false, reason: 'invalidSecret'};
-        if (device.expiresAt <= this.#now()) return {ok: false, reason: 'expired'};
+        if (this.#isExpired(device)) return {ok: false, reason: 'expired'};
         return {ok: true, session, device};
     }
 
@@ -207,8 +208,23 @@ export class SessionStore {
         return device;
     }
 
+    /** Etkinlik: hareketsizlik süresini yeniden başlatır. */
     touchDevice(device: DeviceRecord): void {
-        device.lastSeenAt = this.#now();
+        const now = this.#now();
+        device.lastSeenAt = now;
+        device.expiresAt = now + this.#opts.deviceIdleTtlMs;
+    }
+
+    /** Soket koptu: süre bu andan itibaren işlemeye başlar. Kalıcı dosyaya da yansır (çökme sonrası doğru süre için). */
+    markDisconnected(device: DeviceRecord): void {
+        device.socket = null;
+        this.touchDevice(device);
+        this.#changed();
+    }
+
+    /** Bağlı cihazların eşleşmesi düşmez. */
+    #isExpired(device: DeviceRecord): boolean {
+        return device.socket === null && device.expiresAt <= this.#now();
     }
 
     snapshot(device: DeviceRecord): DeviceSnapshot {
@@ -216,7 +232,8 @@ export class SessionStore {
             deviceId: device.deviceId,
             connected: device.socket !== null,
             pairedAt: device.pairedAt,
-            expiresAt: device.expiresAt,
+            // Bağlıyken süre işlemez; gösterilen değer "şimdi koparsa" düşeceği an.
+            expiresAt: device.socket ? this.#now() + this.#opts.deviceIdleTtlMs : device.expiresAt,
             lastSeenAt: device.lastSeenAt,
             hello: device.hello,
             lifecycle: device.lifecycle,
@@ -266,13 +283,13 @@ export class SessionStore {
         return expired;
     }
 
-    /** Eşleşme süresi dolmuş cihazları oturumlarından siler ve döndürür. */
+    /** Bağlı olmayan ve hareketsizlik süresi dolmuş cihazları oturumlarından siler ve döndürür. */
     collectExpiredDevices(): { session: Session; device: DeviceRecord }[] {
         const now = this.#now();
         const expired: { session: Session; device: DeviceRecord }[] = [];
         for (const session of this.#sessions.values()) {
             for (const device of session.devices.values()) {
-                if (device.expiresAt <= now) {
+                if (device.socket === null && device.expiresAt <= now) {
                     expired.push({session, device});
                     session.devices.delete(device.deviceId);
                 }
