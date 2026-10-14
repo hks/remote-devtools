@@ -256,7 +256,7 @@ tamamlanana kadar v1 olarak çalışmaya devam eder.
 - [ ] İsteğe bağlı: gömülü relay yerine uzak (self-hosted) bir relay'e bağlanma modu
 - [ ] Developer ID imzası, notarization, electron-updater (GitHub provider)
 - [ ] GitHub Actions release iş akışı ([MACOS_RELEASE.md](./MACOS_RELEASE.md))
-- [ ] `appId` (`com.sociallift.remote-devtools`) açık kaynak yayından önce genel bir kimliğe çevrilmeli (kurulu uygulamanın kimliği değişir)
+- [x] `appId`: `com.himmetkaan.remote-devtools` (imzalama kişisel Apple Developer hesabıyla yapılacak)
 
 ### Faz 7 — Storage, State, Flags modülleri
 - [ ] Storage: adapter arayüzü (`keys/get/set/remove/clear`); AsyncStorage, MMKV, localStorage adapter'ları; UI'da tablo, düzenleme ve silme (onaylı)

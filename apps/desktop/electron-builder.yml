@@ -1,5 +1,5 @@
 # Remote DevTools masaüstü paketleri — imzasız dağıtım (imzalı/notarize yayın: docs/v2/MACOS_RELEASE.md, Faz 6).
-appId: com.sociallift.remote-devtools
+appId: com.himmetkaan.remote-devtools
 productName: Remote DevTools
 artifactName: RemoteDevTools-${version}-${os}-${arch}.${ext}
 directories:
