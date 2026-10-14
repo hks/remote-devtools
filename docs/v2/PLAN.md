@@ -243,7 +243,8 @@ tamamlanana kadar v1 olarak çalışmaya devam eder.
 - [x] Uçtan uca deneme (iOS simülatörü + Android emülatörü, Dev Menu açık): dev keşfi ve onay (iOS `localhost`, Android `10.0.2.2`),
       bağlantı öncesi istekler (`history`), Network (gerçek API istekleri), Functions (modal açma, sonuç döndürme, select argümanları),
       uygulama öldürülüp açılınca onaysız resume, arka plan/ön plan, UI'dan unpair + "Always allow" ile onaysız yeniden bağlanma
-- [ ] Bu noktada `main` dalına birleştirme ve v1'in kaldırılması
+- [x] relay-devtools: `feat/generic-platform` → `main` birleştirildi ve push'landı; v1 kodu kaldırıldı (v1 uygulama sürümleri kullanımda değil)
+- [x] mobile-app: `hks/remote-devtools-v2` dalı push'landı (SDK `0.1.0-alpha.1`); PR henüz açılmadı
 
 ### Faz 6 — Desktop app (Electron, macOS arm64)
 - [x] Electron iskeleti: main process'te gömülü relay (`createRelay`), pencerede `packages/ui` (v1 desktop uygulaması `apps/desktop`'a taşındı)
@@ -290,3 +291,33 @@ tamamlanana kadar v1 olarak çalışmaya devam eder.
   çekirdek SDK hiçbir native bağımlılık taşımaz.
 - `history` tamponu varsayılan olarak sadece bellekte tutulur. Uygulama öldürülünce kaybolur. Diskte tutma
   ihtiyacı çıkarsa ileride adapter ile eklenebilir.
+
+---
+
+## 6. Güncel durum (yeni oturum için)
+
+Son güncelleme: 2026-10-14. Tamamlanan: Faz 0–5, Faz 6'nın bir kısmı (bkz. §4 işaretleri).
+
+**Repolar**
+- relay-devtools (bu repo): `main` güncel ve push'lu; CI (typecheck, test, build, docker build) yeşil.
+- mobile-app (Pembe Panjur): `~/WebstormProjects/experimental/iphone-duo`, dal `hks/remote-devtools-v2` (push'lu, PR yok).
+  Entegrasyon: `helpers/developer/remote/RemoteDevtools.ts` (SDK kurulumu), `RemoteFunctions.ts` (17 fonksiyon),
+  `RemoteNetwork.ts` (axios kancaları → `network.record()`), `components/ui/developer/components/DeveloperRemotePanel.tsx`.
+
+**SDK'yı uygulamada güncellemek** (npm'e yayın yok):
+1. `packages/protocol` ve `packages/sdk-js` sürümünü artır (yarn tarball'ı içerik özetiyle önbelleğe alır) ve `SDK_VERSION`'ı eşitle.
+2. `pnpm pack:sdk ~/WebstormProjects/experimental/iphone-duo/vendor/remote-devtools`
+3. mobile-app `package.json`: bağımlılık + `resolutions` içindeki tarball adlarını güncelle, `yarn install`.
+
+**Geliştirme komutları:** `pnpm dev:relay` (8080, `CONNECT_REQUESTS=local`), `pnpm dev:ui` (5173), `pnpm dev:example` (5174),
+`pnpm dev:desktop`, `pnpm dist:desktop`, `pnpm test`, `node packages/sdk-js/scripts/fake-device.ts dev 8080`.
+
+**Açık işler / hatırlatmalar**
+- mobile-app: PR açılması; çalışma ağacında kullanıcının commit'lenmemiş Expo yama güncellemeleri var (bilerek dahil edilmedi).
+- mobile-app: `.yarnrc.yml` ve `.npmrc` içinde açık npm token'ı git'te takip ediliyor; iptal edilip ortam değişkenine taşınmalı.
+- Bu makinede iOS build'i Xcode 27 (Swift 6.4) ile Expo 57'nin hazır framework'leri (Swift 6.3.1) uyuşmadığı için alınamıyor.
+- Lint/format (Faz 0) hâlâ ekli değil.
+
+**Sıradaki seçenekler:** Faz 6'nın kalanı (Developer ID imzası + notarization + electron-updater için
+[MACOS_RELEASE.md](./MACOS_RELEASE.md)'deki sertifika/secret adımları kullanıcıdan gerekir; mDNS) veya Faz 7 (Storage, State, Flags).
+
