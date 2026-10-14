@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://hks.github.io/remote-devtools/
+    about: Guides, module reference and the protocol specification.
+  - name: Report a security vulnerability
+    url: https://github.com/hks/remote-devtools/security/advisories/new
+    about: Please report security issues privately.

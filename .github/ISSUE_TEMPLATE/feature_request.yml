@@ -1,0 +1,19 @@
+name: Feature request
+description: Suggest an idea or a new module
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How would it work in the app, the SDK and the UI? Could a custom panel cover it today?
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
