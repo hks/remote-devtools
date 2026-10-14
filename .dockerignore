@@ -2,5 +2,8 @@
 **/dist
 **/.env
 **/*.log
-relay/test
+.git
+.idea
+docs
+packages/relay/test
 *.md

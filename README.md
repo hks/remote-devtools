@@ -17,7 +17,6 @@ Plan ve kararlar: [PLAN.md](./PLAN.md) · İlerleme: [ROADMAP.md](./ROADMAP.md)
 ```
 
 > Bu repo ([hks/relay-devtools-sociallift](https://github.com/hks/relay-devtools-sociallift)) mobile-app'ten bağımsızdır.
-> Lokalde mobile-app reposunun içinde `devtools-web/` olarak durur; mobile-app bu klasörü `.git/info/exclude` ile yok sayar.
 > Mobile-app tarafı (`panjur/SocialLiftAppExpo`): `helpers/developer/remote/`, Dev Menu → 🔗 Remote tabı.
 
 ---
@@ -25,17 +24,17 @@ Plan ve kararlar: [PLAN.md](./PLAN.md) · İlerleme: [ROADMAP.md](./ROADMAP.md)
 ## Klasör yapısı
 
 ```
-devtools-web/
-  shared/protocol.ts     # Mesaj sözleşmesi (relay + web). mobile-app'te kopyası: helpers/developer/remote/RemoteProtocol.ts
-  relay/                 # Node 24 + ws. .ts dosyaları derlenmeden çalışır (type stripping)
+package.json, pnpm-workspace.yaml   # pnpm workspaces monorepo
+packages/
+  protocol/              # @remote-devtools/protocol — mesaj sözleşmesi (relay + ui). mobile-app'te kopyası: helpers/developer/remote/RemoteProtocol.ts
+  relay/                 # @remote-devtools/relay — Node 24 + ws. Geliştirmede .ts dosyaları derlenmeden çalışır (type stripping)
     src/                 #   relay.ts (WebSocket akışı), sessions.ts (oturum deposu), static.ts, server.ts
-    test/                #   uçtan uca testler (npm test)
-    scripts/             #   smoke.ts, fake-device.ts
-  web/                   # Vite + React + TS
-  Dockerfile             # web build + relay → tek imaj
-  docker-compose.yml     # relay + caddy (TLS)
-  Caddyfile
-  .env.example
+    test/                #   uçtan uca testler (pnpm test)
+    scripts/             #   build.ts (esbuild → dist/main.js), smoke.ts, fake-device.ts
+  ui/                    # @remote-devtools/ui — Vite + React + TS
+apps/
+  server/                # docker imajı: Dockerfile (ui build + paketlenmiş relay), docker-compose.yml (relay + caddy), Caddyfile, .env.example
+docs/v2/                 # generic platform planı (v2)
 ```
 
 ---
@@ -68,18 +67,20 @@ Notlar:
 
 ## Lokal geliştirme
 
-Gereksinim: Node 24+.
+Gereksinim: Node 24+ ve pnpm (`corepack enable` yeterli). Komutlar repo kökünden çalıştırılır.
 
 ```bash
-cd devtools-web/relay && npm install
-cd devtools-web/web && npm install
+pnpm install
 ```
 
 **Tek süreç (build edilmiş web'i relay sunar):**
 
 ```bash
-cd devtools-web/web && npm run build
-cd devtools-web/relay && PUBLIC_URL=http://<MAC_LAN_IP>:8787 WEB_DIST_DIR=../web/dist PORT=8787 node src/main.ts
+pnpm build
+```
+
+```bash
+PUBLIC_URL=http://<MAC_LAN_IP>:8787 WEB_DIST_DIR=packages/ui/dist PORT=8787 node packages/relay/dist/main.js
 ```
 
 `http://localhost:8787` → QR. `PUBLIC_URL`, QR'a yazılan ve telefonun bağlanacağı adrestir; telefonla aynı Wi-Fi'daki
@@ -89,14 +90,17 @@ ise sayfa bunun telefondan erişilemeyeceği uyarısını gösterir.
 **Arayüz üzerinde çalışırken (hot reload):**
 
 ```bash
-cd devtools-web/relay && npm run dev        # :8080
-cd devtools-web/web && npm run dev          # :5173, /ws ve /health relay'e proxy'lenir
+pnpm dev:relay        # :8080
+```
+
+```bash
+pnpm dev:ui           # :5173, /ws ve /health relay'e proxy'lenir
 ```
 
 **Telefon olmadan deneme:** QR ekranındaki "QR içeriği" alanını kopyala:
 
 ```bash
-cd devtools-web/relay && node scripts/fake-device.ts '<QR içeriği>'
+node packages/relay/scripts/fake-device.ts '<QR içeriği>'
 ```
 
 Komutlar (stdin): `bg`, `fg`, `log|debug|warn|err <mesaj>`, `name <cihaz adı>`, `drop`, `resume`, `unpair`, `quit`.
@@ -105,9 +109,11 @@ Simülatörde uygulama varsa QR içeriği Remote tabındaki "QR içeriğini yap�
 **Testler:**
 
 ```bash
-cd devtools-web/relay && npm test                         # 23 senaryo
-cd devtools-web/relay && npm run smoke -- ws://127.0.0.1:8787   # çalışan bir relay'e karşı uçtan uca
-cd devtools-web/web && npm run typecheck
+pnpm typecheck && pnpm test                              # tüm paketler; relay'de 23 senaryo
+```
+
+```bash
+node packages/relay/scripts/smoke.ts ws://127.0.0.1:8787   # çalışan bir relay'e karşı uçtan uca
 ```
 
 ### Telefon relay'e bağlanamıyorsa
@@ -126,7 +132,7 @@ cd devtools-web/web && npm run typecheck
 Aynı compose lokal ve sunucuda çalışır; fark sadece `.env`.
 
 ```bash
-cd devtools-web
+cd apps/server
 cp .env.example .env     # değerleri düzenle
 docker compose up -d --build
 ```
@@ -144,7 +150,7 @@ HTTPS_PORT=443
   Bunun için DNS kaydı sunucuyu göstermeli ve **80 ile 443 dışarı açık** olmalı.
 - Lokalde `SITE_ADDRESS=:80` → düz HTTP, portlar varsayılan `8080`/`8443`.
 - Sağlık kontrolü: `GET /health` → `{"ok":true,"sessions":N,"uptimeSec":N}`.
-- Kurulumdan sonra: `npm run smoke -- wss://devtools.example.com` (relay/ içinde).
+- Kurulumdan sonra: `node packages/relay/scripts/smoke.ts wss://devtools.example.com` (repo kökünden).
 
 ### Ortam değişkenleri
 
@@ -179,13 +185,13 @@ erişimi kısıtla (VPN, IP allowlist veya Caddy `basicauth`) — login gelene k
 
 ## Protokol
 
-Tüm mesajlar `{v, type, id, ts, payload}` zarfıyla taşınır; tipler [shared/protocol.ts](./shared/protocol.ts) içinde.
+Tüm mesajlar `{v, type, id, ts, payload}` zarfıyla taşınır; tipler [packages/protocol/src/index.ts](./packages/protocol/src/index.ts) içinde.
 Relay payload içeriğini doğrulamaz, sadece yönlendirir (`sync`/`invoke` web → cihaz; `hello`, `lifecycle`, `request`,
 `response`, `syncResult`, `invokeResult`, `log` cihaz → web).
 
 Protokolü değiştirirken:
 
-1. `shared/protocol.ts` ve mobile-app'teki `helpers/developer/remote/RemoteProtocol.ts`'i **birlikte** güncelle.
+1. `packages/protocol/src/index.ts` ve mobile-app'teki `helpers/developer/remote/RemoteProtocol.ts`'i **birlikte** güncelle.
 2. Uyumsuz değişiklikte `PROTOCOL_VERSION`'ı artır (relay farklı sürümü `UNSUPPORTED_VERSION` ile reddeder;
    telefon da QR'daki sürüm uyuşmazsa eşleşmez).
 
@@ -195,7 +201,7 @@ Protokolü değiştirirken:
 
 1. **mobile-app:** `helpers/developer/remote/RemoteCommands.ts` → `REMOTE_COMMANDS`'a `id: (args) => …` ekle.
    Dönen değer web'de sonuç olarak görünür; hata fırlatırsa başarısız sayılır.
-2. **web:** `web/src/lib/commands.ts` → `COMMANDS`'a aynı `id` ile başlık/açıklama/grup ekle.
+2. **web:** `packages/ui/src/lib/commands.ts` → `COMMANDS`'a aynı `id` ile başlık/açıklama/grup ekle.
 
 Sadece telefona eklenirse web Functions tabında "web'de tanımlı olmayan komut" uyarısı çıkar; sadece web'e eklenirse
 kart "Bu uygulama sürümünde yok" olarak pasif görünür.

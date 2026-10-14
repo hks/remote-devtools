@@ -168,12 +168,13 @@ Her faz kendi PR'ı ile `feat/generic-platform` dalına birleşir. `main` dalı,
 tamamlanana kadar v1 olarak çalışmaya devam eder.
 
 ### Faz 0 — Monorepo iskeleti (davranış değişikliği yok)
-- [ ] pnpm workspaces, kök `package.json`, ortak `tsconfig.base.json`, lint/format
-- [ ] `shared/` → `packages/protocol`, `relay/` → `packages/relay`, `web/` → `packages/ui`
-- [ ] Docker dosyaları → `apps/server` (imaj aynı çıktıyı üretir)
-- [ ] Relay için build adımı (tsup/esbuild); Electron'da type stripping'e güvenilmez
-- [ ] Mevcut 23 relay testi ve UI typecheck yeşil
-- [ ] CI: GitHub Actions (install, typecheck, test)
+- [x] pnpm workspaces, kök `package.json`, ortak `tsconfig.base.json`, `.editorconfig`
+- [ ] Lint/format (ESLint + Prettier): mevcut kodun stiline göre ayarlanıp ayrı bir PR'da eklenecek, toplu yeniden biçimlendirme diff'ini bu fazdan ayırmak için
+- [x] `shared/` → `packages/protocol`, `relay/` → `packages/relay`, `web/` → `packages/ui`
+- [x] Docker dosyaları → `apps/server` (build context repo kökü; çalışma imajında node_modules yok)
+- [x] Relay için build adımı (esbuild → `dist/main.js`, bağımlılıklar dahil); Electron'da type stripping'e güvenilmez
+- [x] Mevcut 23 relay testi, typecheck, build ve paketlenmiş relay'e karşı smoke testi yeşil
+- [x] CI: GitHub Actions (install, typecheck, test, build + docker build)
 
 ### Faz 1 — Protokol v2 + relay
 - [ ] `packages/protocol`: v2 zarfı, çekirdek mesajlar, `module.*` yönlendirme, field DSL ve panel tipleri ([PROTOCOL.md](./PROTOCOL.md))
