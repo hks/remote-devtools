@@ -1,9 +1,9 @@
 import type {RelayConnectionState} from '../store/useDevtoolsStore.ts';
 
 const LABEL: Record<RelayConnectionState, string> = {
-    connecting: 'Relay bağlanıyor',
-    open: 'Relay bağlı',
-    reconnecting: 'Relay yeniden bağlanıyor',
+    connecting: 'Connecting to relay',
+    open: 'Relay connected',
+    reconnecting: 'Reconnecting to relay',
 };
 
 export function RelayBadge({state}: {state: RelayConnectionState}) {

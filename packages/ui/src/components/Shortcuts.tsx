@@ -1,24 +1,29 @@
 import {useEffect, useState} from 'react';
-import {requestSync} from '../lib/network.ts';
-import {type TabId, useDevtoolsStore} from '../store/useDevtoolsStore.ts';
-import {useNetworkStore} from '../store/useNetworkStore.ts';
-
-const TAB_KEYS: Record<string, TabId> = {'1': 'logs', '2': 'serviceRequests', '3': 'functions'};
+import {modulesFor} from '../modules/registry.ts';
+import {useDevtoolsStore} from '../store/useDevtoolsStore.ts';
 
 const SHORTCUTS: [string, string][] = [
-    ['1 / 2 / 3', 'Logs / Service Requests / Functions'],
-    ['/', 'Aktif tabda aramaya odaklan'],
-    ['⌘F / Ctrl+F', 'Aktif tabda aramaya odaklan'],
-    ['s', 'Sync (geçmiş istekleri getir)'],
-    ['↑ / ↓', 'Service Requests: önceki / sonraki istek'],
-    ['Esc', 'Detayı / bu pencereyi kapat'],
-    ['p', 'Service Requests: duraklat / devam'],
-    ['?', 'Kısayollar'],
+    ['1 – 9', 'Switch tab (in order)'],
+    ['[ / ]', 'Previous / next device'],
+    ['/', 'Focus search in the current tab'],
+    ['⌘F / Ctrl+F', 'Focus search in the current tab'],
+    ['↑ / ↓', 'Network: previous / next request'],
+    ['p', 'Network: pause / resume'],
+    ['Esc', 'Close details / this dialog'],
+    ['?', 'Keyboard shortcuts'],
 ];
 
 function isTyping(target: EventTarget | null): boolean {
     const el = target as HTMLElement | null;
     return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+}
+
+function moveDevice(step: number) {
+    const {devices, selectedDeviceId, selectDevice} = useDevtoolsStore.getState();
+    const ids = Object.values(devices).sort((a, b) => a.pairedAt - b.pairedAt).map((d) => d.deviceId);
+    if (ids.length === 0) return;
+    const idx = selectedDeviceId ? ids.indexOf(selectedDeviceId) : -1;
+    selectDevice(ids[(idx + step + ids.length) % ids.length]!);
 }
 
 /** Tab'lar arası geçerli kısayollar + `?` ile açılan yardım. */
@@ -28,27 +33,19 @@ export function Shortcuts() {
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
             if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
-            if (e.key === '?') {
-                setOpen((v) => !v);
-                return;
-            }
-            if (e.key === 'Escape') {
-                setOpen(false);
-                return;
-            }
-            const tab = TAB_KEYS[e.key];
-            if (tab) {
-                useDevtoolsStore.getState().setActiveTab(tab);
+            if (e.key === '?') return setOpen((v) => !v);
+            if (e.key === 'Escape') return setOpen(false);
+            if (e.key === '[') return moveDevice(-1);
+            if (e.key === ']') return moveDevice(1);
+            if (/^[1-9]$/.test(e.key)) {
+                const {devices, selectedDeviceId, setActiveTab} = useDevtoolsStore.getState();
+                const module = modulesFor(selectedDeviceId ? devices[selectedDeviceId] ?? null : null)[Number(e.key) - 1];
+                if (module) setActiveTab(module.id);
                 return;
             }
             if (e.key === '/') {
                 e.preventDefault();
                 document.querySelector<HTMLInputElement>('.tab-content input[type="search"]')?.focus();
-                return;
-            }
-            if (e.key === 's') {
-                const {relay, device} = useDevtoolsStore.getState();
-                if (relay === 'open' && device?.connected && useNetworkStore.getState().sync.status === 'idle') requestSync();
             }
         };
         window.addEventListener('keydown', onKey);
@@ -57,15 +54,15 @@ export function Shortcuts() {
 
     return (
         <>
-            <button className="icon-btn shortcuts-btn" onClick={() => setOpen(true)} title="Klavye kısayolları (?)" aria-label="Klavye kısayolları">
+            <button className="icon-btn shortcuts-btn" onClick={() => setOpen(true)} title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">
                 ⌨︎
             </button>
             {open && (
                 <div className="overlay" onClick={() => setOpen(false)}>
-                    <div className="dialog" role="dialog" aria-label="Klavye kısayolları" onClick={(e) => e.stopPropagation()}>
+                    <div className="dialog" role="dialog" aria-label="Keyboard shortcuts" onClick={(e) => e.stopPropagation()}>
                         <header>
-                            <h2>Klavye kısayolları</h2>
-                            <button className="icon-btn" onClick={() => setOpen(false)} aria-label="Kapat">✕</button>
+                            <h2>Keyboard shortcuts</h2>
+                            <button className="icon-btn" onClick={() => setOpen(false)} aria-label="Close">✕</button>
                         </header>
                         <table className="kv">
                             <tbody>

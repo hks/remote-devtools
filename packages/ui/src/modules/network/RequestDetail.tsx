@@ -1,9 +1,9 @@
 import {type ReactNode, useState} from 'react';
-import {toCurl, toEntryJson} from '../lib/exporters.ts';
-import {copyText, formatClock, stringifyData} from '../lib/format.ts';
-import {formatBytes, formatDuration, fullUrl, rowStatus, statusLabel} from '../lib/requestFormat.ts';
-import type {NetworkRow} from '../store/useNetworkStore.ts';
-import {JsonTree} from './JsonTree.tsx';
+import {JsonTree} from '../../components/JsonTree.tsx';
+import {toCurl, toEntryJson} from '../../lib/exporters.ts';
+import {copyText, formatClock, stringifyData} from '../../lib/format.ts';
+import {formatBytes, formatDuration, rowStatus, statusLabel} from '../../lib/requestFormat.ts';
+import type {NetworkRow} from '../../store/useNetworkStore.ts';
 
 type DetailTab = 'summary' | 'request' | 'response';
 
@@ -17,14 +17,14 @@ function CopyButton({label, text}: {label: string; text: () => string}) {
                 setTimeout(() => setDone(false), 1200);
             }}
         >
-            {done ? 'Kopyalandı ✓' : label}
+            {done ? 'Copied ✓' : label}
         </button>
     );
 }
 
 function KeyValueTable({data}: {data: Record<string, unknown> | null | undefined}) {
     const entries = Object.entries(data ?? {});
-    if (entries.length === 0) return <p className="muted small">Yok</p>;
+    if (entries.length === 0) return <p className="muted small">None</p>;
     return (
         <table className="kv">
             <tbody>
@@ -51,24 +51,32 @@ function Section({title, actions, children}: {title: string; actions?: ReactNode
     );
 }
 
+function queryParams(url: string | undefined): Record<string, string> | null {
+    if (!url) return null;
+    try {
+        const params: Record<string, string> = {};
+        for (const [key, value] of new URL(url).searchParams) params[key] = key in params ? `${params[key]}, ${value}` : value;
+        return params;
+    } catch {
+        return null;
+    }
+}
+
 function isEmptyBody(body: unknown): boolean {
     return body === null || body === undefined || body === '' || (typeof body === 'object' && Object.keys(body).length === 0);
 }
 
-function Body({value}: {value: unknown}) {
-    if (isEmptyBody(value)) return <p className="muted small">Boş</p>;
-    if (typeof value === 'string') return <pre className="code-block">{value}</pre>;
-    const truncated = (value as {__truncated?: boolean}).__truncated;
-    if (truncated) {
-        const t = value as {sizeChars: number; preview: string};
-        return (
-            <>
-                <p className="callout callout-warn">Gövde çok büyük ({formatBytes(t.sizeChars)}), telefonda kısaltıldı. İlk 5.000 karakter:</p>
-                <pre className="code-block">{t.preview}</pre>
-            </>
-        );
-    }
-    return <JsonTree value={value}/>;
+function Body({value, truncated}: {value: unknown; truncated?: {originalSize: number}}) {
+    const notice = truncated && (
+        <p className="callout callout-warn">The body was too large ({formatBytes(truncated.originalSize)}) and was truncated on the device.</p>
+    );
+    if (isEmptyBody(value)) return notice || <p className="muted small">Empty</p>;
+    return (
+        <>
+            {notice}
+            {typeof value === 'string' ? <pre className="code-block">{value}</pre> : <JsonTree value={value}/>}
+        </>
+    );
 }
 
 export function RequestDetail({row, onClose}: {row: NetworkRow; onClose: () => void}) {
@@ -77,20 +85,20 @@ export function RequestDetail({row, onClose}: {row: NetworkRow; onClose: () => v
     const status = rowStatus(row);
 
     return (
-        <aside className="detail" aria-label="İstek detayı">
+        <aside className="detail" aria-label="Request details">
             <header className="detail-head">
                 <span className={`status-pill is-${status}`}>{statusLabel(row)}</span>
                 <span className="method">{request?.method ?? '—'}</span>
-                <span className="detail-url mono" title={request ? fullUrl(request) : row.uuid}>
-                    {request ? fullUrl(request) : '(istek bilgisi yok)'}
+                <span className="detail-url mono" title={request?.url ?? row.uuid}>
+                    {request?.url ?? '(request details missing)'}
                 </span>
                 {request && <CopyButton label="cURL" text={() => toCurl(request)}/>}
                 <CopyButton label="JSON" text={() => toEntryJson(row)}/>
-                <button className="icon-btn" onClick={onClose} aria-label="Kapat" title="Kapat (Esc)">✕</button>
+                <button className="icon-btn" onClick={onClose} aria-label="Close" title="Close (Esc)">✕</button>
             </header>
 
             <nav className="detail-tabs" role="tablist">
-                {([['summary', 'Özet'], ['request', 'İstek'], ['response', 'Yanıt']] as const).map(([id, title]) => (
+                {([['summary', 'Summary'], ['request', 'Request'], ['response', 'Response']] as const).map(([id, title]) => (
                     <button
                         key={id}
                         role="tab"
@@ -106,25 +114,25 @@ export function RequestDetail({row, onClose}: {row: NetworkRow; onClose: () => v
             <div className="detail-body">
                 {tab === 'summary' && (
                     <>
-                        <Section title="Genel">
+                        <Section title="General">
                             <KeyValueTable
                                 data={{
-                                    URL: request ? fullUrl(request) : '—',
+                                    URL: request?.url ?? '—',
                                     Method: request?.method ?? '—',
-                                    'HTTP status': response?.status ?? (response ? 'Ağ hatası' : 'Bekleniyor'),
-                                    Sonuç: response ? (response.result === 'success' ? 'Başarılı' : `Hata — ${response.errorMessage ?? ''}`) : 'Bekleniyor',
-                                    Süre: formatDuration(response?.durationMs),
-                                    'Yanıt boyutu': formatBytes(row.responseSize),
-                                    Başlangıç: request?.startedAt ? formatClock(request.startedAt) : 'Bilinmiyor',
-                                    Kaynak: row.origin === 'sync' ? 'Sync (geçmiş)' : 'Canlı',
+                                    'HTTP status': response?.status ?? (response ? 'Network error' : 'Waiting'),
+                                    Result: response ? (response.result === 'success' ? 'Success' : `Error — ${response.errorMessage ?? ''}`) : 'Waiting',
+                                    Duration: formatDuration(response?.durationMs),
+                                    'Response size': formatBytes(row.responseSize),
+                                    Started: request?.startedAt ? formatClock(request.startedAt) : 'Unknown',
+                                    Origin: row.origin === 'history' ? 'Buffered before the device connected' : 'Live',
                                     UUID: row.uuid,
                                 }}
                             />
                         </Section>
-                        <Section title="İstek header'ları">
+                        <Section title="Request headers">
                             <KeyValueTable data={request?.headers}/>
                         </Section>
-                        <Section title="Yanıt header'ları">
+                        <Section title="Response headers">
                             <KeyValueTable data={response?.headers}/>
                         </Section>
                     </>
@@ -132,12 +140,12 @@ export function RequestDetail({row, onClose}: {row: NetworkRow; onClose: () => v
 
                 {tab === 'request' && (
                     <>
-                        <Section title="Query parametreleri">
-                            {isEmptyBody(request?.params) ? <p className="muted small">Yok</p> : <JsonTree value={request?.params}/>}
+                        <Section title="Query parameters">
+                            <KeyValueTable data={queryParams(request?.url)}/>
                         </Section>
                         <Section
-                            title="Gövde"
-                            actions={!isEmptyBody(request?.body) && <CopyButton label="JSON kopyala" text={() => stringifyData(request?.body)}/>}
+                            title="Body"
+                            actions={!isEmptyBody(request?.body) && <CopyButton label="Copy" text={() => stringifyData(request?.body)}/>}
                         >
                             <Body value={request?.body}/>
                         </Section>
@@ -147,16 +155,16 @@ export function RequestDetail({row, onClose}: {row: NetworkRow; onClose: () => v
                 {tab === 'response' && (
                     response ? (
                         <Section
-                            title="Gövde"
-                            actions={!isEmptyBody(response.body) && <CopyButton label="JSON kopyala" text={() => stringifyData(response.body)}/>}
+                            title="Body"
+                            actions={!isEmptyBody(response.body) && <CopyButton label="Copy" text={() => stringifyData(response.body)}/>}
                         >
                             {response.errorMessage && (
                                 <p className={`callout ${response.result === 'error' ? 'callout-err' : ''}`}>{response.errorMessage}</p>
                             )}
-                            <Body value={response.body}/>
+                            <Body value={response.body} truncated={response.bodyTruncated}/>
                         </Section>
                     ) : (
-                        <p className="empty">Yanıt bekleniyor…</p>
+                        <p className="empty">Waiting for the response…</p>
                     )
                 )}
             </div>

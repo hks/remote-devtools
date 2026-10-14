@@ -211,21 +211,22 @@ tamamlanana kadar v1 olarak çalışmaya devam eder.
   `examples/web` Faz 3'e (UI v2'ye geçince uçtan uca görülebilsin diye)
 
 ### Faz 3 — UI çekirdeği
-- [ ] Tüm metinler İngilizce
-- [ ] Modül kayıt defteri: `capabilities` → tab listesi; bilinmeyen modül için "unsupported" bilgisi
-- [ ] Cihaz seçici (sol panel): durum, platform, app, `meta` alanları, cihaz başına ayrı store
-- [ ] Eşleşme ekranı: QR + 6 haneli kod + bekleyen bağlantı istekleri (Onayla/Reddet) + onaylı cihazlar
-- [ ] Logs (çekirdek): cihaz bazlı, filtre ve arama
-- [ ] IndexedDB kalıcılığının kaldırılması (G14) ve Sync butonunun kaldırılması
-- [ ] Kısayolların yeni tab yapısına uyarlanması
-- [ ] `examples/web`: SDK'yı kullanan küçük bir web sayfası; UI ile uçtan uca deneme
+- [x] Tüm metinler İngilizce; UI v2 protokolünü konuşuyor, v1 tipleri silindi
+- [x] Modül kayıt defteri (`modules/registry.ts`): `capabilities` → tab listesi; tanınmayan modüller cihaz kartında listelenir
+- [x] Cihaz seçici (sol panel): durum, app, platform; cihaz başına ayrı log / istek / komut durumu; kart `meta` alanlarını gösterir
+- [x] Eşleşme ekranı: QR + 6 haneli kod + relay adresi; bekleyen bağlantı istekleri her görünümde üstte (Approve / Reject / Always allow); onaylı cihaz listesi
+- [x] Logs (çekirdek): cihaz bazlı, seviye / kaynak / tag filtresi, arama, oturum olaylarını gösterme seçeneği; `history` kayıtları zaman sırasına yerleşir
+- [x] IndexedDB kalıcılığı ve Sync kaldırıldı (G14)
+- [x] Kısayollar: `1–9` tab'lar (cihazın modül sırasıyla), `[` / `]` cihazlar arası
+- [x] `examples/web`: SDK'yı kullanan web sayfası (kod/QR ile eşleşme, dev modu, loglar, field DSL'li örnek fonksiyonlar)
+- [x] Tarayıcıda uçtan uca doğrulandı: dev bağlantı isteği + onay, kodla ikinci cihaz, fonksiyon çağrısı + form doğrulama, history, eşleşme kaldırma, dar ekran
+- Öne alınanlar (Faz 4'ten): Network ve Functions tab'larının UI tarafı v2'ye taşındı; field DSL form çizici yazıldı
 
-### Faz 4 — Network + Functions modülleri
-- [ ] SDK: fetch/XHR otomatik yakalama (RN ve tarayıcı), axios adapter'ı, `network.record()`, body boyut sınırı
-- [ ] SDK: `functions.register`, argüman doğrulama, `invoke` → handler → `invokeResult`
-- [ ] UI: Network tab'ının generic hale getirilmesi (mevcut filtre, JSON ağacı, cURL, HAR export korunur)
-- [ ] UI: field DSL form renderer'ı (Functions ve paneller ortak kullanır)
-- [ ] UI: Functions tab'ı tamamen `capabilities.functions` üzerinden çizilir; `web/src/lib/commands.ts` silinir
+### Faz 4 — Network + Functions modülleri (SDK tarafı)
+- [ ] SDK: `networkModule` — fetch/XHR otomatik yakalama (RN ve tarayıcı), axios adapter'ı, `network.record()`, body boyut sınırı + `bodyTruncated`
+- [ ] SDK: `functionsModule` — `register({id, title, args, handler})`, field DSL'e göre argüman doğrulama, `module.functions.invoke` → handler → `module.functions.result`
+- [ ] `examples/web` ve `fake-device` elle yazılmış fonksiyon modülü yerine `functionsModule` kullanır
+- [ ] SDK'nın yayınlanabilir build'i (ESM + `.d.ts`); Pembe Panjur entegrasyonu (Faz 5) için gerekli
 
 ### Faz 5 — Pembe Panjur geçişi (referans entegrasyon)
 - [ ] mobile-app'e `@himmetkaan/remote-devtools` eklenmesi (`enabled: showDevMenu`)

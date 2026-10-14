@@ -7,9 +7,9 @@ Uygulamadaki Developer Menu'yü bilgisayardan kullanmak için web arayüzü + We
 - **Telefon → Web:** servis istekleri (canlı + Sync ile geçmiş), uygulama yaşam döngüsü, loglar
 - **Web → Telefon:** Dev Menu fonksiyonlarını tetikleme
 
-> ⚠️ **`feat/generic-platform` dalı:** relay protokol v2'ye geçti ([docs/v2](./docs/v2/PLAN.md)). UI ve mobile-app henüz v1
-> konuştuğu için bu dalda birlikte çalışmazlar (UI Faz 3'te, mobile-app Faz 5'te taşınacak). Relay'i denemek için
-> aşağıdaki `fake-device.ts` (JS SDK üzerinde) ve `smoke.ts` kullanılabilir.
+> ⚠️ **`feat/generic-platform` dalı:** relay, UI ve JS SDK protokol v2'ye geçti ([docs/v2](./docs/v2/PLAN.md)).
+> Pembe Panjur mobile-app'i henüz v1 konuştuğu için bu dala bağlanamaz (Faz 5'te taşınacak). Denemek için
+> `examples/web` veya `fake-device.ts` kullanılabilir (aşağıda).
 
 Plan ve kararlar: [PLAN.md](./PLAN.md) · İlerleme: [ROADMAP.md](./ROADMAP.md)
 
@@ -36,7 +36,9 @@ packages/
     test/                #   uçtan uca testler (pnpm test)
     scripts/             #   build.ts (esbuild → dist/main.js), smoke.ts
   sdk-js/                # @himmetkaan/remote-devtools — JS SDK (RN/Expo, tarayıcı, Node); scripts/fake-device.ts
-  ui/                    # @himmetkaan/remote-devtools-ui — Vite + React + TS
+  ui/                    # @himmetkaan/remote-devtools-ui — Vite + React + TS; modules/ altında tab'lar (logs, network, functions)
+examples/
+  web/                   # SDK'yı kullanan örnek web sayfası (pnpm dev:example)
 apps/
   server/                # docker imajı: Dockerfile (ui build + paketlenmiş relay), docker-compose.yml (relay + caddy), Caddyfile, .env.example
 docs/v2/                 # generic platform planı (v2)
@@ -44,29 +46,28 @@ docs/v2/                 # generic platform planı (v2)
 
 ---
 
-## Kullanım
+## Kullanım (v2)
 
-1. Web arayüzünü aç → QR görünür (2 dk geçerli, tek kullanımlık, kendiliğinden yenilenir).
-2. Telefonda Dev Menu → **🔗 Remote** → **📷 QR Okut**.
-3. Bağlanınca web'de cihaz kartı dolar, telefonda dev butonunda yeşil nokta belirir.
+1. UI'ı aç → cihaz yoksa eşleşme ekranı açılır: QR + 6 haneli kod (2 dk geçerli, tek kullanımlık, kendiliğinden yenilenir).
+2. Uygulamada SDK'nın bağlantı ekranından QR'ı okut veya kodu gir (`devtools.connection.pairWithQr / pairWithCode`).
+3. `isDevelopment: true` olan uygulamalar yerel relay'i kendileri bulur ve bağlanmak ister; UI'da **Approve** ile onaylanır
+   (**Always allow** işaretlenirse aynı cihaz + uygulama bir dahaki sefere sormadan bağlanır).
 
-Eşleşme telefonda saklanır: uygulama arka plandan dönünce veya yeniden açılınca kendiliğinden bağlanır.
-Başka bir cihaz bağlamak için web'de veya telefonda **Bağlantıyı Kes**.
+Birden çok cihaz aynı anda bağlı kalabilir; sol panelden seçilir, **＋ Add device** ile yenisi eklenir.
+Eşleşme uygulamada saklanır: uygulama yeniden açılınca kendiliğinden bağlanır; 1 saat kullanılmazsa unutulur.
 
-| Tab | Ne yapar |
-|---|---|
-| 📜 Logs | Bağlandı / koptu / arka plan / ön plan, komut sonuçları, Sync özetleri |
-| 🛎️ Service Requests | Canlı istekler; **Sync** ile telefonda biriken geçmiş. Filtre, arama, JSON ağacı, cURL, HAR/JSON export |
-| 🧩 Functions | Dev Menu fonksiyonları. Telefonun desteklemediği komutlar pasif görünür |
+| Tab | Ne zaman görünür | Ne yapar |
+|---|---|---|
+| 📜 Logs | Her zaman | Cihaz logları + bağlantı / yaşam döngüsü olayları; seviye, kaynak, tag filtresi, arama |
+| 🌐 Network | Uygulama `network` modülünü bildirirse | İstekler; filtre, arama, JSON ağacı, cURL, HAR/JSON export |
+| 🧩 Functions | Uygulama `functions` modülünü bildirirse | Uygulamanın kaydettiği fonksiyonlar; argümanlar için form (field DSL) |
 
-Klavye: `1`/`2`/`3` tab · `/` ara · `s` Sync · `p` duraklat · `↑`/`↓` gezin · `Esc` kapat · `?` tüm kısayollar
+Klavye: `1`–`9` tab · `[` / `]` cihaz · `/` ara · `p` duraklat (Network) · `↑`/`↓` gezin · `Esc` kapat · `?` tüm kısayollar
 
 Notlar:
 
-- Remote yalnızca Dev Menu açıkken (`showDevMenu`) çalışır; son kullanıcıya etkisi yoktur.
-- Bir tarayıcı = bir oturum = bir cihaz. İkinci cihaz için incognito pencere (ayrı oturum) kullan.
-- İstekler ve loglar tarayıcının IndexedDB'sinde tutulur; sayfa yenilenince geri gelir. Temizle butonları siler.
-- Gövdesi 1 MB'tan büyük istek/yanıtlar telefonda kısaltılır (ilk 5.000 karakter + gerçek boyut).
+- UI hiçbir veriyi saklamaz; sayfa yenilenince loglar ve istekler gider (bağlantı öncesi kayıtlar için SDK'da `history`).
+- Bir tarayıcı = bir oturum; aynı tarayıcının sekmeleri oturumu paylaşır. Ayrı oturum için incognito pencere.
 
 ---
 
@@ -95,11 +96,15 @@ ise sayfa bunun telefondan erişilemeyeceği uyarısını gösterir.
 **Arayüz üzerinde çalışırken (hot reload):**
 
 ```bash
-pnpm dev:relay        # :8080
+pnpm dev:relay        # :8080, CONNECT_REQUESTS=local
 ```
 
 ```bash
 pnpm dev:ui           # :5173, /ws ve /health relay'e proxy'lenir
+```
+
+```bash
+pnpm dev:example      # :5174, examples/web — SDK'yı kullanan örnek sayfa
 ```
 
 **Cihaz olmadan deneme (v2):** sahte cihaz JS SDK'nın kendisini kullanır.

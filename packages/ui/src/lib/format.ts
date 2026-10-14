@@ -1,13 +1,13 @@
-import type {DeviceInfo} from '@himmetkaan/remote-devtools-protocol/v1';
+import type {Hello} from '@himmetkaan/remote-devtools-protocol';
 
 export function platformLabel(platform: string): string {
-    if (platform === 'ios') return 'iOS';
-    if (platform === 'android') return 'Android';
-    return platform;
+    const known: Record<string, string> = {ios: 'iOS', android: 'Android', web: 'Web', macos: 'macOS', windows: 'Windows', linux: 'Linux'};
+    return known[platform] ?? platform;
 }
 
-export function describeDevice(info: DeviceInfo): string {
-    return `${platformLabel(info.platform)} ${info.osVersion} · v${info.appVersion} (${info.buildNumber})`;
+export function describeDevice(hello: Hello): string {
+    const app = `${hello.app.name} ${hello.app.version}${hello.app.build ? ` (${hello.app.build})` : ''}`;
+    return `${platformLabel(hello.device.platform)} ${hello.device.os} · ${app}`;
 }
 
 const pad = (n: number, len = 2) => String(n).padStart(len, '0');
@@ -20,13 +20,18 @@ export function formatClock(ts: number): string {
 
 export function formatRelative(ts: number, now = Date.now()): string {
     const sec = Math.max(0, Math.round((now - ts) / 1000));
-    if (sec < 5) return 'şimdi';
-    if (sec < 60) return `${sec} sn önce`;
+    if (sec < 5) return 'just now';
+    if (sec < 60) return `${sec}s ago`;
     const min = Math.round(sec / 60);
-    if (min < 60) return `${min} dk önce`;
+    if (min < 60) return `${min}m ago`;
     const hour = Math.round(min / 60);
-    if (hour < 24) return `${hour} sa önce`;
-    return new Date(ts).toLocaleString('tr-TR');
+    if (hour < 24) return `${hour}h ago`;
+    return new Date(ts).toLocaleString();
+}
+
+export function formatCountdown(ms: number): string {
+    const sec = Math.max(0, Math.ceil(ms / 1000));
+    return sec >= 60 ? `${Math.floor(sec / 60)}:${pad(sec % 60)}` : `${sec}s`;
 }
 
 export function stringifyData(data: unknown): string {

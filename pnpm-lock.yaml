@@ -8,6 +8,19 @@ importers:
 
   .: {}
 
+  examples/web:
+    dependencies:
+      '@himmetkaan/remote-devtools':
+        specifier: workspace:*
+        version: link:../../packages/sdk-js
+    devDependencies:
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+      vite:
+        specifier: 8.3.4
+        version: 8.3.4(@types/node@24.19.1)(esbuild@0.28.2)
+
   packages/protocol:
     devDependencies:
       typescript:

@@ -83,7 +83,7 @@ const JsonNode = memo(function JsonNode({name, value, depth, defaultExpandDepth,
                 <span className="jt-punct">{openBracket}</span>
                 {!open && (
                     <>
-                        <span className="jt-summary">{isArray ? `${entries.length} öğe` : `${entries.length} alan`}</span>
+                        <span className="jt-summary">{isArray ? `${entries.length} items` : `${entries.length} keys`}</span>
                         <span className="jt-punct">{closeBracket}</span>
                         {comma}
                     </>
@@ -104,7 +104,7 @@ const JsonNode = memo(function JsonNode({name, value, depth, defaultExpandDepth,
                         ))}
                         {entries.length > visible && (
                             <button className="jt-more" onClick={() => setVisible((v) => v + PAGE_SIZE)}>
-                                … {entries.length - visible} öğe daha göster
+                                … show {entries.length - visible} more
                             </button>
                         )}
                     </div>

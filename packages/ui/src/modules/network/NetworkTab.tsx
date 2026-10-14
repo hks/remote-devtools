@@ -1,44 +1,33 @@
 import {memo, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import {RequestDetail} from '../components/RequestDetail.tsx';
-import {downloadText, timestampForFile, toHar, toJsonExport} from '../lib/exporters.ts';
-import {formatClock} from '../lib/format.ts';
-import {
-    displayHost,
-    displayPath,
-    formatBytes,
-    formatDuration,
-    fullUrl,
-    METHODS,
-    type RowStatus,
-    rowStatus,
-    statusLabel,
-} from '../lib/requestFormat.ts';
-import {type NetworkRow, useNetworkStore} from '../store/useNetworkStore.ts';
+import {downloadText, timestampForFile, toHar, toJsonExport} from '../../lib/exporters.ts';
+import {formatClock} from '../../lib/format.ts';
+import {displayHost, displayPath, formatBytes, formatDuration, METHODS, type RowStatus, rowStatus, statusLabel} from '../../lib/requestFormat.ts';
+import {type NetworkRow, useDeviceNetwork, useNetworkStore} from '../../store/useNetworkStore.ts';
+import {RequestDetail} from './RequestDetail.tsx';
 
 const STATUSES: {id: RowStatus; label: string}[] = [
-    {id: 'success', label: 'Başarılı'},
-    {id: 'error', label: 'Hata'},
-    {id: 'pending', label: 'Bekleyen'},
+    {id: 'success', label: 'Success'},
+    {id: 'error', label: 'Error'},
+    {id: 'pending', label: 'Pending'},
 ];
 
 const STICK_THRESHOLD_PX = 40;
 
-const RequestRow = memo(function RequestRow({row, selected}: {row: NetworkRow; selected: boolean}) {
-    const select = useNetworkStore((s) => s.select);
+const RequestRow = memo(function RequestRow({deviceId, row, selected}: {deviceId: string; row: NetworkRow; selected: boolean}) {
     const status = rowStatus(row);
     const request = row.request;
 
     return (
         <tr
             className={`req-row is-${status}${selected ? ' is-selected' : ''}`}
-            onClick={() => select(row.uuid)}
+            onClick={() => useNetworkStore.getState().select(deviceId, row.uuid)}
             data-uuid={row.uuid}
             aria-selected={selected}
         >
             <td><span className={`status-pill is-${status}`}>{statusLabel(row)}</span></td>
             <td className="method">{request?.method ?? '—'}</td>
-            <td className="req-path" title={request ? fullUrl(request) : row.uuid}>
-                <span className="mono">{request ? displayPath(request) : '(istek bilgisi yok)'}</span>
+            <td className="req-path" title={request?.url ?? row.uuid}>
+                <span className="mono">{request ? displayPath(request) : '(request details missing)'}</span>
                 {request && <span className="req-host">{displayHost(request)}</span>}
             </td>
             <td className="num">{formatDuration(row.response?.durationMs)}</td>
@@ -48,11 +37,11 @@ const RequestRow = memo(function RequestRow({row, selected}: {row: NetworkRow; s
     );
 });
 
-export function ServiceRequestsTab() {
-    const rows = useNetworkStore((s) => s.rows);
-    const selectedUuid = useNetworkStore((s) => s.selectedUuid);
-    const paused = useNetworkStore((s) => s.paused);
-    const pausedCount = useNetworkStore((s) => s.pausedBuffer.length);
+export function NetworkTab({deviceId}: {deviceId: string}) {
+    const rows = useDeviceNetwork(deviceId, (d) => d.rows);
+    const selectedUuid = useDeviceNetwork(deviceId, (d) => d.selectedUuid);
+    const paused = useDeviceNetwork(deviceId, (d) => d.paused);
+    const pausedCount = useDeviceNetwork(deviceId, (d) => d.pausedBuffer.length);
     const {select, setPaused, clear} = useNetworkStore.getState();
 
     const [query, setQuery] = useState('');
@@ -76,7 +65,7 @@ export function ServiceRequestsTab() {
                 if (!statuses.has(rowStatus(row))) return false;
                 if (method !== 'all' && row.request?.method !== method) return false;
                 if (!deferredQuery) return true;
-                return (row.request ? fullUrl(row.request) : row.uuid).toLowerCase().includes(deferredQuery);
+                return (row.request?.url ?? row.uuid).toLowerCase().includes(deferredQuery);
             }),
         [rows, statuses, method, deferredQuery],
     );
@@ -88,7 +77,7 @@ export function ServiceRequestsTab() {
         if (autoScroll && el) el.scrollTop = el.scrollHeight;
     }, [visible, autoScroll]);
 
-    // Klavye: ↑/↓ seçimi gezdirir, Esc detayı kapatır, Cmd/Ctrl+F aramaya odaklanır.
+    // Klavye: ↑/↓ seçimi gezdirir, Esc detayı kapatır, p duraklatır, Cmd/Ctrl+F aramaya odaklanır.
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
             if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
@@ -99,27 +88,28 @@ export function ServiceRequestsTab() {
             const target = e.target as HTMLElement | null;
             if (target && (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA')) return;
             if (e.key === 'Escape') {
-                select(null);
+                select(deviceId, null);
                 return;
             }
             if (e.key === 'p' && !e.metaKey && !e.ctrlKey && !e.altKey) {
-                const state = useNetworkStore.getState();
-                state.setPaused(!state.paused);
+                const state = useNetworkStore.getState().byDevice[deviceId];
+                setPaused(deviceId, !state?.paused);
                 return;
             }
             if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
             e.preventDefault();
-            const idx = visible.findIndex((r) => r.uuid === useNetworkStore.getState().selectedUuid);
+            const current = useNetworkStore.getState().byDevice[deviceId]?.selectedUuid;
+            const idx = visible.findIndex((r) => r.uuid === current);
             const nextIdx = idx < 0 ? (e.key === 'ArrowDown' ? 0 : visible.length - 1) : idx + (e.key === 'ArrowDown' ? 1 : -1);
             const next = visible[Math.max(0, Math.min(visible.length - 1, nextIdx))];
             if (!next) return;
-            select(next.uuid);
+            select(deviceId, next.uuid);
             setAutoScroll(false);
             listRef.current?.querySelector(`[data-uuid="${CSS.escape(next.uuid)}"]`)?.scrollIntoView({block: 'nearest'});
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [visible, select]);
+    }, [visible, select, setPaused, deviceId]);
 
     const toggleStatus = (status: RowStatus) =>
         setStatuses((prev) => {
@@ -136,17 +126,17 @@ export function ServiceRequestsTab() {
                     ref={searchRef}
                     className="input"
                     type="search"
-                    placeholder="URL'de ara…"
+                    placeholder="Filter by URL…"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                 />
-                <select className="input select" value={method} onChange={(e) => setMethod(e.target.value)} aria-label="Method filtresi">
-                    <option value="all">Tüm method'lar</option>
+                <select className="input select" value={method} onChange={(e) => setMethod(e.target.value)} aria-label="Method filter">
+                    <option value="all">All methods</option>
                     {METHODS.map((m) => (
                         <option key={m} value={m}>{m}</option>
                     ))}
                 </select>
-                <div className="chip-group" role="group" aria-label="Sonuç filtresi">
+                <div className="chip-group" role="group" aria-label="Result filter">
                     {STATUSES.map((s) => (
                         <button
                             key={s.id}
@@ -161,14 +151,14 @@ export function ServiceRequestsTab() {
                 <span className="toolbar-spacer"/>
                 <button
                     className={`btn btn-small${paused ? ' is-active' : ''}`}
-                    onClick={() => setPaused(!paused)}
-                    title={paused ? 'Biriken istekleri uygula ve devam et' : 'Yeni istekleri listeye eklemeyi duraklat'}
+                    onClick={() => setPaused(deviceId, !paused)}
+                    title={paused ? 'Apply buffered requests and resume (p)' : 'Pause adding new requests to the list (p)'}
                 >
-                    {paused ? `▶ Devam${pausedCount ? ` (${pausedCount})` : ''}` : '⏸ Duraklat'}
+                    {paused ? `▶ Resume${pausedCount ? ` (${pausedCount})` : ''}` : '⏸ Pause'}
                 </button>
                 <details className="menu">
-                    <summary className={`btn btn-small${visible.length === 0 ? ' is-disabled' : ''}`} title="Görünen (filtrelenmiş) istekleri indir">
-                        ⤓ Dışa aktar
+                    <summary className={`btn btn-small${visible.length === 0 ? ' is-disabled' : ''}`} title="Download the visible (filtered) requests">
+                        ⤓ Export
                     </summary>
                     <div className="menu-items" role="menu">
                         <button
@@ -189,12 +179,12 @@ export function ServiceRequestsTab() {
                                 e.currentTarget.closest('details')?.removeAttribute('open');
                             }}
                         >
-                            JSON <span className="muted small">ham istek + yanıt</span>
+                            JSON <span className="muted small">raw request + response</span>
                         </button>
                     </div>
                 </details>
-                <button className="btn btn-small" onClick={clear} disabled={rows.length === 0}>
-                    Temizle
+                <button className="btn btn-small" onClick={() => clear(deviceId)} disabled={rows.length === 0}>
+                    Clear
                 </button>
             </div>
 
@@ -210,9 +200,7 @@ export function ServiceRequestsTab() {
                 >
                     {visible.length === 0 ? (
                         <p className="empty">
-                            {rows.length === 0
-                                ? 'Henüz istek yok. Uygulamada gezindikçe istekler burada görünür; önceki istekler için Sync.'
-                                : 'Filtreyle eşleşen istek yok.'}
+                            {rows.length === 0 ? 'No requests yet. They show up here as the app makes them.' : 'No requests match the filters.'}
                         </p>
                     ) : (
                         <table className="req-table">
@@ -229,26 +217,26 @@ export function ServiceRequestsTab() {
                                     <th>Status</th>
                                     <th>Method</th>
                                     <th>URL</th>
-                                    <th className="num">Süre</th>
-                                    <th className="num">Boyut</th>
-                                    <th className="num">Zaman</th>
+                                    <th className="num">Time</th>
+                                    <th className="num">Size</th>
+                                    <th className="num">Started</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {visible.map((row) => (
-                                    <RequestRow key={row.uuid} row={row} selected={row.uuid === selectedUuid}/>
+                                    <RequestRow key={row.uuid} deviceId={deviceId} row={row} selected={row.uuid === selectedUuid}/>
                                 ))}
                             </tbody>
                         </table>
                     )}
                 </div>
 
-                {selectedRow && <RequestDetail row={selectedRow} onClose={() => select(null)}/>}
+                {selectedRow && <RequestDetail row={selectedRow} onClose={() => select(deviceId, null)}/>}
             </div>
 
             <footer className="statusbar">
-                {visible.length} / {rows.length} istek
-                {paused && <span className="statusbar-warn"> · Duraklatıldı{pausedCount ? `, ${pausedCount} olay bekliyor` : ''}</span>}
+                {visible.length} / {rows.length} requests
+                {paused && <span className="statusbar-warn"> · Paused{pausedCount ? `, ${pausedCount} event(s) waiting` : ''}</span>}
             </footer>
         </section>
     );

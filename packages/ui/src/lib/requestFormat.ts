@@ -1,25 +1,19 @@
-import type {NetworkRequest} from '@himmetkaan/remote-devtools-protocol/v1';
+import type {NetworkRequest} from '@himmetkaan/remote-devtools-protocol';
 import type {NetworkRow} from '../store/useNetworkStore.ts';
-
-export function fullUrl(request: NetworkRequest): string {
-    if (/^https?:\/\//i.test(request.url) || !request.baseURL) return request.url;
-    return request.baseURL.replace(/\/+$/, '') + '/' + request.url.replace(/^\/+/, '');
-}
 
 /** Listede gösterilecek kısa yol: host olmadan path + query. */
 export function displayPath(request: NetworkRequest): string {
-    const url = fullUrl(request);
     try {
-        const parsed = new URL(url);
+        const parsed = new URL(request.url);
         return parsed.pathname + parsed.search;
     } catch {
-        return url;
+        return request.url;
     }
 }
 
 export function displayHost(request: NetworkRequest): string {
     try {
-        return new URL(fullUrl(request)).host;
+        return new URL(request.url).host;
     } catch {
         return '';
     }
@@ -51,4 +45,4 @@ export function statusLabel(row: NetworkRow): string {
     return row.response.status === null ? 'ERR' : String(row.response.status);
 }
 
-export const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const;
+export const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'] as const;

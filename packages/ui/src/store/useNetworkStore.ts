@@ -1,44 +1,41 @@
 import {create} from 'zustand';
-import type {NetworkEntry, NetworkRequest, NetworkResponse} from '@himmetkaan/remote-devtools-protocol/v1';
+import type {NetworkRequest, NetworkResponse} from '@himmetkaan/remote-devtools-protocol';
 
 export type NetworkRow = {
     uuid: string;
-    /** Sync'te veya cevap isteğinden önce gelirse `null` olabilir. */
+    /** Cevap isteğinden önce gelirse `null` olabilir. */
     request: NetworkRequest | null;
     response: NetworkResponse | null;
     /** Response gövdesinin yaklaşık boyutu (JSON karakter sayısı). */
     responseSize: number | null;
     receivedAt: number;
-    origin: 'live' | 'sync';
+    /** `history`: cihaz bağlanmadan önce tamponlanmıştı. */
+    origin: 'live' | 'history';
 };
 
-export type SyncState =
-    | {status: 'idle'}
-    | {status: 'syncing'; replyTo: string; received: number; added: number; total: number | null};
+type LiveEvent = {kind: 'request'; payload: NetworkRequest; origin: NetworkRow['origin']} | {kind: 'response'; payload: NetworkResponse; origin: NetworkRow['origin']};
 
-/** Bellekte tutulan en fazla istek (IndexedDB kalıcılığı Faz 6'da). */
-const MAX_ROWS = 2000;
-
-type LiveEvent = {kind: 'request'; payload: NetworkRequest} | {kind: 'response'; payload: NetworkResponse};
-
-type NetworkState = {
+export type DeviceNetwork = {
     rows: NetworkRow[];
     selectedUuid: string | null;
     paused: boolean;
-    /** Duraklatılmışken gelen canlı olaylar; devam edilince uygulanır. */
+    /** Duraklatılmışken gelen olaylar; devam edilince uygulanır. */
     pausedBuffer: LiveEvent[];
-    sync: SyncState;
+};
 
-    addRequest(request: NetworkRequest): void;
-    addResponse(response: NetworkResponse): void;
-    /** Sync parçasını birleştirir; eklenen yeni kayıt sayısını döner. */
-    mergeSync(entries: NetworkEntry[]): number;
-    startSync(replyTo: string): void;
-    updateSync(patch: {received: number; added: number; total: number}): void;
-    finishSync(): void;
-    setPaused(paused: boolean): void;
-    select(uuid: string | null): void;
-    clear(): void;
+/** Cihaz başına bellekte tutulan en fazla istek. Kalıcılık yok (G14). */
+const MAX_ROWS = 2000;
+
+export const EMPTY_NETWORK: DeviceNetwork = {rows: [], selectedUuid: null, paused: false, pausedBuffer: []};
+
+type NetworkState = {
+    byDevice: Record<string, DeviceNetwork>;
+    addRequest(deviceId: string, request: NetworkRequest, origin: NetworkRow['origin']): void;
+    addResponse(deviceId: string, response: NetworkResponse, origin: NetworkRow['origin']): void;
+    setPaused(deviceId: string, paused: boolean): void;
+    select(deviceId: string, uuid: string | null): void;
+    clear(deviceId: string): void;
+    removeDevice(deviceId: string): void;
 };
 
 function measure(body: unknown): number | null {
@@ -54,113 +51,63 @@ function cap(rows: NetworkRow[]): NetworkRow[] {
     return rows.length > MAX_ROWS ? rows.slice(rows.length - MAX_ROWS) : rows;
 }
 
-function applyRequest(rows: NetworkRow[], request: NetworkRequest, origin: NetworkRow['origin']): NetworkRow[] {
-    const idx = rows.findIndex((r) => r.uuid === request.uuid);
-    if (idx >= 0) {
-        const next = rows.slice();
-        next[idx] = {...next[idx]!, request};
-        return next;
-    }
-    return cap([...rows, {uuid: request.uuid, request, response: null, responseSize: null, receivedAt: Date.now(), origin}]);
-}
-
-function applyResponse(rows: NetworkRow[], response: NetworkResponse, origin: NetworkRow['origin']): NetworkRow[] {
+function findFromEnd(rows: NetworkRow[], uuid: string): number {
     // Yeni kayıtlar sonda olduğundan sondan aramak daha hızlı.
-    let idx = -1;
-    for (let i = rows.length - 1; i >= 0; i--) {
-        if (rows[i]!.uuid === response.uuid) {
-            idx = i;
-            break;
-        }
-    }
-    const responseSize = measure(response.body);
-    if (idx >= 0) {
-        const next = rows.slice();
-        next[idx] = {...next[idx]!, response, responseSize};
-        return next;
-    }
-    return cap([...rows, {uuid: response.uuid, request: null, response, responseSize, receivedAt: Date.now(), origin}]);
+    for (let i = rows.length - 1; i >= 0; i--) if (rows[i]!.uuid === uuid) return i;
+    return -1;
 }
 
-export const useNetworkStore = create<NetworkState>((set, get) => ({
-    rows: [],
-    selectedUuid: null,
-    paused: false,
-    pausedBuffer: [],
-    sync: {status: 'idle'},
-
-    addRequest: (request) => {
-        if (get().paused) {
-            set((s) => ({pausedBuffer: [...s.pausedBuffer, {kind: 'request', payload: request}]}));
-            return;
+function apply(rows: NetworkRow[], event: LiveEvent): NetworkRow[] {
+    const idx = findFromEnd(rows, event.payload.uuid);
+    if (event.kind === 'request') {
+        if (idx >= 0) {
+            const next = rows.slice();
+            next[idx] = {...next[idx]!, request: event.payload};
+            return next;
         }
-        set((s) => ({rows: applyRequest(s.rows, request, 'live')}));
-    },
+        return cap([...rows, {uuid: event.payload.uuid, request: event.payload, response: null, responseSize: null, receivedAt: Date.now(), origin: event.origin}]);
+    }
+    const responseSize = measure(event.payload.body);
+    if (idx >= 0) {
+        const next = rows.slice();
+        next[idx] = {...next[idx]!, response: event.payload, responseSize};
+        return next;
+    }
+    return cap([...rows, {uuid: event.payload.uuid, request: null, response: event.payload, responseSize, receivedAt: Date.now(), origin: event.origin}]);
+}
 
-    addResponse: (response) => {
-        if (get().paused) {
-            set((s) => ({pausedBuffer: [...s.pausedBuffer, {kind: 'response', payload: response}]}));
-            return;
-        }
-        set((s) => ({rows: applyResponse(s.rows, response, 'live')}));
-    },
+export const useNetworkStore = create<NetworkState>((set, get) => {
+    const update = (deviceId: string, fn: (state: DeviceNetwork) => Partial<DeviceNetwork>) =>
+        set((s) => {
+            const current = s.byDevice[deviceId] ?? EMPTY_NETWORK;
+            return {byDevice: {...s.byDevice, [deviceId]: {...current, ...fn(current)}}};
+        });
 
-    mergeSync: (entries) => {
-        const existing = new Map(get().rows.map((r) => [r.uuid, r]));
-        const added: NetworkRow[] = [];
-        let changed = false;
+    const ingest = (deviceId: string, event: LiveEvent) => {
+        const current = get().byDevice[deviceId] ?? EMPTY_NETWORK;
+        if (current.paused) update(deviceId, (d) => ({pausedBuffer: [...d.pausedBuffer, event]}));
+        else update(deviceId, (d) => ({rows: apply(d.rows, event)}));
+    };
 
-        for (const entry of entries) {
-            const current = existing.get(entry.request.uuid);
-            if (!current) {
-                added.push({
-                    uuid: entry.request.uuid,
-                    request: entry.request,
-                    response: entry.response,
-                    responseSize: entry.response ? measure(entry.response.body) : null,
-                    receivedAt: Date.now(),
-                    origin: 'sync',
-                });
-            } else if (!current.request || (!current.response && entry.response)) {
-                // Eksik parçayı tamamla (ör. bağlantı koptuğu sırada gelen cevap).
-                existing.set(current.uuid, {
-                    ...current,
-                    request: current.request ?? entry.request,
-                    response: current.response ?? entry.response,
-                    responseSize: current.response ? current.responseSize : entry.response ? measure(entry.response.body) : null,
-                });
-                changed = true;
-            }
-        }
+    return {
+        byDevice: {},
+        addRequest: (deviceId, payload, origin) => ingest(deviceId, {kind: 'request', payload, origin}),
+        addResponse: (deviceId, payload, origin) => ingest(deviceId, {kind: 'response', payload, origin}),
+        setPaused: (deviceId, paused) =>
+            update(deviceId, (d) => {
+                if (paused) return {paused: true};
+                return {paused: false, pausedBuffer: [], rows: d.pausedBuffer.reduce(apply, d.rows)};
+            }),
+        select: (deviceId, selectedUuid) => update(deviceId, () => ({selectedUuid})),
+        clear: (deviceId) => update(deviceId, () => ({rows: [], selectedUuid: null, pausedBuffer: []})),
+        removeDevice: (deviceId) =>
+            set((s) => {
+                const {[deviceId]: _removed, ...byDevice} = s.byDevice;
+                return {byDevice};
+            }),
+    };
+});
 
-        if (added.length === 0 && !changed) return 0;
-
-        // Başlangıç zamanına göre sırala; zamanı bilinmeyen (0) kayıtlar başa, kendi sıralarıyla.
-        const merged = [...added, ...existing.values()].sort(
-            (a, b) => (a.request?.startedAt || 0) - (b.request?.startedAt || 0),
-        );
-        set({rows: cap(merged)});
-        return added.length;
-    },
-
-    startSync: (replyTo) => set({sync: {status: 'syncing', replyTo, received: 0, added: 0, total: null}}),
-    updateSync: ({received, added, total}) =>
-        set((s) => (s.sync.status === 'syncing' ? {sync: {...s.sync, received, added, total}} : {})),
-    finishSync: () => set({sync: {status: 'idle'}}),
-
-    setPaused: (paused) => {
-        if (paused) {
-            set({paused: true});
-            return;
-        }
-        const buffer = get().pausedBuffer;
-        let rows = get().rows;
-        for (const event of buffer) {
-            rows = event.kind === 'request' ? applyRequest(rows, event.payload, 'live') : applyResponse(rows, event.payload, 'live');
-        }
-        set({paused: false, pausedBuffer: [], rows});
-    },
-
-    select: (selectedUuid) => set({selectedUuid}),
-    clear: () => set({rows: [], selectedUuid: null, pausedBuffer: []}),
-}));
+export function useDeviceNetwork<T>(deviceId: string, selector: (state: DeviceNetwork) => T): T {
+    return useNetworkStore((s) => selector(s.byDevice[deviceId] ?? EMPTY_NETWORK));
+}

@@ -1,20 +1,5 @@
-import type {NetworkRequest} from '@himmetkaan/remote-devtools-protocol/v1';
+import type {NetworkRequest} from '@himmetkaan/remote-devtools-protocol';
 import type {NetworkRow} from '../store/useNetworkStore.ts';
-import {fullUrl} from './requestFormat.ts';
-
-/** axios `params` objesini URL'e ekler (axios'un yaptığı gibi). */
-export function urlWithParams(request: NetworkRequest): string {
-    const base = fullUrl(request);
-    const params = request.params;
-    if (!params || typeof params !== 'object' || Object.keys(params).length === 0) return base;
-    const url = new URL(base, 'http://placeholder.invalid');
-    for (const [key, value] of Object.entries(params as Record<string, unknown>)) {
-        if (value === undefined || value === null) continue;
-        const values = Array.isArray(value) ? value : [value];
-        for (const v of values) url.searchParams.append(key, typeof v === 'object' ? JSON.stringify(v) : String(v));
-    }
-    return url.origin === 'http://placeholder.invalid' ? url.pathname + url.search : url.toString();
-}
 
 function headerEntries(headers: Record<string, unknown> | null | undefined): {name: string; value: string}[] {
     return Object.entries(headers ?? {})
@@ -25,7 +10,6 @@ function headerEntries(headers: Record<string, unknown> | null | undefined): {na
 function bodyText(body: unknown): string | null {
     if (body === null || body === undefined || body === '') return null;
     if (typeof body === 'string') return body;
-    if ((body as {__truncated?: boolean}).__truncated) return null;
     return JSON.stringify(body);
 }
 
@@ -33,7 +17,7 @@ const shellQuote = (value: string) => `'${value.replace(/'/g, `'\\''`)}'`;
 
 export function toCurl(request: NetworkRequest): string {
     // Her satır bir seçenek (bayrak + değeri birlikte).
-    const lines = [`curl ${shellQuote(urlWithParams(request))}`];
+    const lines = [`curl ${shellQuote(request.url)}`];
     if (request.method !== 'GET') lines.push(`-X ${request.method}`);
     for (const {name, value} of headerEntries(request.headers)) {
         lines.push(`-H ${shellQuote(`${name}: ${value}`)}`);
@@ -68,7 +52,7 @@ export function toHar(rows: NetworkRow[]): string {
             const {request, response} = row;
             const reqBody = bodyText(request.body);
             const resBody = response ? bodyText(response.body) : null;
-            const url = urlWithParams(request);
+            const {url} = request;
             let queryString: {name: string; value: string}[] = [];
             try {
                 queryString = [...new URL(url).searchParams].map(([name, value]) => ({name, value}));
@@ -76,7 +60,7 @@ export function toHar(rows: NetworkRow[]): string {
                 // Göreli URL — query çıkarılamaz.
             }
             const time = response?.durationMs ?? 0;
-            const contentType = (key: Record<string, unknown> | null | undefined) =>
+            const contentType = (key: Record<string, string> | null | undefined) =>
                 String(Object.entries(key ?? {}).find(([k]) => k.toLowerCase() === 'content-type')?.[1] ?? 'application/json');
 
             return {
