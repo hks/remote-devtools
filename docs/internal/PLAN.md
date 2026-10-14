@@ -3,8 +3,8 @@
 Amaç: Pembe Panjur'a bağlı bu aracı, herhangi bir developer'ın kendi uygulamasına SDK ile bağlayabildiği
 açık kaynak bir platforma dönüştürmek.
 
-İlgili dokümanlar: [PROTOCOL.md](./PROTOCOL.md) (protokol v2 taslağı) · [MACOS_RELEASE.md](./MACOS_RELEASE.md) (imzalı .dmg yayını)
-v1 dokümanları: [../../PLAN.md](../../PLAN.md) · [../../ROADMAP.md](../../ROADMAP.md)
+İlgili dokümanlar: [protocol.md](../reference/protocol.md) (protokol v2) · [macos-release.md](../maintainers/macos-release.md) (imzalı .dmg yayını)
+v1 dokümanları: [v1/PLAN.md](./v1/PLAN.md) · [v1/ROADMAP.md](./v1/ROADMAP.md)
 
 Durum: `[ ]` yapılacak · `[~]` devam ediyor · `[x]` tamamlandı
 
@@ -209,7 +209,7 @@ tamamlanana kadar v1 olarak çalışmaya devam eder.
 - [x] CI: GitHub Actions (install, typecheck, test, build + docker build)
 
 ### Faz 1 — Protokol v2 + relay
-- [x] `packages/protocol`: v2 zarfı, çekirdek mesajlar, `module.*` yönlendirme, field DSL ve panel tipleri ([PROTOCOL.md](./PROTOCOL.md))
+- [x] `packages/protocol`: v2 zarfı, çekirdek mesajlar, `module.*` yönlendirme, field DSL ve panel tipleri ([PROTOCOL.md](../reference/protocol.md))
 - [x] v1 tipleri geçici olarak `@himmetkaan/remote-devtools-protocol/v1` altında; UI Faz 3'te v2'ye geçince silinecek
 - [x] Relay: çoklu cihazlı oturum, `deviceId` ile yönlendirme, cihaz mesajlarına `deviceId` damgası
 - [x] Relay: `module.*` mesajlarını içeriğine bakmadan iletme, boyut sınırı, cihaz başına hız sınırı
@@ -282,7 +282,7 @@ tamamlanana kadar v1 olarak çalışmaya devam eder.
 - [ ] `@himmetkaan/remote-devtools-mdns` paketi (`DiscoveryProvider`; RN: zeroconf + Expo config plugin); opsiyonel, varsayılan kapalı
 - [ ] İsteğe bağlı: gömülü relay yerine uzak (self-hosted) bir relay'e bağlanma modu
 - [ ] Developer ID imzası, notarization, electron-updater (GitHub provider)
-- [ ] GitHub Actions release iş akışı ([MACOS_RELEASE.md](./MACOS_RELEASE.md))
+- [ ] GitHub Actions release iş akışı ([macos-release.md](../maintainers/macos-release.md))
 - [x] `appId`: `com.himmetkaan.remote-devtools` (imzalama kişisel Apple Developer hesabıyla yapılacak)
 
 ### Faz 7 — Storage, State, Flags modülleri
@@ -380,5 +380,5 @@ Faz 6'nın bir kısmı (bkz. §4 işaretleri).
   mobile-app'teki npm token konusu bu projenin kapsamı dışında.
 
 **Sıradaki seçenekler:** Faz 9 (açık kaynak yayını) hazırlığı veya bekletilen işlerden biri. Faz 6'nın kalanında Developer ID
-imzası + notarization + electron-updater için [MACOS_RELEASE.md](./MACOS_RELEASE.md)'deki sertifika/secret adımları kullanıcıdan gerekir.
+imzası + notarization + electron-updater için [macos-release.md](../maintainers/macos-release.md)'deki sertifika/secret adımları kullanıcıdan gerekir.
 

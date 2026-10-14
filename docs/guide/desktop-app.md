@@ -1,0 +1,37 @@
+# Desktop app (macOS)
+
+The desktop app runs the relay and the UI in one window, so nothing needs to be hosted. Devices connect to your
+computer over the local network; the phone and the computer must be on the same network.
+
+Currently built for macOS on Apple Silicon. Download the `.dmg` from the
+[GitHub releases](https://github.com/hks/remote-devtools/releases).
+
+::: warning Unsigned builds
+Until the app is signed with a Developer ID and notarized, macOS blocks the first launch. Right-click the app and
+choose **Open**. If macOS says the app is damaged, run:
+
+```bash
+xattr -cr "/Applications/Remote DevTools.app"
+```
+:::
+
+## How it behaves
+
+- The relay listens on `0.0.0.0:8787`. If the port is taken the app tells you; set `DEVTOOLS_PORT` to use another.
+- The address written into the QR code is your computer's LAN IP, picked automatically and shown in the window title.
+  If the wrong interface was chosen (VPN, Docker…), pick the right one in the **Network** menu. The address updates
+  when your IP changes.
+- Connect requests from the local network are allowed (`CONNECT_REQUESTS=local`), so development builds and
+  simulators find the app by themselves; the SDK tries port `8787` first.
+- Only connection metadata is stored (`~/Library/Application Support/Remote DevTools/relay-state.json`: the session,
+  pairings and trusted devices). Devices come back with their stored pairing after the app restarts. Logs, requests
+  and other data are never written to disk.
+- On first launch macOS may ask for **Local Network** and firewall permission. Without them devices cannot connect.
+
+## Building it yourself
+
+```bash
+pnpm install
+pnpm dev:desktop      # build the UI and main process and open Electron
+pnpm dist:desktop     # .dmg and .zip in apps/desktop/release/ (Apple Silicon)
+```

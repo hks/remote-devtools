@@ -1,4 +1,4 @@
-# Remote DevTools desktop packages — unsigned distribution (signed/notarized release: docs/v2/MACOS_RELEASE.md, Phase 6).
+# Remote DevTools desktop packages — unsigned distribution (signed/notarized release: docs/maintainers/macos-release.md, Phase 6).
 appId: com.himmetkaan.remote-devtools
 productName: Remote DevTools
 artifactName: RemoteDevTools-${version}-${os}-${arch}.${ext}

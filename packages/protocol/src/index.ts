@@ -1,7 +1,7 @@
 /**
  * Remote DevTools — WebSocket protocol (v2)
  *
- * The contract between the relay, the UI and all SDKs. Human-readable version: docs/v2/PROTOCOL.md.
+ * The contract between the relay, the UI and all SDKs. Human-readable version: docs/reference/protocol.md.
  * The Swift / Kotlin / Flutter SDKs depend on that document, not this file; keep the two in sync.
  *
  * Only "erasable" TypeScript is used (no enum / namespace) so that it can run without

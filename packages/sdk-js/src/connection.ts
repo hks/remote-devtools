@@ -84,7 +84,7 @@ const ACTIVITY_SAVE_INTERVAL_MS = 60_000;
 /** How long to wait before asking again if the user didn't answer the pending request. */
 const EXPIRED_REQUEST_BACKOFF_MS = 60_000;
 
-/** Relay close codes (see docs/v2/PROTOCOL.md). */
+/** Relay close codes (see docs/reference/protocol.md). */
 const Close = {replaced: 4000, unpaired: 4002, unsupportedVersion: 4005} as const;
 
 /** A development device that loses its pairing for these reasons starts discovery again; not if the user removed it. */

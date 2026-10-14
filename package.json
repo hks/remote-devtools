@@ -15,7 +15,9 @@
     "dev:example": "pnpm --filter @himmetkaan/remote-devtools-example-web dev",
     "pack:sdk": "node scripts/pack-sdk.ts",
     "dev:desktop": "pnpm --filter @himmetkaan/remote-devtools-desktop start",
-    "dist:desktop": "pnpm --filter @himmetkaan/remote-devtools-desktop dist"
+    "dist:desktop": "pnpm --filter @himmetkaan/remote-devtools-desktop dist",
+    "docs:dev": "pnpm --filter @himmetkaan/remote-devtools-docs dev",
+    "docs:build": "pnpm --filter @himmetkaan/remote-devtools-docs build"
   },
   "devDependencies": {
     "esbuild": "0.28.2"

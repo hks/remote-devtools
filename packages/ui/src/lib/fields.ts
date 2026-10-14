@@ -1,7 +1,7 @@
 import type {Field, Fields, SelectOption} from '@himmetkaan/remote-devtools-protocol';
 
 /**
- * Form state for the Field DSL (docs/v2/PROTOCOL.md §6).
+ * Form state for the Field DSL (docs/reference/protocol.md §6).
  * Form values are the raw input values (numbers and JSON as text); converted with `toArgs` on submit.
  */
 export type FormValues = Record<string, string | boolean>;
