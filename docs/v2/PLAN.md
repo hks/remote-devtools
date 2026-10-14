@@ -232,11 +232,15 @@ tamamlanana kadar v1 olarak çalışmaya devam eder.
 - Not: paketler Faz 9'a kadar `private: true`; Pembe Panjur (Faz 5) `pnpm pack` tarball'larıyla kurulabilir
 
 ### Faz 5 — Pembe Panjur geçişi (referans entegrasyon)
-- [ ] mobile-app'e `@himmetkaan/remote-devtools` eklenmesi (`enabled: showDevMenu`)
-- [ ] `commands.ts` içindeki tüm komutların app tarafında `functions.register` ile tanımlanması
-- [ ] `userId` / `apiEndpoint` → `meta`
-- [ ] `helpers/developer/remote/` ve `RemoteProtocol.ts` kopyasının kaldırılması; Remote tab'ın SDK bağlantı API'sini kullanması
-- [ ] v1 ile özellik eşdeğerliği kontrol listesi (QR, resume, network, functions, lifecycle, logs)
+- [x] Dağıtım: npm'e yayın yerine `pnpm pack:sdk <klasör>` ile tarball; mobile-app'te `vendor/remote-devtools/` + yarn `file:`
+      bağımlılığı ve protokol paketi için `resolutions`. Yarn tarball'ı içerik özetiyle önbelleğe aldığı için her paketlemede sürüm artırılır
+- [x] mobile-app (`hks/remote-devtools-v2` dalı): SDK yalnızca Dev Menu açıkken çalışır (`startRemoteDevtools` / `stopRemoteDevtools`)
+- [x] 17 komut `functionsModule` ile app tarafında tanımlandı (başlık, grup, onay, select argümanları)
+- [x] `userId` / `apiEndpoint` → `meta`; değişince `updateMeta`
+- [x] Network: otomatik yakalama kapalı; mevcut axios kancaları `network.record()` ile bağlandı (yalnızca API trafiği, `result_code === 1` kuralı korunur)
+- [x] v1 istemcisi, `RemoteProtocol.ts` kopyası ve serializer'lar kaldırıldı; Remote tab'ı SDK bağlantı API'sini kullanır (QR, 6 haneli kod, dev keşfi)
+- [x] Doğrulama: tsc (yeni hata yok), eslint, jest, iOS Hermes bundle (`expo export`)
+- [ ] Simülatörde uçtan uca deneme (QR/kod, resume, network, functions, lifecycle, logs)
 - [ ] Bu noktada `main` dalına birleştirme ve v1'in kaldırılması
 
 ### Faz 6 — Desktop app (Electron, macOS arm64)
