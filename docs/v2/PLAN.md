@@ -290,6 +290,11 @@ Pembe Panjur entegrasyonu bu fazda yapılmadı (doğrulama `examples/web` + `fak
 - [x] `examples/web`: localStorage + sessionStorage, Zustand todo store'u, banner/renk flag'leri; `fake-device`: bellek deposu, sayaç store'u, iki flag
 - [x] Tarayıcıda uçtan uca doğrulandı: storage listeleme/düzenleme/silme, canlı state akışı ve yeniden bağlanınca fark,
       flag override → sayfa yeniden yüklenince korunması → toplu sıfırlama, dar ekran
+- [x] Pembe Panjur (SDK `0.1.0-alpha.3`, `hks/remote-devtools-v2` dalı): Storage = AsyncStorage + MMKV `analytics-data` (ikisi de
+      salt okunur, SecureStore kodda kullanılmıyor); State = 17 Zustand store'unun hepsi (StoreDeveloper diziyi yerinde değiştirdiği
+      için sadece sayılar); Flags = 17 `temporaryAppSettings` anahtarı (app değeri GrowthBook/A-B'den, override store her değiştiğinde
+      yeniden uygulanır, `GrowthbookHelpers`'a dokunulmadı) + 3 Dev Menu ayarı (override tutulmaz, ayara doğrudan yazılır).
+      tsc (yeni hata yok), eslint, jest, iOS Hermes bundle; simülatörlerde kullanıcı tarafından denendi
 
 ### Faz 8 — Şemalı özel paneller
 - [ ] Protokol: `PanelDef` + blok tipleri (table, keyValue, json, actions, form) + `panel.update` (tam ve kısmi)
@@ -323,14 +328,15 @@ Pembe Panjur entegrasyonu bu fazda yapılmadı (doğrulama `examples/web` + `fak
 
 ## 6. Güncel durum (yeni oturum için)
 
-Son güncelleme: 2026-10-14. Tamamlanan: Faz 0–5, Faz 7; Faz 6'nın bir kısmı (bkz. §4 işaretleri).
+Son güncelleme: 2026-10-14. Tamamlanan: Faz 0–5, Faz 7 (Pembe Panjur dahil); Faz 6'nın bir kısmı (bkz. §4 işaretleri).
 
 **Repolar**
 - relay-devtools (bu repo): `main` güncel ve push'lu; CI (typecheck, test, build, docker build) yeşil.
   Faz 7 `main`'e birleştirildi ve push'landı.
-- mobile-app (Pembe Panjur): `~/WebstormProjects/experimental/iphone-duo`, dal `hks/remote-devtools-v2` (push'lu, PR yok).
+- mobile-app (Pembe Panjur): `~/WebstormProjects/experimental/iphone-duo`, dal `hks/remote-devtools-v2` (push'lu, PR yok), SDK `0.1.0-alpha.3`.
   Entegrasyon: `helpers/developer/remote/RemoteDevtools.ts` (SDK kurulumu), `RemoteFunctions.ts` (17 fonksiyon),
-  `RemoteNetwork.ts` (axios kancaları → `network.record()`), `components/ui/developer/components/DeveloperRemotePanel.tsx`.
+  `RemoteNetwork.ts` (axios kancaları → `network.record()`), `RemoteStorage.ts`, `RemoteState.ts`, `RemoteFlags.ts`,
+  `components/ui/developer/components/DeveloperRemotePanel.tsx`.
 
 **SDK'yı uygulamada güncellemek** (npm'e yayın yok):
 1. `packages/protocol` ve `packages/sdk-js` sürümünü artır (yarn tarball'ı içerik özetiyle önbelleğe alır) ve `SDK_VERSION`'ı eşitle.
@@ -346,7 +352,9 @@ Son güncelleme: 2026-10-14. Tamamlanan: Faz 0–5, Faz 7; Faz 6'nın bir kısm�
 - Bu makinede iOS build'i Xcode 27 (Swift 6.4) ile Expo 57'nin hazır framework'leri (Swift 6.3.1) uyuşmadığı için alınamıyor.
 - Lint/format (Faz 0) hâlâ ekli değil.
 
-**Sıradaki seçenekler:** Faz 7 modüllerinin Pembe Panjur'a bağlanması (AsyncStorage, MMKV, SecureStore, Zustand store'ları;
-SDK sürümü artırılıp tarball yenilenir), Faz 8 (şemalı paneller) veya Faz 6'nın kalanı (Developer ID imzası + notarization +
+- `yarn install` çalışan Metro'nun dosya haritasını bozabiliyor (paketler yeniden bağlanırken "module not found");
+  SDK güncellemesinden sonra Metro `-c` ile yeniden başlatılmalı.
+
+**Sıradaki seçenekler:** Faz 8 (şemalı paneller), Faz 0'daki lint/format, mobile-app PR'ı veya Faz 6'nın kalanı (Developer ID imzası + notarization +
 electron-updater için [MACOS_RELEASE.md](./MACOS_RELEASE.md)'deki sertifika/secret adımları kullanıcıdan gerekir; mDNS).
 
