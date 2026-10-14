@@ -1,7 +1,24 @@
 {
   "name": "@himmetkaan/remote-devtools",
   "version": "0.1.0-alpha.3",
-  "private": true,
+  "description": "Remote DevTools SDK for React Native, Expo, browsers and Node: logs, network, state, storage, flags and custom panels in a desktop or web UI.",
+  "keywords": [
+    "remote-devtools",
+    "devtools",
+    "react-native",
+    "expo",
+    "debugging",
+    "network-inspector",
+    "logger",
+    "feature-flags"
+  ],
+  "homepage": "https://hks.github.io/remote-devtools/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hks/remote-devtools.git",
+    "directory": "packages/sdk-js"
+  },
+  "bugs": "https://github.com/hks/remote-devtools/issues",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -9,9 +26,12 @@
     ".": "./src/index.ts"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "publishConfig": {
+    "access": "public",
+    "provenance": true,
     "main": "./dist/index.cjs",
     "module": "./dist/index.js",
     "types": "./dist/index.d.ts",

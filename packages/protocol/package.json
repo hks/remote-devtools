@@ -1,7 +1,20 @@
 {
   "name": "@himmetkaan/remote-devtools-protocol",
   "version": "0.1.0-alpha.3",
-  "private": true,
+  "description": "Wire protocol types, field DSL and helpers for Remote DevTools (relay, UI and SDKs).",
+  "keywords": [
+    "remote-devtools",
+    "devtools",
+    "protocol",
+    "websocket"
+  ],
+  "homepage": "https://hks.github.io/remote-devtools/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hks/remote-devtools.git",
+    "directory": "packages/protocol"
+  },
+  "bugs": "https://github.com/hks/remote-devtools/issues",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -9,9 +22,12 @@
     ".": "./src/index.ts"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "publishConfig": {
+    "access": "public",
+    "provenance": true,
     "main": "./dist/index.cjs",
     "module": "./dist/index.js",
     "types": "./dist/index.d.ts",

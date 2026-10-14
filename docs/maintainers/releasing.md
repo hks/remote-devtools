@@ -28,7 +28,7 @@ The workflow needs an `NPM_TOKEN` repository secret: an npm **granular access to
 the `@himmetkaan` packages. Prereleases can be made with `pnpm changeset pre enter alpha`.
 
 ::: info Keep `SDK_VERSION` in sync
-`packages/sdk-js/src/client.ts` reports `SDK_VERSION` in every `hello`. The `version` script updates it from
+`packages/sdk-js/src/client.ts` reports `SDK_VERSION` in every `hello`. `pnpm version-packages` (run by the workflow) updates it from
 `package.json`; a test fails if they differ.
 :::
 

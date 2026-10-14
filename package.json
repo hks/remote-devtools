@@ -17,9 +17,13 @@
     "dev:desktop": "pnpm --filter @himmetkaan/remote-devtools-desktop start",
     "dist:desktop": "pnpm --filter @himmetkaan/remote-devtools-desktop dist",
     "docs:dev": "pnpm --filter @himmetkaan/remote-devtools-docs dev",
-    "docs:build": "pnpm --filter @himmetkaan/remote-devtools-docs build"
+    "docs:build": "pnpm --filter @himmetkaan/remote-devtools-docs build",
+    "changeset": "changeset",
+    "version-packages": "changeset version && node scripts/sync-sdk-version.ts && pnpm install --lockfile-only",
+    "release": "pnpm --filter @himmetkaan/remote-devtools-protocol --filter @himmetkaan/remote-devtools build && changeset publish"
   },
   "devDependencies": {
+    "@changesets/cli": "2.31.1",
     "esbuild": "0.28.2"
   }
 }
