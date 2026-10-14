@@ -240,7 +240,9 @@ tamamlanana kadar v1 olarak çalışmaya devam eder.
 - [x] Network: otomatik yakalama kapalı; mevcut axios kancaları `network.record()` ile bağlandı (yalnızca API trafiği, `result_code === 1` kuralı korunur)
 - [x] v1 istemcisi, `RemoteProtocol.ts` kopyası ve serializer'lar kaldırıldı; Remote tab'ı SDK bağlantı API'sini kullanır (QR, 6 haneli kod, dev keşfi)
 - [x] Doğrulama: tsc (yeni hata yok), eslint, jest, iOS Hermes bundle (`expo export`)
-- [ ] Simülatörde uçtan uca deneme (QR/kod, resume, network, functions, lifecycle, logs)
+- [x] Uçtan uca deneme (iOS simülatörü + Android emülatörü, Dev Menu açık): dev keşfi ve onay (iOS `localhost`, Android `10.0.2.2`),
+      bağlantı öncesi istekler (`history`), Network (gerçek API istekleri), Functions (modal açma, sonuç döndürme, select argümanları),
+      uygulama öldürülüp açılınca onaysız resume, arka plan/ön plan, UI'dan unpair + "Always allow" ile onaysız yeniden bağlanma
 - [ ] Bu noktada `main` dalına birleştirme ve v1'in kaldırılması
 
 ### Faz 6 — Desktop app (Electron, macOS arm64)
