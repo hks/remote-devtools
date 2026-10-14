@@ -1,0 +1,21 @@
+{
+  "name": "@himmetkaan/remote-devtools",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@himmetkaan/remote-devtools-protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "@himmetkaan/remote-devtools-relay": "workspace:*",
+    "@types/node": "24.19.1",
+    "typescript": "7.0.2"
+  }
+}

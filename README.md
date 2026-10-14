@@ -9,7 +9,7 @@ Uygulamadaki Developer Menu'yü bilgisayardan kullanmak için web arayüzü + We
 
 > ⚠️ **`feat/generic-platform` dalı:** relay protokol v2'ye geçti ([docs/v2](./docs/v2/PLAN.md)). UI ve mobile-app henüz v1
 > konuştuğu için bu dalda birlikte çalışmazlar (UI Faz 3'te, mobile-app Faz 5'te taşınacak). Relay'i denemek için
-> aşağıdaki `fake-device.ts` ve `smoke.ts` kullanılabilir.
+> aşağıdaki `fake-device.ts` (JS SDK üzerinde) ve `smoke.ts` kullanılabilir.
 
 Plan ve kararlar: [PLAN.md](./PLAN.md) · İlerleme: [ROADMAP.md](./ROADMAP.md)
 
@@ -34,7 +34,8 @@ packages/
   relay/                 # @himmetkaan/remote-devtools-relay — Node 24 + ws. Geliştirmede .ts dosyaları derlenmeden çalışır (type stripping)
     src/                 #   relay.ts (WebSocket akışı), sessions.ts (oturum deposu), static.ts, server.ts
     test/                #   uçtan uca testler (pnpm test)
-    scripts/             #   build.ts (esbuild → dist/main.js), smoke.ts, fake-device.ts
+    scripts/             #   build.ts (esbuild → dist/main.js), smoke.ts
+  sdk-js/                # @himmetkaan/remote-devtools — JS SDK (RN/Expo, tarayıcı, Node); scripts/fake-device.ts
   ui/                    # @himmetkaan/remote-devtools-ui — Vite + React + TS
 apps/
   server/                # docker imajı: Dockerfile (ui build + paketlenmiş relay), docker-compose.yml (relay + caddy), Caddyfile, .env.example
@@ -101,28 +102,28 @@ pnpm dev:relay        # :8080
 pnpm dev:ui           # :5173, /ws ve /health relay'e proxy'lenir
 ```
 
-**Cihaz olmadan deneme (v2):**
+**Cihaz olmadan deneme (v2):** sahte cihaz JS SDK'nın kendisini kullanır.
 
 ```bash
-node packages/relay/scripts/fake-device.ts qr '<QR içeriği>'
+node packages/sdk-js/scripts/fake-device.ts qr '<QR içeriği>'
 ```
 
 ```bash
-node packages/relay/scripts/fake-device.ts code <6 haneli kod> ws://127.0.0.1:8080/ws/device
+node packages/sdk-js/scripts/fake-device.ts code <6 haneli kod> ws://127.0.0.1:8080
 ```
 
 ```bash
-node packages/relay/scripts/fake-device.ts connect ws://127.0.0.1:8080/ws/device
+node packages/sdk-js/scripts/fake-device.ts dev 8080
 ```
 
-`connect` modu relay'in `CONNECT_REQUESTS=local` ile çalışmasını gerektirir (`pnpm dev:relay` bunu açar).
-Komutlar (stdin): `bg`, `fg`, `log|debug|warn|err <mesaj>`, `name <cihaz adı>`, `drop`, `resume`, `unpair`, `quit`.
-Sahte cihaz `ping` ve `echo` fonksiyonlarını bildirir ve `module.functions.invoke` isteklerine cevap verir.
+`dev` modu (`isDevelopment`) yerel relay'i bulur ve UI'dan onay ister; relay'in `CONNECT_REQUESTS=local` ile çalışması
+gerekir (`pnpm dev:relay` bunu açar). Komutlar (stdin): `bg`, `fg`, `log|debug|warn|err <mesaj>`, `name <metin>`, `drop`,
+`resume`, `unpair`, `quit`. Sahte cihaz `ping` ve `echo` fonksiyonlarını bildirir ve çağrılara cevap verir.
 
 **Testler:**
 
 ```bash
-pnpm typecheck && pnpm test                              # tüm paketler; relay'de 70 test
+pnpm typecheck && pnpm test                              # tüm paketler: relay 70, SDK 22 test
 ```
 
 ```bash

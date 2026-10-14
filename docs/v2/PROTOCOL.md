@@ -118,7 +118,7 @@ QR içeriği:
 | `capabilities.update` | `Partial<Capabilities>` — komut/flag/panel tanımları değişince |
 | `lifecycle` | `{ state: 'active' \| 'background' \| 'inactive' }` |
 | `log` | `{ level: 'debug' \| 'info' \| 'warn' \| 'error', message: string, data?: unknown, tag?: string, at: number }` |
-| `history` | `{ logs: LogPayload[], modules: Record<string, unknown[]>, final: boolean }` — `history.enabled` ise bağlanınca parça parça |
+| `history` | `{ entries: { type, payload, ts }[], final: boolean }` — `history.enabled` ise bağlantı öncesi tampon, bağlanınca `hello`'dan hemen sonra, sırası korunarak parça parça. UI her girdiyi aynı tipte canlı bir mesaj gibi işler |
 
 ```ts
 type Hello = {

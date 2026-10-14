@@ -245,7 +245,11 @@ export type RelayToDevice = {
 
 // ─── Device → UI çekirdek mesajları (relay iletir) ───────────────────────────
 
-export type HistoryChunk = { logs: LogEntry[]; modules: Record<string, unknown[]>; final: boolean };
+/** Bağlantı öncesi tamponlanmış bir mesaj: normalde canlı gönderilecek olan `type` + `payload`. */
+export type HistoryEntry = { type: string; payload: unknown; ts: number };
+
+/** Sıra korunur; büyük tamponlar birden çok parçaya bölünür, son parçada `final: true`. */
+export type HistoryChunk = { entries: HistoryEntry[]; final: boolean };
 
 export type DeviceToUi = {
     /** Her bağlantı/resume sonrası cihazın ilk mesajı. */

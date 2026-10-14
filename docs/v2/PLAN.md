@@ -113,50 +113,55 @@ Swift, Kotlin ve Flutter SDK'ları ileride `sdks/` altına girer ve protokol sö
 
 ---
 
-## 3. SDK (JS) API taslağı
+## 3. SDK (JS) API
+
+Çekirdek Faz 2'de yazıldı (`packages/sdk-js`). Modüller (`functionsModule`, `networkModule`…) Faz 4 ve 7'de gelecek;
+aşağıdaki modül kullanımı hedeflenen biçimdir.
 
 ```ts
-import {RemoteDevTools} from '@himmetkaan/remote-devtools';
-import {networkModule, functionsModule, storageModule, stateModule, flagsModule} from '@himmetkaan/remote-devtools/modules';
-import {asyncStorageAdapter} from '@himmetkaan/remote-devtools/adapters/async-storage';
-import {zustandAdapter} from '@himmetkaan/remote-devtools/adapters/zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {AppState, Platform} from 'react-native';
+import {RemoteDevTools, reactNativeLifecycle} from '@himmetkaan/remote-devtools';
+
+const functions = functionsModule();          // Faz 4
+const network = networkModule({autoCapture: true});
 
 const devtools = RemoteDevTools.init({
-    enabled: showDevMenu,            // G13: zorunlu; false iken her şey no-op
-    isDevelopment: __DEV__,          // G16: mDNS/localhost otomatik keşif
+    enabled: showDevMenu,                      // G13: zorunlu; false iken her şey no-op
+    isDevelopment: __DEV__,                    // G16: yerel relay'i bulup bağlantı isteği gönderir
     app: {id: 'com.pembepanjur.app', name: 'Pembe Panjur', version, build},
+    device: {platform: Platform.OS, os: String(Platform.Version), name: deviceName},
     meta: {userId: String(user.id), apiEndpoint},  // UI'da cihaz kartında gösterilir
-    history: {enabled: true, maxEntries: 500},     // G15
-    discovery: {localhost: true, mdns: false},     // G20: mdns için @himmetkaan/remote-devtools-mdns kurulmalı
-    persistence: asyncStorageAdapter(AsyncStorage), // eşleşme bilgisi için
-    modules: [
-        networkModule({autoCapture: true}),
-        functionsModule(),
-        storageModule({adapters: [asyncStorageAdapter(AsyncStorage)]}),
-        stateModule({stores: [zustandAdapter('deviceInfo', useDeviceInfoStore)]}),
-        flagsModule(),
-    ],
+    storage: AsyncStorage,                     // eşleşme bilgisi + cihaz kimliği (arayüz doğrudan uyar)
+    lifecycle: reactNativeLifecycle(AppState), // SDK react-native'i import etmez
+    history: {enabled: true, maxEntries: 500}, // G15
+    discovery: {localhost: {port: 8080}, providers: [/* mdnsDiscovery() — G20, opsiyonel paket */]},
+    captureConsole: ['warn', 'error'],
+    modules: [functions, network],
 });
 
 devtools.log.info('Logged in', {userId});
+devtools.updateMeta({userId: String(newUser.id)});
 
-devtools.functions.register({
+functions.register({                           // Faz 4: modül referansı üzerinden
     id: 'rateUs.setDecision',
     title: 'Set Rate Us decision',
     group: 'Rate Us',
     args: {decision: {type: 'select', options: ['notShown', 'yes_yes', 'yes_no', 'no_yes', 'no_no']}},
-    handler: async ({decision}) => { /* ... */ return {ok: true}; },
+    handler: async ({decision}) => { /* ... */ },
 });
 
-devtools.flags.define({key: 'newPaywall', type: 'boolean', default: false});
-devtools.panels.define({id: 'session', title: 'Session', blocks: [/* PROTOCOL §7 */]});
-
-// Bağlantı UI'ı developer'ın elinde: SDK durum + aksiyon verir, ekranı app çizer
-devtools.connection.pairWithQr(qrString);   // veya pairWithCode('123456', relayUrl)
-devtools.connection.subscribe((state) => {/* idle | discovering | pending-approval | connected | ... */});
+// Bağlantı ekranı developer'ın elinde: SDK durum + aksiyon verir, ekranı app çizer
+await devtools.connection.pairWithQr(qrString);            // veya pairWithCode('123456', 'https://devtools.example.com')
+devtools.connection.subscribe((state) => {/* idle | discovering | connecting | pending-approval | connected | reconnecting */});
+devtools.connection.disconnect();   // eşleşmeyi saklar; connect() ile devam
+devtools.connection.unpair();       // eşleşmeyi siler
 ```
 
 Notlar:
+- SDK `react-native`, AsyncStorage veya kamera paketlerini import etmez; hepsi seçeneklerle verilir. Aynı paket RN, tarayıcı ve Node'da çalışır.
+- Kendi modülünü yazmak için `defineModule({name, capabilities, setup(ctx)})`: `ctx.emit`, `ctx.handle` (cevaplı istek),
+  `ctx.on`, `ctx.updateCapabilities`. Bir modül sadece `module.<name>.*` tiplerini kullanabilir.
 - Komut, flag ve panel tanımları bağlantıdan önce de yapılabilir. Bağlanınca `hello` ile, sonradan değişirse
   `capabilities.update` ile gönderilir.
 - RN için QR okutma ekranı opsiyonel bir paket olur (`@himmetkaan/remote-devtools-react-native-ui`). Çekirdek kamera bağımlılığı taşımaz.
@@ -192,16 +197,18 @@ tamamlanana kadar v1 olarak çalışmaya devam eder.
 - [x] `fake-device.ts` (qr / code / connect modları, örnek fonksiyonlar) ve `smoke.ts` v2'ye taşındı
 
 ### Faz 2 — JS SDK çekirdeği
-- [ ] `RemoteDevTools.init`, `enabled` kapısı (kapalıyken no-op ve sıfır yan etki)
-- [ ] Bağlantı durum makinesi: pair (QR/kod) · resume · yeniden bağlanma (backoff) · lifecycle (AppState / visibilitychange)
-- [ ] Eşleşme bilgisinin saklanması + TTL (persistence adapter: AsyncStorage, SecureStore, localStorage)
-- [ ] `isDevelopment` keşfi: localhost (iOS sim `localhost`, Android emu `10.0.2.2`)
-- [ ] Keşif eklenti arayüzü (`DiscoveryProvider`); mDNS bu arayüzü uygulayan ayrı bir paket olarak gelir
-- [ ] `@himmetkaan/remote-devtools-mdns` paketi (RN: zeroconf + Expo config plugin); `discovery.mdns` varsayılan kapalı
-- [ ] `log` API'si + `history` tamponu (halka tampon, `maxEntries`)
-- [ ] Modül arayüzü (`defineModule`) ve `capabilities.update`
-- [ ] `relay/scripts/fake-device.ts` SDK üzerine yeniden yazılır (Node ortamında SDK)
-- [ ] `examples/web` ile uçtan uca test
+- [x] `RemoteDevTools.init`, `enabled` kapısı (kapalıyken soket açılmaz, modül kurulmaz, global yama yapılmaz)
+- [x] Bağlantı durum makinesi: pair (QR/kod) · resume · yeniden bağlanma (üstel backoff + jitter) · ön plana dönünce hemen deneme
+- [x] Yaşam döngüsü kaynakları: `reactNativeLifecycle(AppState)`, `browserLifecycle()`, `staticLifecycle()`
+- [x] Eşleşme bilgisinin saklanması (`storage`: AsyncStorage / localStorage / bellek); kayan süre cihazda da izlenir, süresi geçmiş eşleşme relay'e gitmeden unutulur
+- [x] `isDevelopment` keşfi: localhost (`localhost`, Android emülatörü `10.0.2.2`, ek host'lar); UI yoksa tekrar dener, reddedilince durur
+- [x] Keşif eklenti arayüzü (`DiscoveryProvider`)
+- [x] `log` API'si (güvenli serileştirme: Error, döngü, BigInt…), `captureConsole`, `history` tamponu (sıralı, parçalı gönderim)
+- [x] Modül arayüzü (`defineModule`, `ctx.emit/handle/on/updateCapabilities`, `ModuleError`) ve `capabilities.update`
+- [x] `fake-device.ts` SDK üzerine yeniden yazıldı (`packages/sdk-js/scripts`, qr / code / dev modları)
+- [x] 22 SDK testi gerçek relay'e karşı (eşleşme, resume, relay yeniden başlatma, keşif, onay/ret, history, modüller, konsol)
+- Taşınanlar: `@himmetkaan/remote-devtools-mdns` paketi Faz 6'ya (desktop'taki mDNS yayınıyla birlikte test edilebilsin diye);
+  `examples/web` Faz 3'e (UI v2'ye geçince uçtan uca görülebilsin diye)
 
 ### Faz 3 — UI çekirdeği
 - [ ] Tüm metinler İngilizce
@@ -211,6 +218,7 @@ tamamlanana kadar v1 olarak çalışmaya devam eder.
 - [ ] Logs (çekirdek): cihaz bazlı, filtre ve arama
 - [ ] IndexedDB kalıcılığının kaldırılması (G14) ve Sync butonunun kaldırılması
 - [ ] Kısayolların yeni tab yapısına uyarlanması
+- [ ] `examples/web`: SDK'yı kullanan küçük bir web sayfası; UI ile uçtan uca deneme
 
 ### Faz 4 — Network + Functions modülleri
 - [ ] SDK: fetch/XHR otomatik yakalama (RN ve tarayıcı), axios adapter'ı, `network.record()`, body boyut sınırı
@@ -231,6 +239,7 @@ tamamlanana kadar v1 olarak çalışmaya devam eder.
 - [ ] Electron iskeleti: main process'te gömülü relay (`createRelay`), renderer'da `packages/ui`
 - [ ] Port seçimi, LAN IP tespiti, QR'a doğru adresin yazılması
 - [ ] mDNS yayını (`_remotedevtools._tcp`), ayarlardan açılıp kapatılabilir; macOS Yerel Ağ izni metinleri
+- [ ] `@himmetkaan/remote-devtools-mdns` paketi (`DiscoveryProvider`; RN: zeroconf + Expo config plugin); opsiyonel, varsayılan kapalı
 - [ ] Bağlantı metadata'sının diskte saklanması (oturum, eşleşmeler, onaylı cihazlar). Veri saklanmaz
 - [ ] İsteğe bağlı: gömülü relay yerine uzak (self-hosted) bir relay'e bağlanma modu
 - [ ] electron-builder: imzalama, notarization, `.dmg` + `.zip`, electron-updater (GitHub provider)

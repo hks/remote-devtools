@@ -36,6 +36,22 @@ importers:
         specifier: 7.0.2
         version: 7.0.2
 
+  packages/sdk-js:
+    dependencies:
+      '@himmetkaan/remote-devtools-protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
+      '@himmetkaan/remote-devtools-relay':
+        specifier: workspace:*
+        version: link:../relay
+      '@types/node':
+        specifier: 24.19.1
+        version: 24.19.1
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+
   packages/ui:
     dependencies:
       '@himmetkaan/remote-devtools-protocol':
