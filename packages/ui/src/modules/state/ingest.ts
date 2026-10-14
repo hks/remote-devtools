@@ -9,7 +9,7 @@ export function startStateIngest() {
         const change = msg.payload as StateChange;
         useStateStore.getState().applyChange(stateKey(msg.deviceId, change.storeId), change);
     });
-    // Eşleşmesi kaldırılan cihazın state'i bellekte kalmasın.
+    // Don't keep state of an unpaired device in memory.
     useDevtoolsStore.subscribe((s, prev) => {
         if (s.devices === prev.devices) return;
         for (const deviceId of Object.keys(prev.devices)) if (!s.devices[deviceId]) useStateStore.getState().removeDevice(deviceId);

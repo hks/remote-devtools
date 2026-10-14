@@ -35,9 +35,9 @@ type SocketState = {
     role: Role;
     address: string;
     session: Session | null;
-    /** Sadece cihaz soketlerinde: kimliği doğrulanmış cihaz kaydı. */
+    /** Device sockets only: the authenticated device record. */
     device: DeviceRecord | null;
-    /** Sadece cihaz soketlerinde: UI onayı bekleyen `connect` isteği. */
+    /** Device sockets only: the `connect` request awaiting UI approval. */
     pendingRequestId: string | null;
     alive: boolean;
     authTimer: NodeJS.Timeout | null;
@@ -47,9 +47,9 @@ type SocketState = {
 type Pending = {
     request: ConnectRequest;
     ws: WebSocket;
-    /** Cihazın `connect` mesajının id'si; `paired` buna cevap olarak gönderilir. */
+    /** Id of the device's `connect` message; `paired` is sent as a reply to it. */
     messageId: string;
-    /** İsteğin gösterildiği oturumlar. Herhangi birinden gelen cevap geçerlidir. */
+    /** Sessions the request is shown to. A reply from any of them is valid. */
     sessionIds: Set<string>;
     timer: NodeJS.Timeout;
 };
@@ -69,7 +69,7 @@ const DEVICE_FORWARD = new Set<string>(DEVICE_TO_UI_TYPES);
 
 export type Relay = {
     store: SessionStore;
-    /** QR'a yazılan adresi değiştirir (ör. masaüstü uygulamada LAN IP'si değişince). Sonraki `session` mesajlarında geçerli olur. */
+    /** Changes the address written into the QR (e.g. when the LAN IP changes in the desktop app). Takes effect in subsequent `session` messages. */
     setPublicUrl(publicUrl: string | null): void;
     close(): Promise<void>;
 };
@@ -119,7 +119,7 @@ export function attachRelay(server: Server, config: RelayConfig): Relay {
     const wss = new WebSocketServer({noServer: true, maxPayload: config.maxPayloadBytes});
     let deviceWsUrl = toDeviceWsUrl(config.publicUrl);
 
-    // ─── Gönderim yardımcıları ───────────────────────────────────────────────
+    // ─── Send helpers ────────────────────────────────────────────────────────
 
     function sendRaw(ws: WebSocket, data: string) {
         if (ws.readyState === WebSocket.OPEN) ws.send(data);
@@ -173,9 +173,9 @@ export function attachRelay(server: Server, config: RelayConfig): Relay {
         }
     }
 
-    // ─── Cihaz bağlama / ayırma ──────────────────────────────────────────────
+    // ─── Device attach / detach ──────────────────────────────────────────────
 
-    /** Soketi kimliği doğrulanmış cihaz kaydına bağlar; aynı cihazın eski bağlantısı kapatılır. */
+    /** Binds the socket to the authenticated device record; the same device's previous connection is closed. */
     function attachDevice(ws: WebSocket, state: SocketState, session: Session, device: DeviceRecord) {
         const previous = device.socket as WebSocket | null;
         if (previous && previous !== ws) detachSocket(previous, CloseCode.replaced, 'replaced');
@@ -188,7 +188,7 @@ export function attachRelay(server: Server, config: RelayConfig): Relay {
         broadcastDeviceStatus(session, device, 'connected');
     }
 
-    /** Soketin oturum bağını keser (close olayı durum yayınlamasın diye) ve kapatır. */
+    /** Unbinds the socket from its session (so the close event does not broadcast status) and closes it. */
     function detachSocket(ws: WebSocket, code: number, reason: string) {
         const state = sockets.get(ws);
         if (state) {
@@ -199,8 +199,8 @@ export function attachRelay(server: Server, config: RelayConfig): Relay {
     }
 
     /**
-     * Yeni bir eşleşmeyi tamamlar: cihazı oturuma ekler (varsa eski kaydı değiştirir),
-     * cihaza sırrını gönderir ve UI'lara haber verir.
+     * Completes a new pairing: adds the device to the session (replacing any previous record),
+     * sends the device its secret and notifies the UIs.
      */
     function completePairing(ws: WebSocket, state: SocketState, session: Session, {device, replaced}: AddedDevice, replyTo: string) {
         const oldSocket = replaced?.socket as WebSocket | null | undefined;
@@ -223,7 +223,7 @@ export function attachRelay(server: Server, config: RelayConfig): Relay {
         log.info('device unpaired', {session: session.id, device: deviceId, reason});
     }
 
-    // ─── Bağlantı istekleri (connect) ────────────────────────────────────────
+    // ─── Connect requests (connect) ──────────────────────────────────────────
 
     function resolvePending(requestId: string, outcome: ConnectOutcome): Pending | null {
         const entry = pending.get(requestId);
@@ -263,7 +263,7 @@ export function attachRelay(server: Server, config: RelayConfig): Relay {
         const targets = [...store.sessions()].filter((s) => s.uis.size > 0);
         if (targets.length === 0) return rejectConnect(ws, null, 'noSession', msg.id);
 
-        // Aynı cihazdan önceki bekleyen istek varsa yenisi onun yerini alır.
+        // A new request replaces any earlier pending request from the same device.
         for (const [id, entry] of pending) {
             if (entry.request.deviceId === deviceId) {
                 resolvePending(id, 'cancelled');
@@ -322,7 +322,7 @@ export function attachRelay(server: Server, config: RelayConfig): Relay {
         if (deviceState) completePairing(entry.ws, deviceState, session, store.addDevice(session, request.deviceId), entry.messageId);
     }
 
-    // ─── UI mesajları ────────────────────────────────────────────────────────
+    // ─── UI messages ─────────────────────────────────────────────────────────
 
     function handleUi(ws: WebSocket, state: SocketState, msg: Envelope, raw: string) {
         const payload = msg.payload as Record<string, unknown>;
@@ -389,7 +389,7 @@ export function attachRelay(server: Server, config: RelayConfig): Relay {
         }
     }
 
-    // ─── Cihaz mesajları ─────────────────────────────────────────────────────
+    // ─── Device messages ─────────────────────────────────────────────────────
 
     function rejectDevice(ws: WebSocket, code: ErrorCode, message: string, replyTo: string) {
         sendError(ws, code, message, replyTo);
@@ -404,7 +404,7 @@ export function attachRelay(server: Server, config: RelayConfig): Relay {
         completePairing(ws, state, result.session, result, msg.id);
     }
 
-    /** Saniyelik pencerede mesaj sayar; sınır aşılırsa `false` döner ve UI'lara pencere başına bir kez uyarı gider. */
+    /** Counts messages in a one-second window; returns `false` over the limit and warns the UIs once per window. */
     function withinRateLimit(state: SocketState): boolean {
         const now = Date.now();
         if (now - state.rate.windowStart >= 1000) state.rate = {windowStart: now, count: 0, dropped: 0};
@@ -492,7 +492,7 @@ export function attachRelay(server: Server, config: RelayConfig): Relay {
         sendError(ws, 'UNKNOWN_TYPE', `Unknown message type: ${msg.type}`, msg.id);
     }
 
-    // ─── Bağlantı yaşam döngüsü ──────────────────────────────────────────────
+    // ─── Connection lifecycle ────────────────────────────────────────────────
 
     function onConnection(ws: WebSocket, role: Role, address: string) {
         const state: SocketState = {
@@ -563,7 +563,7 @@ export function attachRelay(server: Server, config: RelayConfig): Relay {
 
     server.on('upgrade', onUpgrade);
 
-    // ─── Periyodik işler ─────────────────────────────────────────────────────
+    // ─── Periodic jobs ───────────────────────────────────────────────────────
 
     const heartbeat = setInterval(() => {
         for (const [ws, state] of sockets) {

@@ -9,7 +9,7 @@ services:
     environment:
       PORT: 8080
       PUBLIC_URL: ${PUBLIC_URL:-}
-      # Relay Caddy'nin arkasında: istemci adresi X-Forwarded-For'dan okunur.
+      # The relay sits behind Caddy: the client address is read from X-Forwarded-For.
       TRUST_PROXY: "true"
       SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-24}
       PAIR_TOKEN_TTL_SEC: ${PAIR_TOKEN_TTL_SEC:-120}

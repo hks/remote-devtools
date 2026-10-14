@@ -1,7 +1,7 @@
 import type {DeviceSnapshot, Hello, Lifecycle, PairingInfo, TrustedDevice} from '@himmetkaan/remote-devtools-protocol';
 import {randomCode, randomToken, safeEqual} from './secrets.ts';
 
-/** Relay'in mesaj gönderebildiği uç (WebSocket'in ihtiyaç duyduğumuz alt kümesi). */
+/** An endpoint the relay can send messages to (the subset of WebSocket we need). */
 export type Peer = {
     send(data: string): void;
     close(code?: number, reason?: string): void;
@@ -11,7 +11,7 @@ export type DeviceRecord = {
     deviceId: string;
     secret: string;
     pairedAt: number;
-    /** Bağlı değilken eşleşmenin unutulacağı an (son etkinlik + hareketsizlik süresi). */
+    /** When the pairing is forgotten while disconnected (last activity + idle timeout). */
     expiresAt: number;
     lastSeenAt: number | null;
     hello: Hello | null;
@@ -23,7 +23,7 @@ export type Session = {
     id: string;
     uiSecret: string;
     createdAt: number;
-    /** Son kez en az bir UI'ın bağlı olduğu an — TTL buna göre hesaplanır. */
+    /** Last time at least one UI was connected — the TTL is computed from this. */
     lastUiSeenAt: number;
     uis: Set<Peer>;
     pairing: PairingInfo;
@@ -33,7 +33,7 @@ export type Session = {
 
 export type PairFailure = 'SESSION_NOT_FOUND' | 'INVALID_PAIR_TOKEN' | 'PAIR_TOKEN_EXPIRED' | 'INVALID_CODE' | 'DEVICE_LIMIT';
 
-/** `replaced`: aynı `deviceId` ile daha önce eşleşmiş kayıt (soketi varsa çağıran kapatmalıdır). */
+/** `replaced`: the record previously paired with the same `deviceId` (the caller must close its socket, if any). */
 export type AddedDevice = { device: DeviceRecord; replaced: DeviceRecord | null };
 
 export type PairResult = ({ ok: true; session: Session } & AddedDevice) | { ok: false; code: PairFailure };
@@ -42,7 +42,7 @@ export type DeviceAuthResult =
     | { ok: true; session: Session; device: DeviceRecord }
     | { ok: false; reason: 'sessionNotFound' | 'invalidSecret' | 'expired' };
 
-/** Diske yazılabilen, soket içermeyen oturum görüntüsü. */
+/** A socket-free session snapshot that can be written to disk. */
 export type PersistedSession = {
     id: string;
     uiSecret: string;
@@ -59,13 +59,13 @@ export type SessionStoreOptions = {
     maxSessions: number;
     maxDevicesPerSession: number;
     now?: () => number;
-    /** Kalıcı metadata değiştiğinde çağrılır (dosyaya yazmak için). */
+    /** Called when persistent metadata changes (to write it to the file). */
     onChange?: () => void;
 };
 
 export class SessionStore {
     readonly #sessions = new Map<string, Session>();
-    /** 6 haneli kod → oturum id'si. Kodlar tüm oturumlar arasında benzersizdir. */
+    /** 6-digit code → session id. Codes are unique across all sessions. */
     readonly #codes = new Map<string, string>();
     readonly #opts: SessionStoreOptions;
     readonly #now: () => number;
@@ -87,9 +87,9 @@ export class SessionStore {
         this.#opts.onChange?.();
     }
 
-    // ─── Oturum ──────────────────────────────────────────────────────────────
+    // ─── Session ─────────────────────────────────────────────────────────────
 
-    /** Limit doluysa `null` döner. */
+    /** Returns `null` if the limit is reached. */
     create(): Session | null {
         if (this.#sessions.size >= this.#opts.maxSessions) return null;
         const now = this.#now();
@@ -123,9 +123,9 @@ export class SessionStore {
         session.lastUiSeenAt = this.#now();
     }
 
-    // ─── Eşleşme (QR + kod) ──────────────────────────────────────────────────
+    // ─── Pairing (QR + code) ─────────────────────────────────────────────────
 
-    /** Eski QR token'ını ve kodu geçersiz kılıp yenilerini üretir. */
+    /** Invalidates the old QR token and code and generates new ones. */
     issuePairing(session: Session): PairingInfo {
         this.#codes.delete(session.pairing.code);
         let code: string;
@@ -135,7 +135,7 @@ export class SessionStore {
         return session.pairing;
     }
 
-    /** Süresi dolmuşsa yeniler; UI tekrar bağlandığında güncel bir QR görsün diye. */
+    /** Renews it if expired, so the UI sees a current QR when it reconnects. */
     ensureFreshPairing(session: Session): PairingInfo {
         return session.pairing.expiresAt <= this.#now() ? this.issuePairing(session) : session.pairing;
     }
@@ -157,20 +157,20 @@ export class SessionStore {
 
     #consumePairing(session: Session, deviceId: string): PairResult {
         if (!this.canAddDevice(session, deviceId)) return {ok: false, code: 'DEVICE_LIMIT'};
-        // Tek kullanımlık: bir sonraki cihaz için hemen yenisi üretilir.
+        // Single-use: a new one is generated right away for the next device.
         this.issuePairing(session);
         return {ok: true, session, ...this.addDevice(session, deviceId)};
     }
 
-    // ─── Cihazlar ────────────────────────────────────────────────────────────
+    // ─── Devices ─────────────────────────────────────────────────────────────
 
     canAddDevice(session: Session, deviceId: string): boolean {
         return session.devices.has(deviceId) || session.devices.size < this.#opts.maxDevicesPerSession;
     }
 
     /**
-     * Cihazı oturuma ekler (aynı `deviceId` varsa yeni sırla değiştirir).
-     * Eski kaydın soketi kapatılmaz; çağıran kapatmalıdır.
+     * Adds the device to the session (replacing an existing `deviceId` with a new secret).
+     * The old record's socket is not closed; the caller must close it.
      */
     addDevice(session: Session, deviceId: string): AddedDevice {
         const now = this.#now();
@@ -208,21 +208,21 @@ export class SessionStore {
         return device;
     }
 
-    /** Etkinlik: hareketsizlik süresini yeniden başlatır. */
+    /** Activity: restarts the idle timeout. */
     touchDevice(device: DeviceRecord): void {
         const now = this.#now();
         device.lastSeenAt = now;
         device.expiresAt = now + this.#opts.deviceIdleTtlMs;
     }
 
-    /** Soket koptu: süre bu andan itibaren işlemeye başlar. Kalıcı dosyaya da yansır (çökme sonrası doğru süre için). */
+    /** Socket dropped: the timeout starts running from now. Also persisted to the file (for a correct timeout after a crash). */
     markDisconnected(device: DeviceRecord): void {
         device.socket = null;
         this.touchDevice(device);
         this.#changed();
     }
 
-    /** Bağlı cihazların eşleşmesi düşmez. */
+    /** Pairings of connected devices do not expire. */
     #isExpired(device: DeviceRecord): boolean {
         return device.socket === null && device.expiresAt <= this.#now();
     }
@@ -232,7 +232,7 @@ export class SessionStore {
             deviceId: device.deviceId,
             connected: device.socket !== null,
             pairedAt: device.pairedAt,
-            // Bağlıyken süre işlemez; gösterilen değer "şimdi koparsa" düşeceği an.
+            // The timeout does not run while connected; the shown value is when it would expire "if it dropped now".
             expiresAt: device.socket ? this.#now() + this.#opts.deviceIdleTtlMs : device.expiresAt,
             lastSeenAt: device.lastSeenAt,
             hello: device.hello,
@@ -244,7 +244,7 @@ export class SessionStore {
         return [...session.devices.values()].map((d) => this.snapshot(d));
     }
 
-    // ─── Onaylı cihazlar ─────────────────────────────────────────────────────
+    // ─── Trusted devices ─────────────────────────────────────────────────────
 
     trust(session: Session, entry: Omit<TrustedDevice, 'trustedAt'>): void {
         session.trusted.set(entry.deviceId, {...entry, trustedAt: this.#now()});
@@ -257,7 +257,7 @@ export class SessionStore {
         return removed;
     }
 
-    /** Bu cihazı (aynı uygulama için) onaylamış oturumu bulur. */
+    /** Finds the session that trusted this device (for the same app). */
     findTrustingSession(deviceId: string, appId: string): Session | null {
         for (const session of this.#sessions.values()) {
             const entry = session.trusted.get(deviceId);
@@ -266,9 +266,9 @@ export class SessionStore {
         return null;
     }
 
-    // ─── Çöp toplama ─────────────────────────────────────────────────────────
+    // ─── Garbage collection ──────────────────────────────────────────────────
 
-    /** Hiçbir UI'ın TTL süresince bağlanmadığı oturumları siler ve döndürür. */
+    /** Deletes and returns sessions to which no UI connected within the TTL. */
     collectExpiredSessions(): Session[] {
         const now = this.#now();
         const expired: Session[] = [];
@@ -283,7 +283,7 @@ export class SessionStore {
         return expired;
     }
 
-    /** Bağlı olmayan ve hareketsizlik süresi dolmuş cihazları oturumlarından siler ve döndürür. */
+    /** Removes disconnected devices whose idle timeout has elapsed from their sessions and returns them. */
     collectExpiredDevices(): { session: Session; device: DeviceRecord }[] {
         const now = this.#now();
         const expired: { session: Session; device: DeviceRecord }[] = [];
@@ -299,7 +299,7 @@ export class SessionStore {
         return expired;
     }
 
-    // ─── Kalıcılık ───────────────────────────────────────────────────────────
+    // ─── Persistence ─────────────────────────────────────────────────────────
 
     export(): PersistedSession[] {
         return [...this.#sessions.values()].map((s) => ({

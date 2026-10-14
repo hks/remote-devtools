@@ -19,7 +19,7 @@ type BlockProps<T extends Block['type']> = {
     unavailable: string | null;
 };
 
-/** Bu kadar satırdan fazlası olan tablolarda arama kutusu gösterilir. */
+/** Tables with more rows than this get a search box. */
 const TABLE_FILTER_FROM = 8;
 const TABLE_PAGE = 200;
 
@@ -28,7 +28,7 @@ function cellText(value: unknown): string {
     return typeof value === 'object' ? stringifyData(value) : String(value);
 }
 
-/** Aksiyonu cihazda çalıştırır, sonucu Logs'a yazar ve bloğun durum satırı için döner. */
+/** Runs the action on the device, writes the result to Logs and returns it for the block's status line. */
 function useAction(deviceId: string, panel: PanelDef, blockId: string) {
     const [running, setRunning] = useState<string | null>(null);
     const [lastRun, setLastRun] = useState<Run | null>(null);
@@ -250,7 +250,7 @@ const PanelBlock = memo(function PanelBlock(props: BlockProps<Block['type']>) {
             content = <TableBlock {...(props as BlockProps<'table'>)}/>;
             break;
         case 'form':
-            // Alanlar değişince form baştan kurulur.
+            // Form is rebuilt when the fields change.
             content = <FormBlock key={JSON.stringify(block.fields)} {...(props as BlockProps<'form'>)}/>;
             break;
         default:

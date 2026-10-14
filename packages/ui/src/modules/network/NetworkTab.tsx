@@ -77,7 +77,7 @@ export function NetworkTab({deviceId}: {deviceId: string}) {
         if (autoScroll && el) el.scrollTop = el.scrollHeight;
     }, [visible, autoScroll]);
 
-    // Klavye: ↑/↓ seçimi gezdirir, Esc detayı kapatır, p duraklatır, Cmd/Ctrl+F aramaya odaklanır.
+    // Keyboard: ↑/↓ move the selection, Esc closes the detail, p pauses, Cmd/Ctrl+F focuses search.
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
             if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {

@@ -7,10 +7,10 @@ export type TimelineEntry = {
     id: number;
     at: number;
     actions: string[];
-    /** `full`: fark çok büyüktü, tam state geldi. `resync`: izlenmeyen sürede oluşan fark (yeniden abone olunca). */
+    /** `full`: diff was too large, full state was sent. `resync`: diff accumulated while unwatched (on resubscribe). */
     kind: 'patch' | 'full' | 'resync';
     changes: ChangeLine[];
-    /** `changes` kısaltıldıysa toplam sayı. */
+    /** Total count if `changes` was truncated. */
     total: number;
 };
 
@@ -18,11 +18,11 @@ export type StoreView = {
     state: unknown;
     loaded: boolean;
     timeline: TimelineEntry[];
-    /** Patch uygulanamadı (ör. kaçırılmış bir mesaj); tab yeniden abone olur. */
+    /** Patch couldn't be applied (e.g. a missed message); the tab resubscribes. */
     stale: boolean;
 };
 
-/** Store başına tutulan en fazla zaman çizelgesi girdisi ve girdi başına satır. Kalıcılık yok (G14). */
+/** Max timeline entries kept per store and rows per entry. No persistence (G14). */
 const MAX_ENTRIES = 300;
 const MAX_LINES = 200;
 
@@ -44,7 +44,7 @@ function linesFor(doc: unknown, patch: readonly JsonPatchOp[]): {state: unknown;
 
 type StateStore = {
     views: Record<string, StoreView>;
-    /** Abonelik cevabı: ilk yüklemede sadece state; daha önce görülmüşse aradaki fark zaman çizelgesine eklenir. */
+    /** Subscribe response: state only on first load; if seen before, the diff since then is added to the timeline. */
     setSnapshot(key: string, state: unknown): void;
     applyChange(key: string, change: StateChange): void;
     clearTimeline(key: string): void;

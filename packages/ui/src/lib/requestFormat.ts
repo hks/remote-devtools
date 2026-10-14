@@ -1,7 +1,7 @@
 import type {NetworkRequest} from '@himmetkaan/remote-devtools-protocol';
 import type {NetworkRow} from '../store/useNetworkStore.ts';
 
-/** Listede gösterilecek kısa yol: host olmadan path + query. */
+/** Short path shown in the list: path + query without the host. */
 export function displayPath(request: NetworkRequest): string {
     try {
         const parsed = new URL(request.url);
@@ -39,7 +39,7 @@ export function rowStatus(row: NetworkRow): RowStatus {
     return row.response.result;
 }
 
-/** Status kolonu: HTTP kodu; ağ hatasında "ERR". */
+/** Status column: HTTP code; "ERR" on network errors. */
 export function statusLabel(row: NetworkRow): string {
     if (!row.response) return '…';
     return row.response.status === null ? 'ERR' : String(row.response.status);

@@ -37,7 +37,7 @@ describe('relay', () => {
         await assert.rejects(connect(port, '/ws/web'));
     });
 
-    // ─── Zarf / kimlik doğrulama ─────────────────────────────────────────────
+    // ─── Envelope / authentication ───────────────────────────────────────────
 
     it('creates a session with a QR token and a 6-digit code', async () => {
         const {ui, session} = await openUi(port);
@@ -90,7 +90,7 @@ describe('relay', () => {
         ui.close();
     });
 
-    // ─── Eşleşme ─────────────────────────────────────────────────────────────
+    // ─── Pairing ─────────────────────────────────────────────────────────────
 
     it('pairs a device by QR and notifies the UI', async () => {
         const {ui, device, deviceId, deviceSecret, status} = await pairedDevice(port);
@@ -162,7 +162,7 @@ describe('relay', () => {
         second.device.close();
     });
 
-    // ─── Yönlendirme ─────────────────────────────────────────────────────────
+    // ─── Routing ─────────────────────────────────────────────────────────────
 
     it('forwards device messages to the UI stamped with deviceId', async () => {
         const {ui, device, deviceId} = await pairedDevice(port);
@@ -235,7 +235,7 @@ describe('relay', () => {
         assert.equal((await device.closed).code, 4001);
     });
 
-    // ─── Resume / değiştirme ─────────────────────────────────────────────────
+    // ─── Resume / replacement ────────────────────────────────────────────────
 
     it('lets the device resume and keeps its snapshot', async () => {
         const {ui, session, device, deviceId, deviceSecret} = await pairedDevice(port);
@@ -280,7 +280,7 @@ describe('relay', () => {
         fresh.send('resume', {sessionId: session.sessionId, deviceId, deviceSecret});
         await fresh.next('resumed');
         assert.equal((await device.closed).code, 4000);
-        // Eski soketin kapanması "disconnected" yayınlamamalı.
+        // Closing the old socket must not broadcast "disconnected".
         assert.equal((await ui.next('device.status')).payload.state, 'connected');
         await ui.none('device.status');
         ui.close();
@@ -304,7 +304,7 @@ describe('relay', () => {
         again.close();
     });
 
-    // ─── Eşleşmeyi kaldırma ──────────────────────────────────────────────────
+    // ─── Unpairing ───────────────────────────────────────────────────────────
 
     it('unpairs one device from the UI and leaves the others', async () => {
         const a = await pairedDevice(port);

@@ -3,8 +3,8 @@ import type {Hello} from '@himmetkaan/remote-devtools-protocol';
 export type DeviceInfo = Hello['device'];
 
 /**
- * Ortamdan tahmin edilen cihaz bilgisi. React Native'de güvenilir bilgi için `device` seçeneği verilmelidir
- * (ör. `{platform: Platform.OS, os: String(Platform.Version), model, name}`).
+ * Device info guessed from the environment. On React Native, pass the `device` option for reliable info
+ * (e.g. `{platform: Platform.OS, os: String(Platform.Version), model, name}`).
  */
 export function detectDevice(): DeviceInfo {
     const nav = (globalThis as {navigator?: Navigator & {product?: string; userAgentData?: {platform?: string}}}).navigator;

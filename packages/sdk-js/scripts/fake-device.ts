@@ -1,21 +1,21 @@
 /**
- * Gerçek uygulama yerine geçen sahte cihaz — UI'ı ve relay'i cihaz olmadan denemek için. SDK'nın kendisini kullanır.
+ * Fake device standing in for a real app — to try the UI and relay without a device. Uses the SDK itself.
  *
- *   node scripts/fake-device.ts qr '<QR içeriği (JSON)>'
- *   node scripts/fake-device.ts code <6 haneli kod> [ws://127.0.0.1:8080]
- *   node scripts/fake-device.ts dev [port]          # isDevelopment: yerel relay'i bulur, UI'dan onay ister
+ *   node scripts/fake-device.ts qr '<QR content (JSON)>'
+ *   node scripts/fake-device.ts code <6-digit code> [ws://127.0.0.1:8080]
+ *   node scripts/fake-device.ts dev [port]          # isDevelopment: finds the local relay, asks for approval in the UI
  *
- * Bağlandıktan sonra stdin komutları:
+ * stdin commands once connected:
  *   bg / fg       → lifecycle: background / active
- *   log <mesaj>   → info log      warn <mesaj> / err <mesaj> / debug <mesaj>
- *   name <ad>     → `meta.user` alanını değiştirir (UI'a yeni hello gider)
- *   net <url>     → fetch ile istek atar (Network tab'ında görünür)
- *   set <k> <v>   → sahte depoya yazar (Storage tab'ı)
- *   inc           → sahte store'daki sayacı artırır (State tab'ı)
- *   flags         → flag değerlerini yazdırır (Flags tab'ı)
- *   drop          → bağlantıyı kapat (eşleşme saklanır)
- *   resume        → kayıtlı eşleşmeyle yeniden bağlan
- *   unpair        → eşleşmeyi cihazdan kaldır
+ *   log <msg>     → info log      warn <msg> / err <msg> / debug <msg>
+ *   name <name>   → changes the `meta.user` field (a new hello is sent to the UI)
+ *   net <url>     → makes a request with fetch (shows up in the Network tab)
+ *   set <k> <v>   → writes to the fake store (Storage tab)
+ *   inc           → increments the counter in the fake store (State tab)
+ *   flags         → prints flag values (Flags tab)
+ *   drop          → close the connection (pairing is kept)
+ *   resume        → reconnect with the stored pairing
+ *   unpair        → remove the pairing from the device
  *   quit
  */
 import {createInterface} from 'node:readline';
@@ -44,7 +44,7 @@ if (!mode || !['qr', 'code', 'dev'].includes(mode) || (mode !== 'dev' && !arg1))
     process.exit(1);
 }
 
-// stdin'den yönetilen yaşam döngüsü.
+// Lifecycle driven from stdin.
 let lifecycleState: Lifecycle = 'active';
 const lifecycleListeners = new Set<(state: Lifecycle) => void>();
 const lifecycle: LifecycleSource = {
@@ -72,7 +72,7 @@ functions.register({
     handler: ({text, times}) => Array.from({length: times}, () => text),
 });
 
-// Storage: bellekte bir depo (değişiklikleri UI'a bildirir).
+// Storage: an in-memory store (reports changes to the UI).
 const fakeStore = new Map<string, string>([['user', JSON.stringify({id: 1234567, name: 'Fake User'})], ['onboarding.done', 'true']]);
 const storeListeners = new Set<(key: string | null) => void>();
 const memoryAdapter: StorageAdapter = {
@@ -88,7 +88,7 @@ const memoryAdapter: StorageAdapter = {
     },
 };
 
-// State: Redux benzeri küçük bir store.
+// State: a small Redux-like store.
 let appState = {counter: 0, cart: {items: [] as string[]}};
 const stateListeners = new Set<(action?: string) => void>();
 const appStore = {
@@ -109,7 +109,7 @@ const flags = flagsModule();
 flags.define({key: 'checkout.v2', title: 'New checkout', field: {type: 'boolean'}});
 flags.define({key: 'api.timeout', title: 'API timeout (s)', field: {type: 'number', min: 1, max: 60, default: 30}});
 
-// Özel panel: sayaç store'unu gösterir.
+// Custom panel: shows the counter store.
 const panels = panelsModule();
 const counterPanel = panels.define({
     id: 'counter',

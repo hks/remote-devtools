@@ -15,7 +15,7 @@ export function App() {
     const activeTab = useDevtoolsStore((s) => s.activeTab);
     const device = useSelectedDevice();
 
-    // Oturum henüz doğrulanmadı: eşleşme ekranını göstermek, cihazlar varken anlık bir "flaş" yaratır.
+    // Session not verified yet: showing the pairing screen would cause a brief "flash" when devices exist.
     if (!session) {
         return (
             <div className="boot">
@@ -37,7 +37,7 @@ export function App() {
     }
 
     const modules = modulesFor(device);
-    // Seçili tab bu cihazda yoksa (ör. modülü bildirmiyor) Logs'a düş.
+    // If the selected tab is missing on this device (e.g. it doesn't report the module), fall back to Logs.
     const active = modules.find((m) => m.id === activeTab) ?? modules[0]!;
 
     return (

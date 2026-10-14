@@ -13,7 +13,7 @@ type Selection =
 
 const NO_ADAPTERS: StorageAdapterInfo[] = [];
 
-/** JSON nesne/dizi ise ağaç olarak gösterilir; değilse `undefined`. */
+/** Shown as a tree if it is a JSON object/array; otherwise `undefined`. */
 function parseJson(text: string): unknown {
     const trimmed = text.trimStart();
     if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return undefined;
@@ -49,7 +49,7 @@ export function StorageTab({deviceId}: {deviceId: string}) {
     const [query, setQuery] = useState('');
     const deferredQuery = useDeferredValue(query.trim().toLowerCase());
 
-    // Asenkron cevaplar geldiğinde hâlâ aynı depoya bakılıyor mu?
+    // Is the same storage still being viewed when async responses arrive?
     const currentAdapter = useRef<string | null>(null);
     currentAdapter.current = adapter?.id ?? null;
     const selectionRef = useRef(selection);
@@ -84,7 +84,7 @@ export function StorageTab({deviceId}: {deviceId: string}) {
         [deviceId, activeId],
     );
 
-    // Depo değişince (veya cihaz yeniden bağlanınca) listeyi yeniden al.
+    // Refetch the list when the storage changes (or the device reconnects).
     useEffect(() => {
         setEntries(null);
         setSelection(null);
@@ -92,7 +92,7 @@ export function StorageTab({deviceId}: {deviceId: string}) {
         void loadList();
     }, [loadList]);
 
-    // Cihazın bildirdiği değişiklikler: listeyi (kısa bir gecikmeyle, toplu) ve açık değeri yenile.
+    // Changes reported by the device: refresh the list (debounced, batched) and the open value.
     useEffect(() => {
         let timer: ReturnType<typeof setTimeout> | null = null;
         const unsubscribe = relayClient.subscribe((msg) => {

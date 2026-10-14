@@ -4,7 +4,7 @@ export function randomToken(bytes = 24): string {
     return randomBytes(bytes).toString('base64url');
 }
 
-/** 6 haneli eşleşme kodu (baştaki sıfırlar korunur). */
+/** 6-digit pairing code (leading zeros preserved). */
 export function randomCode(): string {
     return randomInt(0, 1_000_000).toString().padStart(6, '0');
 }

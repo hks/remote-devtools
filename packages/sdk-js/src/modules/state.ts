@@ -3,14 +3,14 @@ import {defineModule, type ModuleContext, ModuleError, type RemoteModule} from '
 import {toSerializable} from '../serialize.ts';
 
 /**
- * State tab'ında görünen bir store. State'in değişmez (immutable) güncellendiği varsayılır (Redux, Zustand):
- * fark hesaplanırken aynı referanslı dallar atlanır.
+ * A store shown in the State tab. State is assumed to be updated immutably (Redux, Zustand):
+ * branches with the same reference are skipped when computing the diff.
  */
 export type StateAdapter = {
     id: string;
     title: string;
     getState(): unknown;
-    /** State değişince çağrılır; biliniyorsa action adı verilir. */
+    /** Called when the state changes; the action name is passed if known. */
     subscribe(listener: (action?: string) => void): () => void;
 };
 
@@ -18,20 +18,20 @@ export type StateAdapterOptions = {id?: string; title?: string};
 
 export type StateModuleOptions = {
     stores?: StateAdapter[];
-    /** Değişiklikler en fazla bu sıklıkta gönderilir (ms). Varsayılan 100. */
+    /** Changes are sent at most this often (ms). Default 100. */
     throttleMs?: number;
-    /** Fark bu kadar işlemi aşarsa tam state gönderilir. Varsayılan 500. */
+    /** If the diff exceeds this many operations, the full state is sent. Default 500. */
     maxPatchOps?: number;
 };
 
 export type StateModule = RemoteModule & {
-    /** Store ekler (aynı id varsa değiştirir). Dönen fonksiyon kaldırır. */
+    /** Adds a store (replaces one with the same id). The returned function removes it. */
     register(adapter: StateAdapter): () => void;
     unregister(id: string): void;
 };
 
 const MAX_DEPTH = 32;
-/** Bir aralıkta toplanan action adı sınırı (döngüde dispatch eden uygulamalar mesajı şişirmesin). */
+/** Limit on action names collected per interval (so apps dispatching in a loop don't bloat the message). */
 const MAX_ACTIONS = 50;
 
 const serialize = (value: unknown) => toSerializable(value, {maxDepth: MAX_DEPTH, omitFunctions: true});
@@ -40,7 +40,7 @@ const isFunction = (value: unknown) => typeof value === 'function';
 type Subscription = {
     adapter: StateAdapter;
     unsubscribe: () => void;
-    /** UI'a en son gönderilen ham state (fark buna göre hesaplanır). */
+    /** The raw state last sent to the UI (the diff is computed against it). */
     sent: unknown;
     actions: string[];
     timer: ReturnType<typeof setTimeout> | null;
@@ -48,8 +48,8 @@ type Subscription = {
 };
 
 /**
- * Uygulama state'ini (Redux, Zustand…) UI'da canlı gösterir. UI sadece State tab'ı açıkken abone olur;
- * abonelik yoksa store dinlenmez.
+ * Shows app state (Redux, Zustand…) live in the UI. The UI only subscribes while the State tab is open;
+ * without a subscription the store is not listened to.
  *
  *     const state = stateModule({stores: [zustandAdapter(useCartStore, {id: 'cart', title: 'Cart'})]});
  */
@@ -130,7 +130,7 @@ export function stateModule(options: StateModuleOptions = {}): StateModule {
                     sub.expiresAt = expiresAt;
                     return {};
                 }
-                // Yeni (veya yeniden bağlanan) bir UI: bekleyen değişiklikleri diğer UI'lara gönder, sonra tam state ver.
+                // A new (or reconnecting) UI: flush pending changes to the other UIs, then return the full state.
                 if (sub) {
                     if (sub.timer) clearTimeout(sub.timer);
                     flush(sub);
@@ -166,7 +166,7 @@ export function stateModule(options: StateModuleOptions = {}): StateModule {
     });
 }
 
-// ─── Hazır adapter'lar ───────────────────────────────────────────────────────
+// ─── Built-in adapters ───────────────────────────────────────────────────────
 
 type ReduxStoreLike = {
     getState(): unknown;
@@ -175,8 +175,8 @@ type ReduxStoreLike = {
 };
 
 /**
- * Redux store'u. Action adları için `store.dispatch` sarılır (abonelik süresince); middleware içinden yapılan
- * dispatch'ler (ör. thunk'ların içi) adsız görünür.
+ * A Redux store. `store.dispatch` is wrapped for action names (while subscribed); dispatches made from inside
+ * middleware (e.g. inside thunks) appear unnamed.
  */
 export function reduxAdapter(store: ReduxStoreLike, options: StateAdapterOptions = {}): StateAdapter {
     return {
@@ -210,7 +210,7 @@ type ZustandStoreLike = {
     subscribe(listener: (state: any, previous: any) => void): () => void;
 };
 
-/** Zustand store'u (v4 ve v5; `create` ile oluşturulan hook da olur). Fonksiyonlar (action'lar) gösterilmez. */
+/** A Zustand store (v4 and v5; the hook returned by `create` works too). Functions (actions) are not shown. */
 export function zustandAdapter(store: ZustandStoreLike, options: StateAdapterOptions = {}): StateAdapter {
     return {
         id: options.id ?? 'zustand',

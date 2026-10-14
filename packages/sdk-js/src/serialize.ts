@@ -1,13 +1,13 @@
 export type SerializeOptions = {
-    /** Bu derinlikten sonrası `[Object]` / `[Array]` olur. Varsayılan 8. */
+    /** Anything deeper than this becomes `[Object]` / `[Array]`. Default 8. */
     maxDepth?: number;
-    /** Fonksiyonları `[Function ad]` yerine tamamen atla (ör. Zustand store'larındaki action'lar). */
+    /** Omit functions entirely instead of `[Function name]` (e.g. actions in Zustand stores). */
     omitFunctions?: boolean;
 };
 
 /**
- * Log verisi ve modül payload'ları için JSON güvenli kopya: döngüler, Error'lar, fonksiyonlar, BigInt, Map/Set ve aşırı derin
- * yapılar `JSON.stringify`'ı patlatmasın diye dönüştürülür.
+ * JSON-safe copy for log data and module payloads: cycles, Errors, functions, BigInt, Map/Set and overly deep
+ * structures are converted so they don't break `JSON.stringify`.
  */
 export function toSerializable(value: unknown, options: number | SerializeOptions = {}): unknown {
     const {maxDepth = 8, omitFunctions = false} = typeof options === 'number' ? {maxDepth: options} : options;

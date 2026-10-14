@@ -15,7 +15,7 @@ export async function withRelay(overrides: Partial<RelayConfig>, fn: (relay: Run
 
 export type Msg = Envelope<string, any>;
 
-/** UI yerine geçen basit istemci (global WebSocket). */
+/** Simple client standing in for the UI (global WebSocket). */
 export type Ui = {
     send(type: string, payload?: unknown, extra?: {deviceId?: string}): string;
     next(type: string, timeoutMs?: number): Promise<Msg>;
@@ -111,7 +111,7 @@ export function waitForStatus(client: RemoteDevTools, status: ConnectionStatus, 
     });
 }
 
-/** UI + eşlenmiş istemci kurar, testi çalıştırır, temizler. */
+/** Sets up a UI + paired client, runs the test, cleans up. */
 export async function withPairedClient(modules: RemoteModule[], fn: (ui: Ui, deviceId: string) => Promise<void>, extra: Partial<RemoteDevToolsOptions> = {}) {
     await withRelay({}, async ({port}) => {
         const ui = await openUi(port);

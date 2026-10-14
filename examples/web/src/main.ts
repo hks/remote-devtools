@@ -17,7 +17,7 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 const DEV_KEY = 'example.isDevelopment';
 const isDevelopment = localStorage.getItem(DEV_KEY) === '1';
 
-// ─── Uygulama durumu (Functions tab'ından değiştirilir) ──────────────────────
+// ─── App state (changed from the Functions tab) ──────────────────────────────
 
 let counter = 0;
 const render = () => {
@@ -93,7 +93,7 @@ functions.register({
     },
 });
 
-// Bağlıyken eklenen fonksiyon UI'da hemen görünür.
+// A function registered while connected shows up in the UI immediately.
 let extraRegistered = false;
 functions.register({
     id: 'functions.toggleExtra',
@@ -147,7 +147,7 @@ const renderFlags = () => {
 };
 flags.subscribe(renderFlags);
 
-// ─── Özel panel (tüm blok tipleri) ────────────────────────────────────────────
+// ─── Custom panel (all block types) ───────────────────────────────────────────
 
 const panels = panelsModule();
 
@@ -257,7 +257,7 @@ devtools.connection.subscribe((state) => {
 });
 devtools.log.info('Example page loaded', {href: location.href});
 
-// ─── Kontroller ──────────────────────────────────────────────────────────────
+// ─── Controls ────────────────────────────────────────────────────────────────
 
 $<HTMLInputElement>('relay').value = `ws://${location.hostname}:8080`;
 $<HTMLInputElement>('dev').checked = isDevelopment;
@@ -283,7 +283,7 @@ for (const button of document.querySelectorAll<HTMLButtonElement>('[data-log]'))
 }
 $('console').onclick = () => console.warn('console.warn from the example page', {captured: true});
 
-// ─── Ağ istekleri (Network tab'ı) ─────────────────────────────────────────────
+// ─── Network requests (Network tab) ───────────────────────────────────────────
 
 const relayHttp = () => $<HTMLInputElement>('relay').value.replace(/^ws/, 'http');
 $('net-ok').onclick = () => void fetch(`${relayHttp()}/health`).then((r) => r.json());
@@ -297,7 +297,7 @@ $('net-xhr').onclick = () => {
     xhr.send();
 };
 
-// ─── Storage ve state kontrolleri ─────────────────────────────────────────────
+// ─── Storage and state controls ───────────────────────────────────────────────
 
 $('storage-write').onclick = () => {
     localStorage.setItem('example.lastClick', JSON.stringify({at: new Date().toISOString(), counter}));

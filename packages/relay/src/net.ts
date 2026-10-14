@@ -1,7 +1,7 @@
 import type {IncomingMessage} from 'node:http';
 import {isIPv4} from 'node:net';
 
-/** İsteğin geldiği istemci adresi. `trustProxy` ise `X-Forwarded-For`'un ilk girdisi kullanılır. */
+/** Client address of the request. With `trustProxy`, the first `X-Forwarded-For` entry is used. */
 export function clientAddress(req: IncomingMessage, trustProxy: boolean): string {
     if (trustProxy) {
         const header = req.headers['x-forwarded-for'];
@@ -11,7 +11,7 @@ export function clientAddress(req: IncomingMessage, trustProxy: boolean): string
     return req.socket.remoteAddress ?? '';
 }
 
-/** Loopback, özel ağ (RFC 1918), link-local ve IPv6 ULA adresleri. */
+/** Loopback, private network (RFC 1918), link-local and IPv6 ULA addresses. */
 export function isLocalAddress(address: string): boolean {
     const ip = address.replace(/^::ffff:/i, '').toLowerCase();
     if (isIPv4(ip)) {
@@ -21,7 +21,7 @@ export function isLocalAddress(address: string): boolean {
     return ip === '::1' || /^f[cd][0-9a-f]{2}:/.test(ip) || /^fe[89ab][0-9a-f]:/.test(ip);
 }
 
-/** Pencere içindeki başarısız denemeleri anahtar (IP) bazında sayar. */
+/** Counts failed attempts within the window per key (IP). */
 export class FailureLimiter {
     readonly #hits = new Map<string, number[]>();
     readonly #limit: number;
@@ -52,7 +52,7 @@ export class FailureLimiter {
         this.#hits.set(key, hits);
     }
 
-    /** Süresi geçmiş kayıtları temizler. */
+    /** Removes expired entries. */
     prune(): void {
         for (const key of [...this.#hits.keys()]) this.#recent(key);
     }

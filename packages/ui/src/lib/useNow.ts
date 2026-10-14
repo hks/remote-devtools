@@ -1,6 +1,6 @@
 import {useEffect, useState} from 'react';
 
-/** Belirtilen aralıkla yeniden render tetikleyen saat. */
+/** Clock that triggers a re-render at the given interval. */
 export function useNow(intervalMs = 1000): number {
     const [now, setNow] = useState(() => Date.now());
     useEffect(() => {

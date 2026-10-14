@@ -1,10 +1,10 @@
 /**
- * Yayınlanan kütüphane paketlerini (protocol, SDK) derler. Paket klasöründen çalıştırılır:
+ * Builds the published library packages (protocol, SDK). Run from the package directory:
  *
  *   node ../../scripts/build-lib.ts
  *
- * Çıktı: dist/index.js (ESM), dist/index.cjs (CommonJS), dist/*.d.ts.
- * Workspace içinde paketler kaynak `.ts` dosyalarını export eder; yayında `publishConfig` bu çıktıları gösterir.
+ * Output: dist/index.js (ESM), dist/index.cjs (CommonJS), dist/*.d.ts.
+ * Inside the workspace packages export their `.ts` sources; when published, `publishConfig` points to these outputs.
  */
 import {execFileSync} from 'node:child_process';
 import {readdirSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
@@ -18,14 +18,14 @@ const outdir = join(cwd, 'dist');
 
 rmSync(outdir, {recursive: true, force: true});
 
-// React Native (Hermes) ve eski tarayıcılar için ES2020: private alanlar ve `??=` gibi sözdizimi indirgenir.
+// ES2020 for React Native (Hermes) and older browsers: syntax like private fields and `??=` is downleveled.
 const common = {entryPoints: ['src/index.ts'], bundle: true, external, target: 'es2020', platform: 'neutral', sourcemap: true, logLevel: 'warning'} as const;
 await build({...common, format: 'esm', outfile: join(outdir, 'index.js')});
 await build({...common, format: 'cjs', outfile: join(outdir, 'index.cjs')});
 
 execFileSync('npx', ['tsc', '-p', 'tsconfig.build.json'], {cwd, stdio: 'inherit'});
 
-// `.d.ts` dosyalarındaki `./x.ts` importları yayında `./x.js` olmalı.
+// `./x.ts` imports in `.d.ts` files must be `./x.js` when published.
 for (const file of walk(outdir).filter((f) => f.endsWith('.d.ts'))) {
     const text = readFileSync(file, 'utf8').replace(/(from\s+['"]\.{1,2}\/[^'"]+)\.ts(['"])/g, '$1.js$2');
     writeFileSync(file, text);

@@ -1,6 +1,6 @@
 import type {HistoryEntry} from '@himmetkaan/remote-devtools-protocol';
 
-/** Bağlantı öncesi mesajlar için sabit boyutlu halka tampon; dolunca en eskisi düşer. */
+/** Fixed-size ring buffer for messages sent before connecting; when full, the oldest is dropped. */
 export class HistoryBuffer {
     readonly #max: number;
     #entries: HistoryEntry[] = [];
@@ -19,7 +19,7 @@ export class HistoryBuffer {
         if (this.#entries.length > this.#max) this.#entries.splice(0, this.#entries.length - this.#max);
     }
 
-    /** Tamponu boşaltır ve içeriğini, her biri yaklaşık `maxBytes`'ı geçmeyen parçalara bölünmüş olarak döner. */
+    /** Empties the buffer and returns its contents split into chunks of roughly at most `maxBytes` each. */
     drain(maxBytes: number): HistoryEntry[][] {
         const chunks: HistoryEntry[][] = [];
         let current: HistoryEntry[] = [];

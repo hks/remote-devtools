@@ -1,27 +1,27 @@
 import {type CommandDef, type Fields, validateArgs} from '@himmetkaan/remote-devtools-protocol';
 import {defineModule, type ModuleContext, ModuleError, type RemoteModule} from '../module.ts';
 
-/** `args` tanımından handler'ın göreceği argüman tipi (yaklaşık). */
+/** The argument type the handler receives, derived from the `args` definition (approximate). */
 type ArgsOf<F extends Fields | undefined> = F extends Fields
     ? {[K in keyof F]: F[K] extends {type: 'number'} ? number : F[K] extends {type: 'boolean'} ? boolean : F[K] extends {type: 'text'} ? string : unknown}
     : Record<string, never>;
 
 export type FunctionDef<F extends Fields | undefined = Fields | undefined> = Omit<CommandDef, 'args'> & {
     args?: F;
-    /** Dönen değer (veya Promise) UI'da sonuç olarak gösterilir. Fırlatılan hata başarısızlık olarak raporlanır. */
+    /** The return value (or Promise) is shown as the result in the UI. A thrown error is reported as a failure. */
     handler(args: ArgsOf<F>): unknown;
 };
 
 export type FunctionsModule = RemoteModule & {
-    /** Fonksiyonu kaydeder (aynı id varsa değiştirir). SDK bağlıysa UI hemen güncellenir. Dönen fonksiyon kaydı siler. */
+    /** Registers a function (replaces one with the same id). If the SDK is connected, the UI updates immediately. The returned function unregisters it. */
     register<F extends Fields | undefined>(def: FunctionDef<F>): () => void;
     unregister(id: string): void;
-    /** Kayıtlı fonksiyon id'leri. */
+    /** Ids of registered functions. */
     list(): string[];
 };
 
 /**
- * UI'ın Functions tab'ında görünen, uygulamanın tanımladığı fonksiyonlar.
+ * App-defined functions shown in the UI's Functions tab.
  *
  *     const functions = functionsModule();
  *     RemoteDevTools.init({..., modules: [functions]});

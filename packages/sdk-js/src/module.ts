@@ -6,35 +6,35 @@ export type LogOptions = { tag?: string };
 export type Logger = Record<LogLevel, (message: string, data?: unknown, options?: LogOptions) => void>;
 
 export type EmitOptions = {
-    /** Bağlı değilken `history` açıksa tampona alınsın mı (varsayılan `true`). */
+    /** Whether to buffer while disconnected when `history` is enabled (default `true`). */
     buffer?: boolean;
 };
 
 export type ModuleContext = {
     readonly deviceId: string;
     isConnected(): boolean;
-    /** Mesajı UI'a gönderir. Tip `module.<modül adı>.` ile başlamalıdır. */
+    /** Sends a message to the UI. The type must start with `module.<module name>.`. */
     emit(type: string, payload: unknown, options?: EmitOptions): void;
     /**
-     * UI'dan gelen bir isteği karşılar. Dönen değer (veya Promise) `module.<modül adı>.result` ile `{ok:true, result}` olarak,
-     * fırlatılan hata `{ok:false, error}` olarak cevaplanır.
+     * Handles a request from the UI. The return value (or Promise) is answered via `module.<module name>.result` as `{ok:true, result}`,
+     * a thrown error as `{ok:false, error}`.
      */
     handle<P = any>(type: string, handler: (payload: P, message: Envelope<string, P>) => unknown): void;
-    /** Cevap beklemeyen UI mesajlarını dinler. */
+    /** Listens for UI messages that expect no reply. */
     on<P = any>(type: string, listener: (payload: P, message: Envelope<string, P>) => void): void;
-    /** `capabilities()` değiştiğinde çağrılır; bağlıysa UI'a `capabilities.update` gider, değilse bir sonraki `hello`'ya girer. */
+    /** Call when `capabilities()` changes; if connected, `capabilities.update` is sent to the UI, otherwise it goes into the next `hello`. */
     updateCapabilities(): void;
-    /** SDK'nın `storage` seçeneği; anahtarlar modüle özel bir önekle saklanır (ör. flag override'ları). */
+    /** The SDK's `storage` option; keys are stored under a module-specific prefix (e.g. flag overrides). */
     storage: KeyValueStorage;
     log: Logger;
 };
 
 export type RemoteModule = {
-    /** `hello.capabilities` anahtarı ve mesaj ad alanı (`module.<name>.*`). */
+    /** The `hello.capabilities` key and the message namespace (`module.<name>.*`). */
     name: string;
-    /** UI'a bildirilen yetenek bilgisi. Tanımlanmazsa modül `{}` ile bildirilir. */
+    /** Capabilities reported to the UI. If not defined, the module is reported with `{}`. */
     capabilities?(): unknown;
-    /** SDK etkinse bir kez çağrılır. Dönen fonksiyon `destroy()`'da çağrılır. Global yamalar (fetch vb.) burada yapılmalıdır. */
+    /** Called once if the SDK is enabled. The returned function is called on `destroy()`. Global patches (fetch etc.) belong here. */
     setup?(ctx: ModuleContext): void | (() => void);
 };
 
@@ -42,7 +42,7 @@ export function defineModule<M extends RemoteModule>(module: M): M {
     return module;
 }
 
-/** Handler'dan fırlatılınca UI'a belirtilen kodla iletilir. */
+/** When thrown from a handler, it is forwarded to the UI with the given code. */
 export class ModuleError extends Error {
     readonly code: string;
 

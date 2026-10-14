@@ -16,7 +16,7 @@ function bodyText(body: unknown): string | null {
 const shellQuote = (value: string) => `'${value.replace(/'/g, `'\\''`)}'`;
 
 export function toCurl(request: NetworkRequest): string {
-    // Her satır bir seçenek (bayrak + değeri birlikte).
+    // One option per line (flag and its value together).
     const lines = [`curl ${shellQuote(request.url)}`];
     if (request.method !== 'GET') lines.push(`-X ${request.method}`);
     for (const {name, value} of headerEntries(request.headers)) {
@@ -27,7 +27,7 @@ export function toCurl(request: NetworkRequest): string {
     return lines.join(' \\\n  ');
 }
 
-/** Tek kaydın tamamı (istek + yanıt) — "JSON olarak kopyala". */
+/** A single entry in full (request + response) — "Copy as JSON". */
 export function toEntryJson(row: NetworkRow): string {
     return JSON.stringify({request: row.request, response: row.response}, null, 2);
 }
@@ -44,7 +44,7 @@ export function toJsonExport(rows: NetworkRow[]): string {
     );
 }
 
-/** HAR 1.2 — Chrome DevTools, Charles, Proxyman vb. ile açılabilir. */
+/** HAR 1.2 — can be opened in Chrome DevTools, Charles, Proxyman, etc. */
 export function toHar(rows: NetworkRow[]): string {
     const entries = rows
         .filter((r): r is NetworkRow & {request: NetworkRequest} => r.request !== null)
@@ -57,7 +57,7 @@ export function toHar(rows: NetworkRow[]): string {
             try {
                 queryString = [...new URL(url).searchParams].map(([name, value]) => ({name, value}));
             } catch {
-                // Göreli URL — query çıkarılamaz.
+                // Relative URL — query can't be extracted.
             }
             const time = response?.durationMs ?? 0;
             const contentType = (key: Record<string, string> | null | undefined) =>

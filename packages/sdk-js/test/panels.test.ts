@@ -76,7 +76,7 @@ describe('panelsModule', () => {
             panel.update('stats', {items: [{label: 'Pending', value: 3}]});
             assert.deepEqual((await ui.next('module.panels.update')).payload, {panelId: 'queue', blockId: 'stats', data: {items: [{label: 'Pending', value: 3}]}});
 
-            // Aksiyonlar güncellenirse handler'lar UI'a gitmez.
+            // When actions are updated, handlers are not sent to the UI.
             panel.update('tools', {actions: [{id: 'retry', label: 'Retry', handler: () => 'ok'}]});
             assert.deepEqual((await ui.next('module.panels.update')).payload.data, {actions: [{id: 'retry', label: 'Retry'}]});
 
@@ -85,7 +85,7 @@ describe('panelsModule', () => {
 
             panel.remove();
             assert.deepEqual((await ui.next('capabilities.update')).payload.panels, []);
-            panel.update('stats', {items: []}); // kaldırılmış panel: sessizce yok sayılır
+            panel.update('stats', {items: []}); // removed panel: silently ignored
             await ui.none('module.panels.update');
         });
     });

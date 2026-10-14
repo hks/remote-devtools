@@ -10,7 +10,7 @@ export function startNetworkIngest() {
         if (msg.type === 'module.network.request') network.addRequest(msg.deviceId, msg.payload as NetworkRequest, origin);
         else if (msg.type === 'module.network.response') network.addResponse(msg.deviceId, msg.payload as NetworkResponse, origin);
     });
-    // Eşleşmesi kaldırılan cihazın istekleri bellekte kalmasın.
+    // Don't keep requests of an unpaired device in memory.
     useDevtoolsStore.subscribe((s, prev) => {
         if (s.devices === prev.devices) return;
         for (const deviceId of Object.keys(prev.devices)) if (!s.devices[deviceId]) useNetworkStore.getState().removeDevice(deviceId);

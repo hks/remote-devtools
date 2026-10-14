@@ -1,13 +1,13 @@
 import {type ActionDef, type Block, type PanelDef, validateArgs} from '@himmetkaan/remote-devtools-protocol';
 import {defineModule, type ModuleContext, ModuleError, type RemoteModule} from '../module.ts';
 
-/** Dönen değer (veya Promise) UI'da sonuç olarak gösterilir; fırlatılan hata başarısızlık olarak raporlanır. */
+/** The return value (or Promise) is shown as the result in the UI; a thrown error is reported as a failure. */
 export type PanelAction = ActionDef & {handler(): unknown};
 export type PanelRowAction<Row = Record<string, unknown>> = ActionDef & {handler(row: Row): unknown};
 
 type BlockOf<T extends Block['type']> = Extract<Block, {type: T}>;
 
-/** SDK tarafındaki blok tanımı: protokoldeki blokla aynı, aksiyonlarda ve form gönderiminde handler var. */
+/** SDK-side block definition: same as the protocol block, but actions and form submit carry a handler. */
 export type PanelBlock =
     | BlockOf<'text'>
     | BlockOf<'stats'>
@@ -17,22 +17,22 @@ export type PanelBlock =
     | (Omit<BlockOf<'actions'>, 'actions'> & {actions: PanelAction[]})
     | (Omit<BlockOf<'form'>, 'submit'> & {submit: {label: string; danger?: boolean; handler(values: Record<string, any>): unknown}});
 
-/** `update` ile değiştirilebilen alanlar (bloğun tipine göre). */
+/** Fields that can be changed with `update` (depending on the block type). */
 export type PanelBlockData = PanelBlock extends infer B ? (B extends PanelBlock ? Partial<Omit<B, 'id' | 'type'>> : never) : never;
 
 export type PanelOptions = {id: string; title: string; icon?: string; blocks: PanelBlock[]};
 
 export type Panel = {
     readonly id: string;
-    /** Bloğun verilen alanlarını değiştirir (ör. `{rows}`); bağlıysa UI hemen güncellenir. */
+    /** Changes the given fields of a block (e.g. `{rows}`); if connected, the UI updates immediately. */
     update(blockId: string, data: PanelBlockData): void;
-    /** Tüm blokları değiştirir (blok eklemek/çıkarmak için). */
+    /** Replaces all blocks (to add/remove blocks). */
     setBlocks(blocks: PanelBlock[]): void;
     remove(): void;
 };
 
 export type PanelsModule = RemoteModule & {
-    /** Panel tanımlar (aynı id varsa değiştirir). Her panel UI'da ayrı bir tab olur. */
+    /** Defines a panel (replaces one with the same id). Each panel becomes its own tab in the UI. */
     define(options: PanelOptions): Panel;
     remove(id: string): void;
 };
@@ -42,7 +42,7 @@ const BLOCK_TYPES = new Set<Block['type']>(['text', 'stats', 'keyValue', 'json',
 
 const stripHandler = ({handler: _handler, ...action}: ActionDef & {handler?: unknown}): ActionDef => action;
 
-/** Handler'ları atar; UI'a giden blok. */
+/** Strips handlers; the block sent to the UI. */
 function toWire(block: PanelBlock): Block {
     switch (block.type) {
         case 'actions':
@@ -71,7 +71,7 @@ function checkBlocks(panelId: string, blocks: PanelBlock[]) {
 }
 
 /**
- * App'in tanımladığı özel paneller; her panel UI'da ayrı bir tab olur. Bloklar: text, stats, keyValue, json, table,
+ * Custom panels defined by the app; each panel becomes its own tab in the UI. Blocks: text, stats, keyValue, json, table,
  * actions, form.
  *
  *     const panels = panelsModule();
@@ -161,7 +161,7 @@ export function panelsModule(): PanelsModule {
                     if (index < 0) throw new Error(`Panel "${panel.id}" has no block "${blockId}"`);
                     const next = {...panel.blocks[index], ...data} as PanelBlock;
                     panel.blocks[index] = next;
-                    // Sadece değişen alanlar gider (handler'lar atılmış hâliyle).
+                    // Only the changed fields are sent (with handlers stripped).
                     const wire = toWire(next) as Record<string, unknown>;
                     const payload = Object.fromEntries(Object.keys(data).filter((key) => key in wire).map((key) => [key, wire[key]]));
                     ctx?.emit('module.panels.update', {panelId: panel.id, blockId, data: payload}, {buffer: false});

@@ -1,6 +1,6 @@
 /**
- * Eşleşme bilgisi ve cihaz kimliği için anahtar-değer deposu.
- * AsyncStorage (React Native) ve `localStorage` (tarayıcı) bu arayüze doğrudan uyar.
+ * Key-value store for the pairing and the device id.
+ * AsyncStorage (React Native) and `localStorage` (browser) fit this interface directly.
  */
 export type KeyValueStorage = {
     getItem(key: string): string | null | Promise<string | null>;
@@ -8,7 +8,7 @@ export type KeyValueStorage = {
     removeItem(key: string): void | Promise<void>;
 };
 
-/** Sadece bellekte tutar; uygulama kapanınca eşleşme unutulur. */
+/** In-memory only; the pairing is forgotten when the app closes. */
 export function memoryStorage(): KeyValueStorage {
     const data = new Map<string, string>();
     return {
@@ -18,7 +18,7 @@ export function memoryStorage(): KeyValueStorage {
     };
 }
 
-/** Tarayıcıda `localStorage`, yoksa (ör. Node, gizli mod kısıtı) bellek. */
+/** `localStorage` in the browser, otherwise (e.g. Node, private-mode restrictions) in-memory. */
 export function defaultStorage(): KeyValueStorage {
     try {
         const ls = (globalThis as {localStorage?: Storage}).localStorage;
@@ -29,7 +29,7 @@ export function defaultStorage(): KeyValueStorage {
             return ls;
         }
     } catch {
-        // erişim engelli
+        // access denied
     }
     return memoryStorage();
 }

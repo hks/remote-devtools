@@ -1,5 +1,5 @@
-// macOS: Info.plist değiştiği için Electron'un hazır imzası bozulur. Apple Silicon geçerli imza ister;
-// sertifikasız ad-hoc imza (`-`) yeterli. Diğer platformlarda bir şey yapmaz.
+// macOS: changing Info.plist breaks Electron's prebuilt signature. Apple Silicon requires a valid signature;
+// a certificate-less ad-hoc signature (`-`) is enough. Does nothing on other platforms.
 import {execFileSync} from 'node:child_process';
 import {join} from 'node:path';
 

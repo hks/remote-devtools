@@ -4,23 +4,23 @@ import {defineModule, type ModuleContext, ModuleError, type RemoteModule} from '
 type Awaitable<T> = T | Promise<T>;
 
 /**
- * Storage tab'ında görünen bir anahtar-değer deposu. Değerler metindir. `set` / `remove` yoksa depo salt okunurdur.
- * Hazır adapter'lar: `asyncStorageAdapter`, `mmkvAdapter`, `webStorageAdapter`, `secureStoreAdapter`.
+ * A key-value store shown in the Storage tab. Values are strings. Without `set` / `remove` the store is read-only.
+ * Built-in adapters: `asyncStorageAdapter`, `mmkvAdapter`, `webStorageAdapter`, `secureStoreAdapter`.
  */
 export type StorageAdapter = {
     id: string;
     title: string;
     keys(): Awaitable<readonly string[]>;
     get(key: string): Awaitable<string | null | undefined>;
-    /** Birden çok anahtarı tek seferde okur (ör. AsyncStorage `multiGet`). Yoksa `get` tek tek çağrılır. */
+    /** Reads multiple keys at once (e.g. AsyncStorage `multiGet`). Otherwise `get` is called per key. */
     getMany?(keys: readonly string[]): Awaitable<(string | null | undefined)[]>;
     set?(key: string, value: string): Awaitable<void>;
     remove?(key: string): Awaitable<void>;
-    /** Yoksa listelenen anahtarlar tek tek silinir. */
+    /** Otherwise the listed keys are removed one by one. */
     clear?(): Awaitable<void>;
-    /** Depo dışarıdan değiştiğinde haber verir (`null` = birden çok anahtar). UI açık listeyi yeniler. */
+    /** Notifies when the store changes externally (`null` = multiple keys). The UI refreshes the open list. */
     subscribe?(listener: (key: string | null) => void): () => void;
-    /** Değerler hassas: listede önizleme gönderilmez, UI değeri gizli gösterir. */
+    /** Values are sensitive: no preview is sent in the list, and the UI shows the value masked. */
     masked?: boolean;
 };
 
@@ -29,7 +29,7 @@ export type StorageAdapterOptions = {id?: string; title?: string};
 export type StorageModuleOptions = {adapters?: StorageAdapter[]};
 
 export type StorageModule = RemoteModule & {
-    /** Adapter ekler (aynı id varsa değiştirir). Dönen fonksiyon kaldırır. */
+    /** Adds an adapter (replaces one with the same id). The returned function removes it. */
     register(adapter: StorageAdapter): () => void;
     unregister(id: string): void;
 };
@@ -39,7 +39,7 @@ const PREVIEW_LENGTH = 120;
 const isEditable = (a: StorageAdapter) => typeof a.set === 'function' && typeof a.remove === 'function';
 
 /**
- * Uygulamanın depolarını (AsyncStorage, MMKV, localStorage…) UI'da listeler, düzenler ve siler.
+ * Lists, edits and deletes the app's stores (AsyncStorage, MMKV, localStorage…) from the UI.
  *
  *     const storage = storageModule({adapters: [asyncStorageAdapter(AsyncStorage), mmkvAdapter(mmkv)]});
  */
@@ -65,7 +65,7 @@ export function storageModule(options: StorageModuleOptions = {}): StorageModule
         return adapter;
     };
 
-    /** Kendi değişikliklerimizi, kendisi haber vermeyen depolar için diğer UI'lara bildir. */
+    /** Report our own changes to other UIs for stores that don't notify on their own. */
     const changed = (adapter: StorageAdapter, key: string | null) => {
         if (!adapter.subscribe) ctx?.emit('module.storage.changed', {adapterId: adapter.id, key}, {buffer: false});
     };
@@ -157,9 +157,9 @@ export function storageModule(options: StorageModuleOptions = {}): StorageModule
     });
 }
 
-// ─── Hazır adapter'lar (SDK bu paketleri import etmez; örnekleri verilir) ─────
+// ─── Built-in adapters (the SDK doesn't import these packages; instances are passed in) ─────
 
-/** `@react-native-async-storage/async-storage` default export'unun kullanılan kısmı. */
+/** The used part of the `@react-native-async-storage/async-storage` default export. */
 type AsyncStorageLike = {
     getAllKeys(): Promise<readonly string[]>;
     getItem(key: string): Promise<string | null>;
@@ -169,7 +169,7 @@ type AsyncStorageLike = {
     multiRemove?(keys: readonly string[]): Promise<void>;
 };
 
-/** React Native AsyncStorage. `clear` sadece listelenen anahtarları siler (`AsyncStorage.clear()` çağrılmaz). */
+/** React Native AsyncStorage. `clear` only removes the listed keys (`AsyncStorage.clear()` is not called). */
 export function asyncStorageAdapter(storage: AsyncStorageLike, options: StorageAdapterOptions = {}): StorageAdapter {
     return {
         id: options.id ?? 'async-storage',
@@ -183,7 +183,7 @@ export function asyncStorageAdapter(storage: AsyncStorageLike, options: StorageA
     };
 }
 
-/** `react-native-mmkv` instance'ının kullanılan kısmı (v3: `delete`, v4: `remove`). */
+/** The used part of a `react-native-mmkv` instance (v3: `delete`, v4: `remove`). */
 type MmkvLike = {
     getAllKeys(): string[];
     getString(key: string): string | undefined;
@@ -198,8 +198,8 @@ type MmkvLike = {
 };
 
 /**
- * react-native-mmkv (v3 ve v4). Değerler metin olarak okunur; metin olmayan değerler sayıya, sonra boolean'a çevrilmeye
- * çalışılır. Düzenleme her zaman metin yazar.
+ * react-native-mmkv (v3 and v4). Values are read as strings; non-string values are tried as a number, then as a
+ * boolean. Editing always writes a string.
  */
 export function mmkvAdapter(mmkv: MmkvLike, options: StorageAdapterOptions = {}): StorageAdapter {
     return {
@@ -231,8 +231,8 @@ export function mmkvAdapter(mmkv: MmkvLike, options: StorageAdapterOptions = {})
 }
 
 /**
- * Tarayıcıda `localStorage` (varsayılan) veya `sessionStorage`. Başka sekmelerden gelen değişiklikler (`storage` olayı)
- * UI'a bildirilir; aynı sayfadaki yazmalar için Storage tab'ındaki Refresh kullanılır.
+ * `localStorage` (default) or `sessionStorage` in the browser. Changes from other tabs (the `storage` event) are
+ * reported to the UI; for writes on the same page, use Refresh in the Storage tab.
  */
 export function webStorageAdapter(storage?: Storage, options: StorageAdapterOptions = {}): StorageAdapter {
     const target = storage ?? (globalThis as {localStorage?: Storage}).localStorage;
@@ -258,12 +258,12 @@ export function webStorageAdapter(storage?: Storage, options: StorageAdapterOpti
     };
 }
 
-/** `expo-secure-store` modülünün kullanılan kısmı. */
+/** The used part of the `expo-secure-store` module. */
 type SecureStoreLike = {getItemAsync(key: string): Promise<string | null>};
 
 /**
- * expo-secure-store, salt okunur ve maskeli. SecureStore anahtarları listeleyemediği için gösterilecek anahtarlar verilmelidir;
- * değeri olmayanlar listede görünmez.
+ * expo-secure-store, read-only and masked. SecureStore can't list keys, so the keys to show must be provided;
+ * keys without a value don't appear in the list.
  */
 export function secureStoreAdapter(secureStore: SecureStoreLike, options: StorageAdapterOptions & {keys: readonly string[]}): StorageAdapter {
     return {

@@ -1,8 +1,8 @@
 import type {Field, Fields, SelectOption} from '@himmetkaan/remote-devtools-protocol';
 
 /**
- * Field DSL (docs/v2/PROTOCOL.md §6) için form durumu.
- * Form değerleri input'ların ham hâlidir (sayılar ve JSON metin olarak); gönderirken `toArgs` ile dönüştürülür.
+ * Form state for the Field DSL (docs/v2/PROTOCOL.md §6).
+ * Form values are the raw input values (numbers and JSON as text); converted with `toArgs` on submit.
  */
 export type FormValues = Record<string, string | boolean>;
 export type FormErrors = Record<string, string>;
@@ -32,7 +32,7 @@ function initialValue(field: Field): string | boolean {
     }
 }
 
-/** Mevcut bir değeri (ör. flag'in geçerli değeri) form değerine çevirir. */
+/** Converts an existing value (e.g. a flag's current value) to a form value. */
 export function toFormValue(field: Field, value: unknown): string | boolean {
     if (value === undefined || value === null) return initialValue(field);
     switch (field.type) {
@@ -53,7 +53,7 @@ export function fieldLabel(key: string, field: Field): string {
     return field.label ?? key;
 }
 
-/** Form değerlerini cihaza gönderilecek argümanlara çevirir; hatalıysa `errors` doludur. Boş opsiyonel alanlar gönderilmez. */
+/** Converts form values to the args sent to the device; `errors` is filled if invalid. Empty optional fields are omitted. */
 export function toArgs(fields: Fields, values: FormValues): {args: Record<string, unknown>; errors: FormErrors} {
     const args: Record<string, unknown> = {};
     const errors: FormErrors = {};
@@ -83,7 +83,7 @@ export function toArgs(fields: Fields, values: FormValues): {args: Record<string
                 break;
             }
             case 'select': {
-                // Seçenek değeri sayı olabilir; <select> her zaman metin döner.
+                // Option values may be numbers; <select> always returns text.
                 const match = field.options.map(optionValue).find((v) => String(v) === text);
                 if (match === undefined) errors[key] = 'Not one of the options';
                 else args[key] = match;

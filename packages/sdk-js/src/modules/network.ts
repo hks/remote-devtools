@@ -3,18 +3,18 @@ import {randomDeviceId} from '../connection.ts';
 import {defineModule, type ModuleContext, type RemoteModule} from '../module.ts';
 
 export type NetworkModuleOptions = {
-    /** fetch/XHR'ı otomatik yakala (varsayılan `true`). Kapalıyken sadece `record()` ve `axios()` ile kayıt düşülür. */
+    /** Automatically capture fetch/XHR (default `true`). When off, only `record()` and `axios()` record entries. */
     autoCapture?: boolean;
     /**
-     * Global `fetch`'i yakala. Varsayılan: React Native dışında `true`.
-     * React Native'de `fetch` zaten XMLHttpRequest üzerinden çalışır; ikisini birden yakalamak her isteği iki kez gösterir.
+     * Capture the global `fetch`. Default: `true` outside React Native.
+     * On React Native `fetch` already runs on XMLHttpRequest; capturing both would show every request twice.
      */
     captureFetch?: boolean;
-    /** `XMLHttpRequest`'i yakala (axios ve RN'deki fetch dahil). Varsayılan `true`. */
+    /** Capture `XMLHttpRequest` (including axios and fetch on RN). Default `true`. */
     captureXhr?: boolean;
-    /** Bu adreslere giden istekler kaydedilmez. Varsayılan olarak Metro'nun `/symbolicate` istekleri hariç tutulur. */
+    /** Requests to these URLs are not recorded. Metro's `/symbolicate` requests are excluded by default. */
     ignoreUrls?: (string | RegExp)[];
-    /** Bu boyutu (karakter) aşan istek/yanıt gövdeleri kısaltılır. Varsayılan 1 MB. */
+    /** Request/response bodies longer than this (in characters) are truncated. Default 1 MB. */
     maxBodySize?: number;
 };
 
@@ -22,7 +22,7 @@ export type ManualResponse = {
     status?: number | null;
     headers?: Record<string, unknown> | null;
     body?: unknown;
-    /** Verilirse istek başarısız sayılır (ağ hatası vb.). */
+    /** If set, the request is considered failed (network error etc.). */
     error?: string | null;
 };
 
@@ -33,7 +33,7 @@ export type ManualRequest = {
     body?: unknown;
 };
 
-/** axios instance'ının ihtiyaç duyduğumuz kısmı (SDK axios'u import etmez). */
+/** The part of an axios instance we need (the SDK doesn't import axios). */
 type AxiosLike = {
     interceptors: {
         request: {use(onFulfilled: (config: any) => any): number; eject(id: number): void};
@@ -42,13 +42,13 @@ type AxiosLike = {
 };
 
 export type NetworkModule = RemoteModule & {
-    /** Elle kayıt (ör. kendi HTTP katmanı olan uygulamalar). Dönen nesneyle cevap kaydedilir. */
+    /** Manual recording (e.g. apps with their own HTTP layer). Record the response with the returned object. */
     record(request: ManualRequest): {response(response: ManualResponse): void};
-    /** axios instance'ına interceptor ekler (otomatik yakalama kapalıyken). Dönen fonksiyon interceptor'ları kaldırır. */
+    /** Adds interceptors to an axios instance (when auto-capture is off). The returned function removes them. */
     axios(instance: AxiosLike): () => void;
 };
 
-/** Yamalanmış fetch'te orijinali tutar; SDK'nın kendi istekleri (keşif) bunu kullanır. */
+/** Holds the original on the patched fetch; the SDK's own requests (discovery) use it. */
 export const ORIGINAL_FETCH = Symbol.for('remote-devtools.original-fetch');
 const XHR_STATE = Symbol.for('remote-devtools.xhr-state');
 
@@ -57,7 +57,7 @@ const DEFAULT_MAX_BODY = 1024 * 1024;
 
 const isReactNative = () => (globalThis as {navigator?: {product?: string}}).navigator?.product === 'ReactNative';
 
-// ─── Gövde ve başlık dönüşümleri ─────────────────────────────────────────────
+// ─── Body and header conversions ─────────────────────────────────────────────
 
 function resolveUrl(url: string): string {
     try {
@@ -92,20 +92,20 @@ function parseRawHeaders(raw: string): Record<string, string> {
     return out;
 }
 
-/** Metin gövdeyi JSON'a çevirmeyi dener; değilse metin olarak bırakır. */
+/** Tries to parse a text body as JSON; otherwise leaves it as text. */
 function parseText(text: string): unknown {
     const trimmed = text.trimStart();
     if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
         try {
             return JSON.parse(text);
         } catch {
-            // JSON değil
+            // not JSON
         }
     }
     return text;
 }
 
-/** fetch/XHR'a verilen istek gövdesini gösterilebilir bir değere çevirir. */
+/** Converts a request body passed to fetch/XHR into a displayable value. */
 function describeBody(body: unknown): unknown {
     if (body === undefined || body === null) return null;
     if (typeof body === 'string') return parseText(body);
@@ -138,12 +138,12 @@ function safeStringify(value: unknown): string | null {
 
 const isError = (status: number | null) => status === null || status === 0 || status >= 400;
 
-// ─── Modül ───────────────────────────────────────────────────────────────────
+// ─── Module ──────────────────────────────────────────────────────────────────
 
 /**
- * Network tab'ı için istek/yanıt kaydı.
+ * Request/response recording for the Network tab.
  *
- *     const network = networkModule();                 // fetch + XHR otomatik
+ *     const network = networkModule();                 // fetch + XHR automatically
  *     RemoteDevTools.init({..., modules: [network]});
  */
 export function networkModule(options: NetworkModuleOptions = {}): NetworkModule {
@@ -164,7 +164,7 @@ export function networkModule(options: NetworkModuleOptions = {}): NetworkModule
         ctx?.emit('module.network.response', truncated ? {...response, body, bodyTruncated: truncated} : {...response, body});
     }
 
-    /** `headers`: düz nesne, `Headers` veya `[ad, değer][]` olabilir (fetch/XHR/axios). */
+    /** `headers`: may be a plain object, `Headers` or `[name, value][]` (fetch/XHR/axios). */
     function start(input: Omit<ManualRequest, 'headers'> & {headers?: unknown}): {uuid: string; startedAt: number} | null {
         const url = resolveUrl(input.url);
         if (!ctx || ignored(url)) return null;
@@ -216,7 +216,7 @@ export function networkModule(options: NetworkModuleOptions = {}): NetworkModule
             if (contentType.includes('text/event-stream')) {
                 finish(started, {status: response.status, headers, body: '[event stream]'});
             } else {
-                // Gövde ayrı bir kopyadan okunur; uygulamanın okuyacağı yanıt etkilenmez.
+                // The body is read from a clone, so the response the app reads is unaffected.
                 response
                     .clone()
                     .text()
@@ -288,7 +288,7 @@ export function networkModule(options: NetworkModuleOptions = {}): NetworkModule
         };
     }
 
-    // ─── Dış API ─────────────────────────────────────────────────────────────
+    // ─── Public API ──────────────────────────────────────────────────────────
 
     return defineModule({
         name: 'network',

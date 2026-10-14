@@ -3,13 +3,13 @@ import type {NetworkRequest, NetworkResponse} from '@himmetkaan/remote-devtools-
 
 export type NetworkRow = {
     uuid: string;
-    /** Cevap isteğinden önce gelirse `null` olabilir. */
+    /** May be `null` if the response arrives before the request. */
     request: NetworkRequest | null;
     response: NetworkResponse | null;
-    /** Response gövdesinin yaklaşık boyutu (JSON karakter sayısı). */
+    /** Approximate response body size (JSON character count). */
     responseSize: number | null;
     receivedAt: number;
-    /** `history`: cihaz bağlanmadan önce tamponlanmıştı. */
+    /** `history`: buffered before the device connected. */
     origin: 'live' | 'history';
 };
 
@@ -19,11 +19,11 @@ export type DeviceNetwork = {
     rows: NetworkRow[];
     selectedUuid: string | null;
     paused: boolean;
-    /** Duraklatılmışken gelen olaylar; devam edilince uygulanır. */
+    /** Events received while paused; applied on resume. */
     pausedBuffer: LiveEvent[];
 };
 
-/** Cihaz başına bellekte tutulan en fazla istek. Kalıcılık yok (G14). */
+/** Max requests kept in memory per device. No persistence (G14). */
 const MAX_ROWS = 2000;
 
 export const EMPTY_NETWORK: DeviceNetwork = {rows: [], selectedUuid: null, paused: false, pausedBuffer: []};
@@ -52,7 +52,7 @@ function cap(rows: NetworkRow[]): NetworkRow[] {
 }
 
 function findFromEnd(rows: NetworkRow[], uuid: string): number {
-    // Yeni kayıtlar sonda olduğundan sondan aramak daha hızlı.
+    // New entries are at the end, so searching from the end is faster.
     for (let i = rows.length - 1; i >= 0; i--) if (rows[i]!.uuid === uuid) return i;
     return -1;
 }

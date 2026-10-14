@@ -1,8 +1,8 @@
 # SITE_ADDRESS:
-#   lokal  → ":80"                    (düz HTTP, TLS yok)
-#   sunucu → "devtools.example.com"   (Let's Encrypt ile otomatik TLS; 80/443 dışarı açık olmalı)
+#   local  → ":80"                    (plain HTTP, no TLS)
+#   server → "devtools.example.com"   (automatic TLS via Let's Encrypt; 80/443 must be publicly reachable)
 {$SITE_ADDRESS::80} {
 	encode zstd gzip
-	# WebSocket upgrade'leri reverse_proxy tarafından otomatik taşınır.
+	# WebSocket upgrades are proxied automatically by reverse_proxy.
 	reverse_proxy relay:8080
 }

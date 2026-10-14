@@ -8,7 +8,7 @@ import {useDevtoolsStore} from '../store/useDevtoolsStore.ts';
 import {ConnectRequests} from './ConnectRequests.tsx';
 import {TrustedDevices} from './TrustedDevices.tsx';
 
-/** Süre dolmadan bu kadar önce yenisi istenir — okutulan QR'ın geçersiz olma ihtimalini azaltır. */
+/** A new one is requested this long before expiry — reduces the chance of a scanned QR being invalid. */
 const REFRESH_BEFORE_MS = 5_000;
 
 function isUnreachableHost(url: string): boolean {
@@ -35,7 +35,7 @@ function CopyButton({text, label}: {text: string; label: string}) {
     );
 }
 
-/** QR + 6 haneli kod; süre dolmadan kendiliğinden yenilenir (ikisi de tek kullanımlık). */
+/** QR + 6-digit code; refreshed automatically before expiry (both are single-use). */
 export function PairingPanel() {
     const session = useDevtoolsStore((s) => s.session);
     const relay = useDevtoolsStore((s) => s.relay);

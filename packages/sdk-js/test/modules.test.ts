@@ -243,7 +243,7 @@ describe('networkModule', () => {
     });
 });
 
-// ─── Test yardımcıları ───────────────────────────────────────────────────────
+// ─── Test helpers ────────────────────────────────────────────────────────────
 
 type FakeResponse = {status: number; headers: string; body: string; event?: 'timeout' | 'abort' | 'error'};
 

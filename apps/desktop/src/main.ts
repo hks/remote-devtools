@@ -3,17 +3,17 @@ import {join} from 'node:path';
 import {createRelay, loadConfig, type RunningServer} from '@himmetkaan/remote-devtools-relay';
 import {listLanAddresses, type LanAddress} from './network.ts';
 
-// Sabit port: UI'ın oturum bilgisi (localStorage) origin'e (127.0.0.1:port) bağlı.
+// Fixed port: the UI's session info (localStorage) is tied to the origin (127.0.0.1:port).
 const PORT = Number(process.env.DEVTOOLS_PORT) || 8787;
 const LOCAL_URL = `http://127.0.0.1:${PORT}`;
 const NETWORK_POLL_MS = 5_000;
-// Kalıcı bölüm: UI yalnızca oturum kimliğini saklar (veri saklamaz, G14); relay'in STATE_FILE'ıyla birlikte
-// uygulama kapanıp açılınca cihazlar kayıtlı eşleşmeleriyle aynı oturuma geri döner.
+// Persistent partition: the UI only stores the session ID (no data, G14); together with the relay's STATE_FILE,
+// devices return to the same session with their saved pairings when the app is restarted.
 const PARTITION = 'persist:remote-devtools';
 
 let running: RunningServer | null = null;
 let win: BrowserWindow | null = null;
-/** Kullanıcının seçtiği arayüz; `null` = otomatik. */
+/** Interface chosen by the user; `null` = automatic. */
 let pinnedIface: string | null = null;
 let current: LanAddress | null = null;
 
@@ -78,7 +78,7 @@ function selectIface(iface: string | null) {
     refreshNetwork(true);
 }
 
-/** LAN adresi değiştiyse relay'e bildirir ve sayfayı yeniler (QR yeni adresle çizilsin). */
+/** If the LAN address changed, notifies the relay and reloads the page (so the QR is drawn with the new address). */
 function refreshNetwork(force = false) {
     const next = pickAddress();
     const changed = next?.address !== current?.address;
@@ -106,14 +106,14 @@ function createWindow() {
         },
     });
 
-    // Pencere başlığı telefonun bağlanacağı adresi gösterir; sayfanın <title>'ı onu ezmesin.
+    // The window title shows the address the phone connects to; don't let the page's <title> override it.
     win.on('page-title-updated', (event) => event.preventDefault());
     win.once('ready-to-show', () => win?.show());
     win.on('closed', () => {
         win = null;
     });
 
-    // Dış bağlantılar sistem tarayıcısında açılır; pencere relay dışına gitmez.
+    // External links open in the system browser; the window never navigates away from the relay.
     win.webContents.setWindowOpenHandler(({url}) => {
         if (/^https?:/.test(url)) void shell.openExternal(url);
         return {action: 'deny'};
@@ -134,14 +134,14 @@ async function start() {
     try {
         running = await createRelay({
             ...loadConfig(),
-            // Cihazlar LAN üzerinden bağlanır; tüm arayüzlerde dinlenir.
+            // Devices connect over the LAN; listen on all interfaces.
             host: '0.0.0.0',
             port: PORT,
             publicUrl: phoneUrl(current),
             webDistDir: webDistDir(),
-            // Aynı ağdaki geliştirme build'leri QR'sız bağlanmak isteyebilir; UI'da onaylanır (G16).
+            // Development builds on the same network may ask to connect without a QR; approved in the UI (G16).
             connectRequests: 'local',
-            // Yalnızca bağlantı bilgisi (oturum, eşleşmeler, onaylı cihazlar) saklanır; istek/log saklanmaz.
+            // Only connection info (session, pairings, trusted devices) is stored; requests/logs are not.
             stateFile: join(app.getPath('userData'), 'relay-state.json'),
         });
     } catch (error) {
@@ -156,7 +156,7 @@ async function start() {
         return;
     }
 
-    // Paketlenmiş uygulamada ikon bundle'dan gelir; geliştirmede Dock'ta Electron ikonu yerine bu görünsün.
+    // In the packaged app the icon comes from the bundle; in development show this in the Dock instead of the Electron icon.
     if (!app.isPackaged) app.dock?.setIcon(join(__dirname, '../build/icon.png'));
 
     buildMenu();

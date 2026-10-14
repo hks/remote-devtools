@@ -1,6 +1,6 @@
 /**
- * Relay'i bir kütüphane olarak başlatmak için (ör. Electron desktop app).
- * CLI kullanımı için bkz. `main.ts` (ortam değişkenlerinden okur).
+ * For starting the relay as a library (e.g. the Electron desktop app).
+ * For CLI usage see `main.ts` (reads environment variables).
  */
 import {defaultConfig, type RelayConfig} from './config.ts';
 import {type RunningServer, startServer} from './server.ts';

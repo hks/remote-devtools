@@ -15,11 +15,11 @@ import {describeDevice} from './format.ts';
 
 type Credentials = {sessionId: string; uiSecret: string};
 
-/** Cihazdan gelen (relay'in `deviceId` eklediği) mesaj. `history` içindekiler açılıp `historic: true` ile tek tek iletilir. */
+/** Message from a device (with `deviceId` added by the relay). `history` entries are unpacked and delivered one by one with `historic: true`. */
 export type DeviceMessage = Envelope<string, any> & {deviceId: string; historic?: boolean};
 type DeviceListener = (msg: DeviceMessage) => void;
 
-/** Aynı tarayıcı = tek oturum; incognito'nun localStorage'ı ayrı olduğundan orada yeni oturum açılır. */
+/** Same browser = one session; incognito has its own localStorage, so a new session is opened there. */
 const STORAGE_KEY = 'remote-devtools.session.v2';
 
 const RECONNECT_MIN_MS = 500;
@@ -42,7 +42,7 @@ function writeCredentials(creds: Credentials | null) {
         if (creds) localStorage.setItem(STORAGE_KEY, JSON.stringify(creds));
         else localStorage.removeItem(STORAGE_KEY);
     } catch {
-        // Depolama kapalıysa oturum sadece bu sekmede yaşar.
+        // If storage is disabled, the session lives only in this browser tab.
     }
 }
 
@@ -51,12 +51,12 @@ function relayWsUrl(path: string): string {
     return `${protocol}//${location.host}${path}`;
 }
 
-/** QR'a yazılacak cihaz adresi: relay `PUBLIC_URL` verdiyse o, yoksa sayfanın origin'i. */
+/** Device address encoded in the QR: the relay's `PUBLIC_URL` if set, otherwise the page origin. */
 export function resolveDeviceWsUrl(deviceWsUrl: string | null): string {
     return deviceWsUrl ?? relayWsUrl(WS_PATH_DEVICE);
 }
 
-/** Kod ile eşleşirken uygulamaya girilecek relay adresi (cihaz WebSocket yolu olmadan). */
+/** Relay address to enter in the app when pairing by code (without the device WebSocket path). */
 export function resolveRelayBaseUrl(deviceWsUrl: string | null): string {
     return resolveDeviceWsUrl(deviceWsUrl).replace(/\/ws\/device$/, '');
 }
@@ -81,14 +81,14 @@ class RelayClient {
         this.#connect();
     }
 
-    /** Relay'e mesaj gönderir. Bağlantı yoksa `null` döner. */
+    /** Sends a message to the relay. Returns `null` if not connected. */
     send<K extends keyof UiToRelay & string>(type: K, payload: UiToRelay[K]): string | null {
         return this.#sendRaw(type, payload);
     }
 
     /**
-     * Cihaza modül isteği gönderir ve `replyTo` ile gelen cevabı bekler.
-     * Relay hatası (cihaz çevrimdışı vb.) ve zaman aşımı da `{ok: false}` olarak döner.
+     * Sends a module request to the device and waits for the `replyTo` response.
+     * Relay errors (device offline, etc.) and timeouts also resolve as `{ok: false}`.
      */
     request<R = unknown>(type: string, payload: unknown, deviceId: string, timeoutMs = REQUEST_TIMEOUT_MS): Promise<ModuleResult<R>> {
         if (!isModuleType(type)) throw new Error(`Not a module message type: ${type}`);
@@ -103,7 +103,7 @@ class RelayClient {
         });
     }
 
-    /** Cihazlardan gelen tüm mesajlar (çekirdek + modül). */
+    /** All messages from devices (core + module). */
     subscribe(listener: DeviceListener): () => void {
         this.#listeners.add(listener);
         return () => this.#listeners.delete(listener);
@@ -171,7 +171,7 @@ class RelayClient {
         else this.send('session.create', {});
     }
 
-    /** Başka bir sekme yeni oturum açtıysa ona geç. */
+    /** If another browser tab opened a new session, switch to it. */
     #onStorage = (event: StorageEvent) => {
         if (event.key !== STORAGE_KEY) return;
         const next = readCredentials();
@@ -181,7 +181,7 @@ class RelayClient {
     };
 
     #handle(msg: Envelope) {
-        // Modül isteğinin cevabı (veya relay'in o isteğe döndüğü hata).
+        // Response to a module request (or the error the relay returned for it).
         if (msg.replyTo) {
             const pending = this.#requests.get(msg.replyTo);
             if (pending) {

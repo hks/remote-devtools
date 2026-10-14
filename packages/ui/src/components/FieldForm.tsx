@@ -7,11 +7,11 @@ type Props = {
     errors: FormErrors;
     disabled?: boolean;
     onChange(values: FormValues): void;
-    /** Input id'lerini benzersiz yapmak için. */
+    /** Keeps input ids unique. */
     idPrefix: string;
 };
 
-/** Field DSL (PROTOCOL §6) formu. Functions, flag'ler ve panel formları ortak kullanır. */
+/** Field DSL (PROTOCOL §6) form. Shared by Functions, flags and panel forms. */
 export function FieldForm({fields, values, errors, disabled, onChange, idPrefix}: Props) {
     const set = (key: string, value: string | boolean) => onChange({...values, [key]: value});
 

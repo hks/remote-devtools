@@ -1,14 +1,14 @@
-# Remote DevTools masaüstü paketleri — imzasız dağıtım (imzalı/notarize yayın: docs/v2/MACOS_RELEASE.md, Faz 6).
+# Remote DevTools desktop packages — unsigned distribution (signed/notarized release: docs/v2/MACOS_RELEASE.md, Phase 6).
 appId: com.himmetkaan.remote-devtools
 productName: Remote DevTools
 artifactName: RemoteDevTools-${version}-${os}-${arch}.${ext}
 directories:
   output: release
-  buildResources: build   # build/icon.png → tüm platformların ikonu
+  buildResources: build   # build/icon.png → icon for all platforms
 files:
   - dist/**
   - package.json
-# Build edilmiş UI asar dışında durur; relay onu düz dosya olarak sunar.
+# The built UI lives outside the asar; the relay serves it as plain files.
 extraResources:
   - from: ../../packages/ui/dist
     to: ui
@@ -18,27 +18,27 @@ afterPack: scripts/after-pack.mjs
 
 mac:
   target:
-    # Yalnızca Apple Silicon.
+    # Apple Silicon only.
     - target: dmg
       arch: [arm64]
     - target: zip
       arch: [arm64]
   category: public.app-category.developer-tools
-  # Sertifika ile imzalama kapalı: aksi halde anahtar zincirindeki herhangi bir Apple sertifikası otomatik seçilir.
-  # Apple Silicon için gereken ad-hoc imzayı scripts/after-pack.mjs atar.
+  # Certificate signing is off: otherwise any Apple certificate in the keychain would be picked automatically.
+  # scripts/after-pack.mjs applies the ad-hoc signature Apple Silicon requires.
   identity: null
   hardenedRuntime: false
   extendInfo:
     NSLocalNetworkUsageDescription: Remote DevTools connects to apps on devices in your local network.
 
-# Windows ve Linux şimdilik release'e dahil değil (npm scriptleri yalnızca --mac çağırır).
-# Yeniden açmak için: npx electron-builder --win / --linux
+# Windows and Linux are not part of the release for now (the npm scripts only call --mac).
+# To re-enable: npx electron-builder --win / --linux
 win:
-  # Kurulumsuz tek .exe.
+  # Single .exe, no installer.
   target:
     - target: portable
       arch: [x64]
-  # rcedit macOS/Linux'ta Wine ister; imzasız dağıtımda exe metadatası gerekmez.
+  # rcedit needs Wine on macOS/Linux; exe metadata is not needed for unsigned distribution.
   signAndEditExecutable: false
 
 linux:

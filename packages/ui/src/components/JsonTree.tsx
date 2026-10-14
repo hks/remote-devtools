@@ -1,8 +1,8 @@
 import {memo, useState} from 'react';
 
-/** Bu kadar elemandan sonrası "daha fazla göster" ile açılır (büyük listelerde DOM'u şişirmemek için). */
+/** Items beyond this count are revealed via "show more" (avoids bloating the DOM for large lists). */
 const PAGE_SIZE = 100;
-/** Bundan uzun string'ler kısaltılır. */
+/** Strings longer than this are truncated. */
 const MAX_STRING = 300;
 
 type NodeProps = {

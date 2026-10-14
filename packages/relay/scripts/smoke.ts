@@ -1,5 +1,5 @@
 /**
- * Çalışan bir relay'e karşı uçtan uca eşleşme testi.
+ * End-to-end pairing test against a running relay.
  *   node scripts/smoke.ts                       # ws://127.0.0.1:8080
  *   node scripts/smoke.ts wss://devtools.example.com
  */

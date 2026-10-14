@@ -1,8 +1,8 @@
 /**
- * Relay'i tek bir JS dosyasına paketler (`dist/main.js`).
+ * Bundles the relay into a single JS file (`dist/main.js`).
  *
- * Geliştirmede `.ts` dosyaları type stripping ile doğrudan çalışır; ancak Electron'un gömülü Node'u ve docker imajı
- * için derlenmiş, bağımlılıkları içine alınmış bir çıktı gerekir.
+ * In development the `.ts` files run directly via type stripping, but Electron's embedded Node and the docker image
+ * need a compiled output with dependencies bundled in.
  */
 import {build} from 'esbuild';
 
@@ -14,9 +14,9 @@ await build({
     target: 'node24',
     format: 'esm',
     sourcemap: true,
-    // `ws` CommonJS; ESM çıktısında Node yerleşik modüllerini `require` edebilmesi için.
+    // `ws` is CommonJS; this lets it `require` Node built-in modules from the ESM output.
     banner: {js: "import {createRequire as __createRequire} from 'node:module'; const require = __createRequire(import.meta.url);"},
-    // `ws`'nin opsiyonel native hızlandırıcıları; yoksa `ws` kendi JS uygulamasına düşer.
+    // Optional native accelerators for `ws`; if missing, `ws` falls back to its own JS implementation.
     external: ['bufferutil', 'utf-8-validate'],
     logLevel: 'info',
 });

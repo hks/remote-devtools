@@ -6,7 +6,7 @@ import type {PersistedSession} from './sessions.ts';
 
 type StateFile = { version: 1; sessions: PersistedSession[] };
 
-/** Dosya yoksa veya okunamıyorsa boş liste döner (relay yine de açılır). */
+/** Returns an empty list if the file is missing or unreadable (the relay still starts). */
 export function loadState(path: string): PersistedSession[] {
     try {
         const data = JSON.parse(readFileSync(path, 'utf8')) as StateFile;
@@ -20,8 +20,8 @@ export function loadState(path: string): PersistedSession[] {
 }
 
 /**
- * Değişiklikleri kısa bir gecikmeyle toplu yazar. Yazım geçici dosya + rename ile atomiktir.
- * Dosya sırlar içerir; sadece sahibi okuyabilir (0600).
+ * Writes changes in batches after a short delay. Writes are atomic via temp file + rename.
+ * The file contains secrets; only the owner can read it (0600).
  */
 export function createStateWriter(path: string, read: () => PersistedSession[], delayMs = 500) {
     let timer: NodeJS.Timeout | null = null;

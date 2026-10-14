@@ -7,7 +7,7 @@ import {deviceName, getDeviceStatus, useDevtoolsStore} from '../store/useDevtool
 import {Shortcuts} from './Shortcuts.tsx';
 import {STATUS_LABEL} from './StatusDot.tsx';
 
-/** Seçili cihazın kartı: cihaz, uygulama, SDK ve app'in serbest `meta` alanları. */
+/** Selected device card: device, app, SDK and the app's free-form `meta` fields. */
 export function DeviceHeader({device}: {device: DeviceSnapshot}) {
     const relay = useDevtoolsStore((s) => s.relay);
     const now = useNow(5000);

@@ -81,7 +81,7 @@ const CommandCard = memo(function CommandCard({deviceId, command, unavailable}: 
                 </button>
             </div>
 
-            {/* Sabit yükseklik: sonuç gelince kart ve grid yeniden dizilmez. */}
+            {/* Fixed height: the card and grid don't reflow when a result arrives. */}
             <div className="cmd-status" title={lastRun?.error?.message ?? resultText ?? undefined}>
                 {unavailable ? (
                     <span className="muted">{unavailable}</span>
@@ -110,7 +110,7 @@ export function FunctionsTab({deviceId}: {deviceId: string}) {
     const q = query.trim().toLowerCase();
     const groups = useMemo(() => {
         const filtered = q ? commands.filter((c) => `${c.title} ${c.id} ${c.description ?? ''} ${c.group ?? ''}`.toLowerCase().includes(q)) : commands;
-        // Gruplar cihazın bildirdiği sırayla.
+        // Groups in the order reported by the device.
         const byGroup = new Map<string, CommandDef[]>();
         for (const command of filtered) {
             const group = command.group || DEFAULT_GROUP;

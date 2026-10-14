@@ -56,7 +56,7 @@ describe('relay timing & limits', () => {
             const gone = (await online.ui.next('device.status', 1000)).payload;
             assert.deepEqual([gone.deviceId, gone.state], [offline.deviceId, 'unpaired']);
 
-            // Bağlı cihaz, sessiz kalsa bile süresinin çok ötesinde eşleşmiş kalır.
+            // A connected device stays paired well past its TTL, even when silent.
             await sleep(300);
             await online.device.none('unpaired');
             await online.ui.none('device.status');
@@ -75,7 +75,7 @@ describe('relay timing & limits', () => {
             device.close();
             await ui.next('device.status');
 
-            // Toplamda TTL'in çok üstünde süre geçer ama her kopuş arası TTL'den kısadır.
+            // Total elapsed time far exceeds the TTL, but each gap between disconnects is shorter than it.
             for (let i = 0; i < 4; i++) {
                 await sleep(80);
                 const again = await connect(port, WS_PATH_DEVICE);
@@ -108,7 +108,7 @@ describe('relay timing & limits', () => {
     it('terminates sockets that stop answering heartbeats and reports the device offline', async () => {
         await withServer({heartbeatIntervalMs: 40}, async ({port}) => {
             const {ui, session} = await openUi(port);
-            // Pong'a cevap vermeyen (ör. arka planda askıya alınmış) cihaz.
+            // A device that does not answer pings (e.g. suspended in the background).
             const silent = new WebSocket(`ws://127.0.0.1:${port}${WS_PATH_DEVICE}`, {autoPong: false});
             await new Promise((r) => silent.once('open', r));
             silent.send(JSON.stringify(createEnvelope('pair.qr', {sessionId: session.sessionId, qrToken: session.pairing.qrToken, deviceId: newDeviceId()})));

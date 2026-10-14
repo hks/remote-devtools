@@ -1,6 +1,6 @@
-# Remote DevTools — relay + build edilmiş UI (tek imaj)
-# Build context repo köküdür: `docker build -f apps/server/Dockerfile .` (compose bunu kendisi ayarlar).
-# Relay esbuild ile tek dosyaya paketlenir; çalışma imajında node_modules yoktur.
+# Remote DevTools — relay + built UI (single image)
+# The build context is the repo root: `docker build -f apps/server/Dockerfile .` (compose sets this itself).
+# The relay is bundled into a single file with esbuild; the runtime image has no node_modules.
 
 FROM node:24.11.0-alpine AS build
 RUN corepack enable

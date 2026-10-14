@@ -1,5 +1,5 @@
-// Electron main sürecini (relay dahil) tek CJS dosyasına paketler.
-// Relay'in .ts kaynakları ve `ws` bağımlılığı bundle'a girer; paketlenmiş uygulamada node_modules gerekmez.
+// Bundles the Electron main process (including the relay) into a single CJS file.
+// The relay's .ts sources and the `ws` dependency are bundled in; the packaged app needs no node_modules.
 import {build} from 'esbuild';
 
 await build({
@@ -9,7 +9,7 @@ await build({
     platform: 'node',
     format: 'cjs',
     target: 'node22',
-    // `ws`'in isteğe bağlı native hızlandırıcıları; yoksa `ws` kendi JS uygulamasına düşer.
+    // Optional native accelerators for `ws`; without them `ws` falls back to its own JS implementation.
     external: ['electron', 'bufferutil', 'utf-8-validate'],
     sourcemap: 'linked',
     logLevel: 'info',

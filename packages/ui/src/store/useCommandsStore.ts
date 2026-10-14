@@ -9,9 +9,9 @@ export type CommandRun = {
 };
 
 type CommandState = {
-    /** `deviceId:commandId` → çalışıyor mu */
+    /** `deviceId:commandId` → is running */
     running: Record<string, boolean>;
-    /** `deviceId:commandId` → son sonuç */
+    /** `deviceId:commandId` → last result */
     lastRun: Record<string, CommandRun>;
     setRunning(key: string, running: boolean): void;
     setResult(key: string, run: CommandRun): void;

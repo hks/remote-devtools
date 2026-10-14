@@ -9,8 +9,8 @@ import {StateTab} from './state/StateTab.tsx';
 import {StorageTab} from './storage/StorageTab.tsx';
 
 /**
- * UI modülü = bir tab. `capability` cihazın `hello.capabilities` içindeki anahtarıdır;
- * cihaz bildirmezse tab görünmez. `null` → çekirdek modül, her cihazda vardır.
+ * UI module = one tab. `capability` is the key in the device's `hello.capabilities`;
+ * the tab is hidden if the device doesn't report it. `null` → core module, present on every device.
  */
 export type UiModule = {
     id: string;
@@ -18,7 +18,7 @@ export type UiModule = {
     icon: string;
     capability: string | null;
     Component: ComponentType<{deviceId: string; panelId?: string}>;
-    /** App'in tanımladığı özel panel (her panel ayrı bir tab). */
+    /** Custom panel defined by the app (each panel is its own tab). */
     panelId?: string;
 };
 
@@ -35,7 +35,7 @@ const KNOWN_CAPABILITIES = new Set([...MODULES.map((m) => m.capability).filter(B
 
 const DEFAULT_PANEL_ICON = '🧱';
 
-/** Hazır modüller, ardından cihazın tanımladığı paneller (bildirdiği sırayla). */
+/** Built-in modules, then panels defined by the device (in reported order). */
 export function modulesFor(device: DeviceSnapshot | null): UiModule[] {
     const capabilities = device?.hello?.capabilities ?? {};
     const builtIn = MODULES.filter((m) => m.capability === null || m.capability in capabilities);
@@ -53,7 +53,7 @@ export function modulesFor(device: DeviceSnapshot | null): UiModule[] {
     ];
 }
 
-/** Cihazın bildirdiği ama bu UI sürümünün tanımadığı modüller (daha yeni bir SDK olabilir). */
+/** Modules the device reports but this UI version doesn't know (could be a newer SDK). */
 export function unknownCapabilities(device: DeviceSnapshot | null): string[] {
     return Object.keys(device?.hello?.capabilities ?? {}).filter((key) => !KNOWN_CAPABILITIES.has(key));
 }

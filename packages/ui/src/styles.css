@@ -60,7 +60,7 @@ body {
 code, pre, .mono { font-family: var(--mono); font-size: 12px; }
 button { font: inherit; color: inherit; }
 
-/* ─── Ortak ─────────────────────────────────────────────────────────────── */
+/* ─── Common ───────────────────────────────────────────────────────────── */
 
 .btn {
     display: inline-flex; align-items: center; gap: 6px;
@@ -101,11 +101,11 @@ button { font: inherit; color: inherit; }
 .callout-warn { background: var(--warn-soft); color: var(--warn); }
 .callout code { word-break: break-all; }
 
-/* ─── Açılış ─────────────────────────────────────────────────────────── */
+/* ─── Startup ──────────────────────────────────────────────────────────── */
 
 .boot { height: 100%; display: grid; place-items: center; }
 
-/* ─── Eşleşme ekranı ───────────────────────────────────────────────────── */
+/* ─── Pairing screen ───────────────────────────────────────────────────── */
 
 .solo { min-height: 100%; display: flex; flex-direction: column; }
 .solo-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
@@ -145,7 +145,7 @@ button { font: inherit; color: inherit; }
 .trusted ul { list-style: none; margin: 0; padding: 0; }
 .trusted li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--border); }
 
-/* ─── Bağlantı istekleri ───────────────────────────────────────────────── */
+/* ─── Connect requests ─────────────────────────────────────────────────── */
 
 .requests { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px 0; }
 .pairing .requests { padding: 0; }
@@ -155,7 +155,7 @@ button { font: inherit; color: inherit; }
 }
 .request-text { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; text-align: left; }
 
-/* ─── Çalışma alanı ────────────────────────────────────────────────────── */
+/* ─── Workspace ────────────────────────────────────────────────────────── */
 
 .workspace { height: 100%; display: grid; grid-template-columns: 248px minmax(0, 1fr); }
 .main { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
@@ -219,7 +219,7 @@ button { font: inherit; color: inherit; }
 /* ─── Logs ─────────────────────────────────────────────────────────────── */
 
 .logs { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-/* Tek satır: sayaçlar büyüdükçe satır kırılıp listeyi kaydırmasın; sığmazsa yatay kayar. */
+/* Single line: growing counters shouldn't wrap and shift the list; scrolls horizontally if it doesn't fit. */
 .toolbar {
     display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin;
     padding: 8px 12px; border-bottom: 1px solid var(--border); background: var(--surface);
@@ -320,7 +320,7 @@ button { font: inherit; color: inherit; }
 .status-pill.is-error { background: var(--err-soft); color: var(--err); }
 .status-pill.is-pending { background: var(--surface-2); color: var(--text-3); }
 
-/* ─── Detay ────────────────────────────────────────────────────────────── */
+/* ─── Detail ───────────────────────────────────────────────────────────── */
 
 .detail { min-height: 0; display: flex; flex-direction: column; border-left: 1px solid var(--border); background: var(--surface); }
 .detail-head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); min-width: 0; }
@@ -342,7 +342,7 @@ button { font: inherit; color: inherit; }
 .callout-err { background: var(--err-soft); color: var(--err); }
 .callout { margin: 0 0 8px; }
 
-/* ─── JSON ağacı ───────────────────────────────────────────────────────── */
+/* ─── JSON tree ────────────────────────────────────────────────────────── */
 
 .json-tree { font-family: var(--mono); font-size: 12px; line-height: 1.55; }
 .jt-row { display: block; width: 100%; padding: 0; border: 0; background: none; text-align: left; font: inherit; color: inherit; white-space: pre-wrap; word-break: break-word; }
@@ -363,7 +363,7 @@ button { font: inherit; color: inherit; }
 
 .statusbar-warn { color: var(--warn); }
 
-/* Kenar çubuğu (248px) hesaba katılarak: liste alanı dar kalınca detay listenin üzerine tam genişlikte açılır. */
+/* Accounting for the sidebar (248px): when the list area is narrow, the detail opens full-width over the list. */
 @media (max-width: 1100px) {
     .network.has-detail .network-body { grid-template-columns: minmax(0, 1fr); position: relative; }
     .network.has-detail .detail { position: absolute; inset: 0; border-left: 0; z-index: 2; }
@@ -400,7 +400,7 @@ button { font: inherit; color: inherit; }
 .cmd-status .ok { color: var(--ok); }
 .cmd-status .err { color: var(--err); }
 
-/* ─── Menü, kısayollar ─────────────────────────────────────────────────── */
+/* ─── Menu, shortcuts ──────────────────────────────────────────────────── */
 
 .menu { position: relative; }
 .menu > summary { list-style: none; }
@@ -418,7 +418,7 @@ button { font: inherit; color: inherit; }
 }
 .menu-items button:hover:not(:disabled) { background: var(--surface-2); }
 .menu-items button:disabled { opacity: .5; cursor: not-allowed; }
-/* Toolbar yatay kaydırılabilir; açılan menü kesilmesin. */
+/* Toolbar can scroll horizontally; don't clip the open menu. */
 .toolbar:has(.menu[open]) { overflow: visible; }
 
 .shortcuts-btn { font-size: 16px; height: 32px; }
@@ -431,7 +431,7 @@ kbd {
     border-radius: 4px; background: var(--surface-2); font-family: var(--mono); font-size: 11px; white-space: nowrap;
 }
 
-/* ─── Field DSL formu ──────────────────────────────────────────────────── */
+/* ─── Field DSL form ───────────────────────────────────────────────────── */
 
 .field-form { display: flex; flex-direction: column; gap: 8px; align-self: start; }
 .field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
@@ -508,7 +508,7 @@ kbd {
 .switch input:focus-visible + .switch-track { outline: 2px solid color-mix(in srgb, var(--accent) 50%, transparent); outline-offset: 2px; }
 .switch input:disabled + .switch-track { opacity: .5; }
 
-/* ─── Özel paneller ────────────────────────────────────────────────────── */
+/* ─── Custom panels ────────────────────────────────────────────────────── */
 
 .panel-view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .panel-body { flex: 1; min-height: 0; overflow: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }

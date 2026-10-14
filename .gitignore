@@ -3,7 +3,7 @@ dist/
 .env
 .idea/
 
-# Masaüstü paketleri
+# Desktop packages
 apps/desktop/release/
 
 # macOS

@@ -24,9 +24,9 @@ export type LogEntry = {
     message: string;
     data?: unknown;
     tag?: string;
-    /** `null`: oturum geneli olay (relay bağlantısı vb.). */
+    /** `null`: session-wide event (relay connection, etc.). */
     deviceId: string | null;
-    /** Cihaz bağlanmadan önce tamponlanıp `history` ile gelen kayıt. */
+    /** Entry buffered before the device connected and delivered via `history`. */
     historic?: boolean;
 };
 
@@ -38,7 +38,7 @@ export type SessionInfo = {
     pairing: PairingInfo;
 };
 
-/** Bellekte tutulan en fazla log sayısı (tüm cihazlar). Kalıcılık yok (G14). */
+/** Max number of logs kept in memory (all devices). No persistence (G14). */
 const MAX_LOGS = 10_000;
 
 type DevtoolsState = {
@@ -48,7 +48,7 @@ type DevtoolsState = {
     pendingRequests: ConnectRequest[];
     trusted: TrustedDevice[];
     selectedDeviceId: string | null;
-    /** Cihazlar varken "Add device" ile açılan eşleşme görünümü. */
+    /** Pairing view opened via "Add device" when devices exist. */
     showPairing: boolean;
     activeTab: string;
     logs: LogEntry[];
@@ -60,7 +60,7 @@ type DevtoolsState = {
     removeDevice(deviceId: string): void;
     setHello(deviceId: string, hello: Hello): void;
     mergeCapabilities(deviceId: string, patch: Partial<Capabilities>): void;
-    /** `module.panels.update`: panelin bir bloğunun alanlarını değiştirir. */
+    /** `module.panels.update`: replaces fields of one of the panel's blocks. */
     updatePanelBlock(deviceId: string, panelId: string, blockId: string, data: BlockData): void;
     setLifecycle(deviceId: string, lifecycle: Lifecycle): void;
     addPendingRequest(request: ConnectRequest): void;
@@ -70,7 +70,7 @@ type DevtoolsState = {
     setShowPairing(show: boolean): void;
     setActiveTab(tab: string): void;
     addLog(entry: NewLogEntry): void;
-    /** Toplu ekleme (ör. `history`); zaman sırasına yerleştirilir. */
+    /** Bulk insert (e.g. `history`); placed in time order. */
     addLogs(entries: NewLogEntry[]): void;
     clearLogs(deviceId: string | null): void;
 };
@@ -85,7 +85,7 @@ function toEntry({ts, ...entry}: NewLogEntry): LogEntry {
     return {...entry, id: ++logSeq, ts: ts ?? Date.now()};
 }
 
-/** Seçili cihaz yoksa veya kaldırıldıysa listede kalan ilk cihaz. */
+/** If no device is selected or it was removed, the first remaining device in the list. */
 function pickSelection(devices: Record<string, DeviceSnapshot>, current: string | null): string | null {
     if (current && devices[current]) return current;
     return sortDevices(Object.values(devices))[0]?.deviceId ?? null;
@@ -119,7 +119,7 @@ export const useDevtoolsStore = create<DevtoolsState>((set) => ({
     upsertDevice: (device) =>
         set((s) => {
             const previous = s.devices[device.deviceId];
-            // Relay'in anlık görüntüsünde hello olmayabilir (ör. resume'dan hemen sonra); bilineni kaybetme.
+            // The relay snapshot may lack hello (e.g. right after resume); don't lose what's known.
             const merged = {...device, hello: device.hello ?? previous?.hello ?? null};
             const devices = {...s.devices, [device.deviceId]: merged};
             const isNew = !previous;
@@ -185,7 +185,7 @@ export const useDevtoolsStore = create<DevtoolsState>((set) => ({
     addLogs: (entries) =>
         set((s) => {
             if (entries.length === 0) return {};
-            // Sıralama kararlıdır: aynı zamandaki kayıtlar geliş sırasını korur.
+            // Sort is stable: entries with the same time keep their arrival order.
             const merged = [...s.logs, ...entries.map(toEntry)].sort((a, b) => a.ts - b.ts);
             return {logs: capLogs(merged)};
         }),

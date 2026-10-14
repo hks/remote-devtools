@@ -1,12 +1,12 @@
 import type {Lifecycle} from '@himmetkaan/remote-devtools-protocol';
 
-/** Uygulamanın ön plan / arka plan durumunu bildiren kaynak. `subscribe` aboneliği kaldıran bir fonksiyon döner. */
+/** Source reporting the app's foreground / background state. `subscribe` returns a function that unsubscribes. */
 export type LifecycleSource = {
     current(): Lifecycle;
     subscribe(listener: (state: Lifecycle) => void): () => void;
 };
 
-/** Tarayıcı: `document.visibilityState`. Belge yoksa her zaman `active`. */
+/** Browser: `document.visibilityState`. Always `active` when there is no document. */
 export function browserLifecycle(): LifecycleSource {
     const doc = (globalThis as {document?: Document}).document;
     const read = (): Lifecycle => (doc?.visibilityState === 'hidden' ? 'background' : 'active');
@@ -21,7 +21,7 @@ export function browserLifecycle(): LifecycleSource {
     };
 }
 
-/** React Native'in `AppState` nesnesinin ihtiyaç duyduğumuz kısmı (SDK `react-native`'i import etmez). */
+/** The part of React Native's `AppState` object we need (the SDK doesn't import `react-native`). */
 export type AppStateLike = {
     currentState: string | null;
     addEventListener(type: 'change', listener: (state: string) => void): {remove(): void};
@@ -42,7 +42,7 @@ export function reactNativeLifecycle(appState: AppStateLike): LifecycleSource {
     };
 }
 
-/** Yaşam döngüsü olmayan ortamlar (Node, testler). */
+/** Environments without a lifecycle (Node, tests). */
 export function staticLifecycle(): LifecycleSource {
     return {current: () => 'active', subscribe: () => () => {}};
 }

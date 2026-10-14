@@ -28,8 +28,8 @@ async function fileExists(path: string): Promise<boolean> {
 }
 
 /**
- * Build edilmiş SPA'yı sunar. Dosya bulunamazsa `index.html`'e düşer.
- * `true` dönerse istek karşılanmıştır.
+ * Serves the built SPA. Falls back to `index.html` if the file is not found.
+ * Returning `true` means the request was handled.
  */
 export function createStaticHandler(rootDir: string) {
     const root = resolve(rootDir);
@@ -53,7 +53,7 @@ export function createStaticHandler(rootDir: string) {
         const isAsset = filePath.includes(`${sep}assets${sep}`);
         res.writeHead(200, {
             'Content-Type': MIME[extname(filePath)] ?? 'application/octet-stream',
-            // Vite asset'leri hash'li; index.html her zaman taze olmalı.
+            // Vite assets are hashed; index.html must always be fresh.
             'Cache-Control': isAsset ? 'public, max-age=31536000, immutable' : 'no-cache',
         });
         if (req.method === 'HEAD') {

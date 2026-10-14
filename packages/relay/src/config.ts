@@ -3,41 +3,41 @@ export type ConnectRequestPolicy = 'off' | 'local' | 'any';
 export type RelayConfig = {
     port: number;
     host: string;
-    /** Cihazın göreceği dış adres (ör. `https://devtools.example.com`). Boşsa UI kendi origin'ini kullanır. */
+    /** External address the device will see (e.g. `https://devtools.example.com`). If empty, the UI uses its own origin. */
     publicUrl: string | null;
-    /** Build edilmiş UI'ın klasörü. Yoksa statik sunum devre dışı. */
+    /** Directory of the built UI. If unset, static serving is disabled. */
     webDistDir: string | null;
-    /** Hiçbir UI'ın bağlı olmadığı oturum bu süre sonra silinir. */
+    /** A session with no connected UI is deleted after this time. */
     sessionTtlMs: number;
-    /** QR token'ı ve 6 haneli kodun geçerlilik süresi. */
+    /** Validity period of the QR token and the 6-digit code. */
     pairingTtlMs: number;
     /**
-     * Cihaz eşleşmesinin hareketsizlik süresi. Bağlıyken düşmez; her mesaj ve bağlantının kopması süreyi yeniden başlatır.
-     * Cihaz bu süre boyunca bağlanmazsa eşleşme unutulur ve `resume` reddedilir.
+     * Idle timeout of a device pairing. It does not expire while connected; every message and every disconnect restarts it.
+     * If the device does not connect within this time, the pairing is forgotten and `resume` is rejected.
      */
     deviceIdleTtlMs: number;
-    /** Bekleyen bağlantı isteğinin UI'da cevaplanma süresi. */
+    /** Time the UI has to answer a pending connect request. */
     connectRequestTtlMs: number;
     /**
-     * Kodsuz/QR'sız `connect` isteklerinin kabulü:
-     * `off` kapalı, `local` sadece loopback/özel ağ adreslerinden, `any` her yerden.
+     * Acceptance of `connect` requests without code/QR:
+     * `off` disabled, `local` only from loopback/private network addresses, `any` from anywhere.
      */
     connectRequests: ConnectRequestPolicy;
-    /** `X-Forwarded-For` başlığına güvenilsin mi (reverse proxy arkasında). */
+    /** Whether to trust the `X-Forwarded-For` header (behind a reverse proxy). */
     trustProxy: boolean;
     heartbeatIntervalMs: number;
-    /** Bağlanan soketin kimlik doğrulaması için verilen süre. */
+    /** Time allowed for a connecting socket to authenticate. */
     authTimeoutMs: number;
     maxPayloadBytes: number;
     maxSessions: number;
     maxDevicesPerSession: number;
-    /** Cihaz başına saniyede kabul edilen mesaj sayısı; aşan mesajlar düşürülür. */
+    /** Messages accepted per second per device; excess messages are dropped. */
     deviceMaxMessagesPerSec: number;
-    /** Bir IP'nin pencere içinde yapabileceği başarısız eşleşme denemesi. */
+    /** Failed pairing attempts an IP may make within the window. */
     pairFailureLimit: number;
     pairFailureWindowMs: number;
     gcIntervalMs: number;
-    /** Bağlantı metadata'sının (oturumlar, eşleşmeler, onaylı cihazlar) saklanacağı dosya. Boşsa sadece bellek. */
+    /** File where connection metadata (sessions, pairings, trusted devices) is stored. If empty, memory only. */
     stateFile: string | null;
 };
 

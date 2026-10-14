@@ -11,7 +11,7 @@ const SOURCES: {id: LogSource | 'all'; label: string}[] = [
     {id: 'ui', label: 'UI'},
 ];
 
-/** Kullanıcı listenin dibinden bu kadar yukarıdaysa otomatik kaydırma durur. */
+/** Auto-scroll stops when the user is this far above the bottom of the list. */
 const STICK_THRESHOLD_PX = 40;
 
 const LogRow = memo(function LogRow({entry}: {entry: LogEntry}) {
@@ -41,7 +41,7 @@ const LogRow = memo(function LogRow({entry}: {entry: LogEntry}) {
     );
 });
 
-/** Çekirdek modül: her cihazda vardır. Seçili cihazın logları + (isteğe bağlı) oturum geneli olaylar. */
+/** Core module: present on every device. Logs of the selected device + (optionally) session-wide events. */
 export function LogsTab({deviceId}: {deviceId: string}) {
     const allLogs = useDevtoolsStore((s) => s.logs);
     const clearLogs = useDevtoolsStore((s) => s.clearLogs);
@@ -89,7 +89,7 @@ export function LogsTab({deviceId}: {deviceId: string}) {
         if (autoScroll && el) el.scrollTop = el.scrollHeight;
     }, [visible, autoScroll]);
 
-    // Ctrl/Cmd+F → log araması (sayfa içi arama yerine).
+    // Ctrl/Cmd+F → log search (instead of in-page find).
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
             if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {

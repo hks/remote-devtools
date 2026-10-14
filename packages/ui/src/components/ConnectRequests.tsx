@@ -32,7 +32,7 @@ function RequestCard({request}: {request: ConnectRequest}) {
     );
 }
 
-/** Onay bekleyen geliştirme bağlantıları. Her görünümde üstte gösterilir. */
+/** Development connect requests awaiting approval. Shown at the top of every view. */
 export function ConnectRequests() {
     const requests = useDevtoolsStore((s) => s.pendingRequests);
     if (requests.length === 0) return null;

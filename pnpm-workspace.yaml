@@ -3,6 +3,6 @@ packages:
   - apps/*
   - examples/*
 
-# pnpm varsayılan olarak bağımlılık kurulum betiklerini çalıştırmaz; Electron ikili dosyasını indirmek için gerekli.
+# pnpm does not run dependency install scripts by default; Electron needs it to download its binary.
 onlyBuiltDependencies:
   - electron

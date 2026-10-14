@@ -2,16 +2,16 @@ import {networkInterfaces} from 'node:os';
 
 export type LanAddress = {iface: string; address: string};
 
-// Sanal / tünel arayüzleri: telefon bunlara ulaşamaz.
+// Virtual / tunnel interfaces: the phone cannot reach these.
 const VIRTUAL_IFACE = /^(lo|utun|awdl|llw|bridge|docker|veth|br-|vmnet|vboxnet|virbr|tun|tap|zt|tailscale|wg|anpi|ap\d)|vEthernet|VirtualBox|VMware|Hyper-V|Loopback/i;
-// Tercih sırası: macOS Wi-Fi/Ethernet, Linux, Windows adları.
+// Preference order: macOS Wi-Fi/Ethernet, Linux, Windows names.
 const PREFERRED_IFACE = [/^en0$/, /^en\d+$/, /^(eth|enp|eno|ens|wlan|wlp)/, /^(Wi-?Fi|WLAN|Ethernet)/i];
 
 function isPrivateIPv4(address: string): boolean {
     return /^10\./.test(address) || /^192\.168\./.test(address) || /^172\.(1[6-9]|2\d|3[01])\./.test(address);
 }
 
-/** Telefonun erişebileceği IPv4 adresleri, en olası olan önce. */
+/** IPv4 addresses the phone can reach, most likely first. */
 export function listLanAddresses(): LanAddress[] {
     const result: LanAddress[] = [];
     for (const [iface, infos] of Object.entries(networkInterfaces())) {

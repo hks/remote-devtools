@@ -1,11 +1,11 @@
 /**
- * SDK'yı ve protokol paketini build edip `.tgz` olarak paketler (npm'e yayınlamadan kullanmak için).
+ * Builds the SDK and the protocol package and packs them as `.tgz` (to use them without publishing to npm).
  *
- *   pnpm pack:sdk <hedef klasör>
+ *   pnpm pack:sdk <destination directory>
  *
- * Uygulama tarafında (yarn / npm) tarball'lar `file:` ile kurulur; SDK'nın protokol bağımlılığı da npm'de olmadığından
- * `resolutions` (yarn) veya `overrides` (npm) ile aynı klasördeki tarball'a yönlendirilmelidir.
- * Paket yöneticileri tarball'ı içerik özetiyle önbelleğe aldığı için her yeni paketlemede sürüm artırılmalıdır.
+ * In the app (yarn / npm) the tarballs are installed via `file:`; since the SDK's protocol dependency is not on npm either,
+ * it must be pointed at the tarball in the same directory with `resolutions` (yarn) or `overrides` (npm).
+ * Package managers cache tarballs by content hash, so bump the version for every new pack.
  */
 import {execFileSync} from 'node:child_process';
 import {mkdirSync, readdirSync, rmSync} from 'node:fs';
@@ -18,7 +18,7 @@ if (!dest) {
 }
 const out = resolve(process.cwd(), dest);
 mkdirSync(out, {recursive: true});
-// Eski sürümlerin tarball'ları kalmasın (package.json yeni dosya adını gösterecek).
+// Remove tarballs of old versions (package.json will point to the new file name).
 for (const file of readdirSync(out)) if (/^himmetkaan-remote-devtools.*\.tgz$/.test(file)) rmSync(resolve(out, file));
 
 const root = resolve(import.meta.dirname, '..');

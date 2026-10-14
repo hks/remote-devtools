@@ -2,7 +2,7 @@ import {type Field, type FlagDef, validateArgs} from '@himmetkaan/remote-devtool
 import {defineModule, type ModuleContext, ModuleError, type RemoteModule} from '../module.ts';
 import {toSerializable} from '../serialize.ts';
 
-/** `field` tanımından flag'in değer tipi (yaklaşık). */
+/** The flag's value type derived from its `field` definition (approximate). */
 export type FlagValue<F extends Field> = F extends {type: 'boolean'}
     ? boolean
     : F extends {type: 'number'}
@@ -18,34 +18,34 @@ export type FlagOptions<F extends Field = Field> = {
     title?: string;
     description?: string;
     group?: string;
-    /** Değer tipi ve UI'daki düzenleyici. `default`, override ve `value` yokken geçerli değerdir. */
+    /** Value type and the editor in the UI. `default` is the effective value when there is no override and no `value`. */
     field: F;
-    /** App'in verdiği değer (ör. remote config'ten). Sonradan `setValue` ile değiştirilebilir. */
+    /** The value provided by the app (e.g. from remote config). Can be changed later with `setValue`. */
     value?: FlagValue<F>;
 };
 
 export type Flag<T = unknown> = {
     readonly key: string;
-    /** Override varsa o, yoksa app'in değeri, yoksa `field.default`. */
+    /** The override if any, otherwise the app's value, otherwise `field.default`. */
     get(): T;
-    /** Geçerli değer değişince çağrılır. */
+    /** Called when the effective value changes. */
     subscribe(listener: (value: T) => void): () => void;
 };
 
 export type FlagsModule = RemoteModule & {
-    /** Flag tanımlar (aynı anahtar varsa tanımı günceller, override korunur). */
+    /** Defines a flag (if the key exists, updates the definition and keeps the override). */
     define<F extends Field>(options: FlagOptions<F>): Flag<FlagValue<F>>;
-    /** Tanımı kaldırır; kayıtlı override saklanmaya devam eder. */
+    /** Removes the definition; the stored override is kept. */
     undefine(key: string): void;
     get<T = unknown>(key: string): T | undefined;
-    /** App'in değerini değiştirir (override varsa geçerli değer değişmez). */
+    /** Changes the app's value (the effective value doesn't change while overridden). */
     setValue(key: string, value: unknown): void;
     isOverridden(key: string): boolean;
-    /** Override'ı (anahtar yoksa hepsini) siler. */
+    /** Clears the override (all overrides if no key is given). */
     reset(key?: string): void;
-    /** Herhangi bir flag'in geçerli değeri değişince çağrılır. */
+    /** Called when any flag's effective value changes. */
     subscribe(listener: (key: string, value: unknown) => void): () => void;
-    /** Kayıtlı override'lar yüklenince çözülür (SDK kapalıyken hemen). */
+    /** Resolves once stored overrides are loaded (immediately when the SDK is disabled). */
     ready(): Promise<void>;
 };
 
@@ -61,8 +61,8 @@ function fieldDefault(field: Field): unknown {
 }
 
 /**
- * Feature flag'ler: app tanımlar, UI'dan override edilir. Override'lar SDK'nın `storage`'ında saklanır ve uygulama
- * yeniden açılınca da geçerlidir. SDK kapalıyken (`enabled: false`) override uygulanmaz, `get` app'in değerini döner.
+ * Feature flags: defined by the app, overridden from the UI. Overrides are stored in the SDK's `storage` and still
+ * apply after the app restarts. When the SDK is disabled (`enabled: false`) overrides are not applied; `get` returns the app's value.
  *
  *     const flags = flagsModule();
  *     const newCheckout = flags.define({key: 'checkout.v2', title: 'New checkout', field: {type: 'boolean'}});
@@ -70,7 +70,7 @@ function fieldDefault(field: Field): unknown {
  */
 export function flagsModule(): FlagsModule {
     const entries = new Map<string, Entry>();
-    /** Tanımlanmamış anahtarlar da tutulur: flag sonradan tanımlanınca uygulanır. */
+    /** Undefined keys are kept too: they apply once the flag is defined later. */
     let overrides: Record<string, unknown> = {};
     const listeners = new Set<(key: string, value: unknown) => void>();
     let ctx: ModuleContext | null = null;
@@ -90,8 +90,8 @@ export function flagsModule(): FlagsModule {
     };
 
     /**
-     * `fn` geçerli değerleri değiştirebilir; değişenler dinleyicilere, değer veya override durumu değiştiyse
-     * (ya da `definitionChanged`) UI'a bildirilir.
+     * `fn` may change effective values; changes are reported to listeners, and to the UI if a value or override state
+     * changed (or `definitionChanged`).
      */
     const mutate = (fn: () => void, definitionChanged = false) => {
         const before = new Map([...entries.keys()].map((key) => [key, {value: current(key), overridden: isOverridden(key)}]));
@@ -117,14 +117,14 @@ export function flagsModule(): FlagsModule {
         if (result instanceof Promise) result.catch((err) => ctx?.log.warn('Could not save flag overrides', err, {tag: 'flags'}));
     };
 
-    /** Kayıtlı override'ları uygular; tanımla uyuşmayanlar (ör. seçenek kaldırılmış) atılır. */
+    /** Applies stored overrides; those that don't match the definition (e.g. a removed option) are dropped. */
     const applyStored = (raw: string | null) => {
         let stored: Record<string, unknown> = {};
         try {
             const parsed = raw ? JSON.parse(raw) : {};
             if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) stored = parsed as Record<string, unknown>;
         } catch {
-            // bozuk kayıt yok sayılır
+            // a corrupt record is ignored
         }
         mutate(() => {
             overrides = {...stored, ...overrides};
@@ -184,7 +184,7 @@ export function flagsModule(): FlagsModule {
             } catch {
                 raw = null;
             }
-            // Senkron depolarda (localStorage, MMKV) override'lar `init` dönmeden uygulanır.
+            // With synchronous stores (localStorage, MMKV), overrides are applied before `init` returns.
             if (raw instanceof Promise) {
                 readyPromise = raw.then(applyStored, () => applyStored(null));
             } else {
@@ -209,7 +209,7 @@ export function flagsModule(): FlagsModule {
             });
 
             return () => {
-                // Kapatılınca app'in değerlerine dönülür (override'lar diskte kalır).
+                // On teardown, revert to the app's values (overrides stay on disk).
                 mutate(() => {
                     ctx = null;
                 });

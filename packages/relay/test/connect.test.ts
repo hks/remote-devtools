@@ -3,7 +3,7 @@ import {describe, it} from 'node:test';
 import {WS_PATH_DEVICE, WS_PATH_UI} from '@himmetkaan/remote-devtools-protocol';
 import {connect, makeHello, newDeviceId, openUi, withServer} from './helpers.ts';
 
-/** `connect` gönderen geliştirme cihazı. */
+/** A development device that sends `connect`. */
 async function requestConnect(port: number, deviceId = newDeviceId(), headers: Record<string, string> = {}) {
     const device = await connect(port, WS_PATH_DEVICE, headers);
     device.send('connect', {deviceId, hello: makeHello()});
@@ -158,12 +158,12 @@ describe('connect requests', () => {
             await ui.next('device.status');
             await ui.next('device.status');
 
-            // Sırrını kaybetmiş (ör. eşleşmesi silinmiş) ama onaylı cihaz: onay sorulmadan eşleşir.
+            // A trusted device that lost its secret (e.g. its pairing was removed): pairs without asking for approval.
             const again = await requestConnect(port, deviceId);
             assert.equal((await again.device.next('paired')).payload.sessionId, session.sessionId);
             await ui.none('connect.request');
 
-            // Aynı cihaz kimliği, farklı uygulama: yine onay ister.
+            // Same device id, different app: approval is still required.
             const otherApp = await connect(port, WS_PATH_DEVICE);
             otherApp.send('connect', {deviceId, hello: makeHello({app: {id: 'com.other', name: 'Other', version: '1'}})});
             await otherApp.next('connect.pending');

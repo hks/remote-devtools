@@ -26,7 +26,7 @@ function moveDevice(step: number) {
     selectDevice(ids[(idx + step + ids.length) % ids.length]!);
 }
 
-/** Tab'lar arası geçerli kısayollar + `?` ile açılan yardım. */
+/** Shortcuts that work across tabs + help opened with `?`. */
 export function Shortcuts() {
     const [open, setOpen] = useState(false);
 

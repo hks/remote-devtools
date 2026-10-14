@@ -10,7 +10,7 @@ import {type ChangeLine, EMPTY_VIEW, stateKey, type TimelineEntry, useStateStore
 type StoreInfo = {id: string; title: string};
 
 const NO_STORES: StoreInfo[] = [];
-/** Süre dolmadan yenile (cihaz `STATE_SUBSCRIPTION_TTL_MS` içinde yenilenmeyen aboneliği bırakır). */
+/** Renew before expiry (the device drops subscriptions not renewed within `STATE_SUBSCRIPTION_TTL_MS`). */
 const RENEW_MS = STATE_SUBSCRIPTION_TTL_MS / 3;
 const INLINE_LINES = 6;
 const MAX_VALUE_CHARS = 140;
@@ -87,12 +87,12 @@ export function StateTab({deviceId}: {deviceId: string}) {
     const [refreshToken, setRefreshToken] = useState(0);
     const activeId = store?.id ?? null;
 
-    // Patch uygulanamadıysa baştan abone olunur.
+    // If a patch couldn't be applied, resubscribe from scratch.
     useEffect(() => {
         if (view.stale) setRefreshToken((n) => n + 1);
     }, [view.stale]);
 
-    // Tab açıkken (ve cihaz bağlıyken) abone ol; kapanınca bırak.
+    // Subscribe while the tab is open (and the device connected); unsubscribe when it closes.
     useEffect(() => {
         if (!activeId || unavailable) return;
         let cancelled = false;
@@ -104,7 +104,7 @@ export function StateTab({deviceId}: {deviceId: string}) {
                 return;
             }
             setError(null);
-            // Yenileme cevabında state varsa cihaz aboneliği düşürmüş demektir (ör. uygulama yeniden başladı).
+            // State in the renew response means the device dropped the subscription (e.g. the app restarted).
             if ('state' in outcome.result) useStateStore.getState().setSnapshot(stateKey(deviceId, activeId), outcome.result.state);
         };
         void subscribe(false);

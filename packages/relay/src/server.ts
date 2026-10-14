@@ -14,7 +14,7 @@ export type RunningServer = {
     close(): Promise<void>;
 };
 
-/** Sırrı olmayan, herkese açık JSON uç noktaları; tarayıcıdaki SDK'lar da okuyabilsin diye CORS açıktır. */
+/** Public JSON endpoints without secrets; CORS is open so in-browser SDKs can read them too. */
 function sendJson(res: ServerResponse, body: unknown) {
     res.writeHead(200, {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store'});
     res.end(JSON.stringify(body));
@@ -31,7 +31,7 @@ export async function startServer(config: RelayConfig): Promise<RunningServer> {
             return sendJson(res, {ok: true, sessions: relay.store.size, uptimeSec: Math.round((Date.now() - startedAt) / 1000)});
         }
 
-        // `isDevelopment` SDK'ları localhost'ta relay olup olmadığını buradan anlar.
+        // `isDevelopment` SDKs use this to detect whether a relay is running on localhost.
         if (path === DISCOVERY_PATH) {
             return sendJson(res, {
                 name: 'remote-devtools',

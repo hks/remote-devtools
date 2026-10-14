@@ -16,7 +16,7 @@ import {
 } from '../src/index.ts';
 import {createClient, openUi, relayUrl, sleep, type Ui, waitForStatus, withPairedClient, withRelay} from './helpers.ts';
 
-/** UI'dan cihaza istek gönderip cevabın payload'ını döner. */
+/** Sends a request from the UI to the device and returns the reply payload. */
 async function call(ui: Ui, deviceId: string, type: string, payload: unknown) {
     const resultType = `${type.split('.').slice(0, 2).join('.')}.result`;
     const id = ui.send(type, payload, {deviceId});
@@ -59,7 +59,7 @@ function fakeMmkv(initial: Record<string, string | number | boolean> = {}) {
     };
 }
 
-/** Basit bir Redux store'u (redux paketine bağımlı olmadan). */
+/** A simple Redux store (without depending on the redux package). */
 function createReduxStore<S>(reducer: (state: S | undefined, action: {type: string; [k: string]: unknown}) => S) {
     let state = reducer(undefined, {type: '@@INIT'});
     const listeners = new Set<() => void>();
@@ -77,7 +77,7 @@ function createReduxStore<S>(reducer: (state: S | undefined, action: {type: stri
     };
 }
 
-/** Zustand'ın vanilla store'u gibi davranan küçük bir store. */
+/** A small store that behaves like Zustand's vanilla store. */
 function createZustandStore<S extends object>(initial: S) {
     let state = initial;
     const listeners = new Set<(state: S, prev: S) => void>();
@@ -137,7 +137,7 @@ describe('storageModule', () => {
 
             assert.equal((await call(ui, deviceId, 'module.storage.set', {adapterId: 'async-storage', key: 'c', value: '{"n":1}'})).ok, true);
             assert.equal(async.data.get('c'), '{"n":1}');
-            // AsyncStorage değişiklik bildirmediği için modül kendi yazdıklarını bildirir (diğer UI pencereleri için).
+            // AsyncStorage doesn't report changes, so the module reports its own writes (for other UI windows).
             assert.deepEqual((await ui.next('module.storage.changed')).payload, {adapterId: 'async-storage', key: 'c'});
 
             await call(ui, deviceId, 'module.storage.remove', {adapterId: 'async-storage', key: 'a'});
@@ -160,7 +160,7 @@ describe('storageModule', () => {
             mmkv.set('token', 'changed in app');
             assert.deepEqual((await ui.next('module.storage.changed')).payload, {adapterId: 'mmkv', key: 'token'});
             await call(ui, deviceId, 'module.storage.remove', {adapterId: 'mmkv', key: 'count'});
-            // Tek bildirim: adapter'ın kendi olayı (modül ayrıca bildirmez).
+            // A single notification: the adapter's own event (the module doesn't report it again).
             assert.deepEqual((await ui.next('module.storage.changed')).payload, {adapterId: 'mmkv', key: 'count'});
             await ui.none('module.storage.changed');
         });
@@ -211,7 +211,7 @@ describe('stateModule', () => {
         const state = stateModule({stores: [reduxAdapter(store, {id: 'app', title: 'App'})], throttleMs: 20});
         await withPairedClient([state], async (ui, deviceId) => {
             assert.deepEqual((await call(ui, deviceId, 'module.state.snapshot', {storeId: 'app'})).result, {state: {count: 0, items: []}});
-            // Abone olunmadan değişiklik gönderilmez.
+            // No changes are sent without a subscription.
             store.dispatch({type: 'inc'});
             await ui.none('module.state.change', 60);
 
@@ -289,7 +289,7 @@ describe('flagsModule', () => {
             await call(ui, deviceId, 'module.flags.set', {key: 'api.timeout', value: 5});
             assert.equal(timeout.get(), 5);
 
-            // App'in değeri değişse de override geçerli kalır.
+            // The override stays in effect even if the app's value changes.
             flags.setValue('api.timeout', 10);
             assert.equal(timeout.get(), 5);
 
@@ -314,12 +314,12 @@ describe('flagsModule', () => {
             await call(ui, client.connection.state.deviceId!, 'module.flags.set', {key: 'beta', value: true});
             assert.equal(flag.get(), true);
             client.destroy();
-            // Kapatılınca app'in değerine dönülür.
+            // On destroy, it reverts to the app's value.
             assert.equal(flag.get(), false);
             ui.close();
         });
 
-        // Yeniden açılış: override kayıtlı depodan okunur (memoryStorage senkron olduğu için hemen).
+        // Restart: the override is read from storage (immediately, since memoryStorage is synchronous).
         const second = flagsModule();
         const again = second.define({key: 'beta', field: {type: 'boolean'}});
         const client = createClient({modules: [second], storage, discovery: {localhost: false}});
@@ -328,7 +328,7 @@ describe('flagsModule', () => {
         assert.equal(second.isOverridden('beta'), true);
         client.destroy();
 
-        // SDK kapalıyken override uygulanmaz.
+        // Overrides are not applied while the SDK is disabled.
         const disabled = flagsModule();
         const off = disabled.define({key: 'beta', field: {type: 'boolean'}});
         const noop = createClient({modules: [disabled], storage, enabled: false});
@@ -353,7 +353,7 @@ describe('flagsModule', () => {
         await flags.ready();
         assert.equal(level.get(), 3);
         assert.equal(mode.get(), 'a');
-        // Henüz tanımlanmamış bir flag'in override'ı saklanır, tanımlanınca uygulanır.
+        // The override of a not-yet-defined flag is kept and applied once it is defined.
         assert.equal(flags.define({key: 'later', field: {type: 'text'}}).get(), 'x');
         client.destroy();
     });

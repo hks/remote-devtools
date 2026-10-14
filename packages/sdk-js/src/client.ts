@@ -22,38 +22,38 @@ export const SDK_NAME = '@himmetkaan/remote-devtools';
 export const SDK_VERSION = '0.1.0-alpha.3';
 
 export type RemoteDevToolsOptions = {
-    /** Zorunlu kapı. `false` iken hiçbir şey yapılmaz: soket açılmaz, modüller kurulmaz, global yama yapılmaz. */
+    /** Required gate. When `false` nothing happens: no socket is opened, no modules are set up, no globals are patched. */
     enabled: boolean;
-    /** Geliştirme modu: yerel relay'i bulup bağlantı isteği gönderir (UI'da onay gerekir). */
+    /** Development mode: finds the local relay and sends a connect request (must be approved in the UI). */
     isDevelopment?: boolean;
     app: Hello['app'];
-    /** Verilmeyen alanlar ortamdan tahmin edilir. React Native'de `platform` ve `os` verilmelidir. */
+    /** Omitted fields are guessed from the environment. On React Native, `platform` and `os` should be provided. */
     device?: Partial<DeviceInfo>;
-    /** UI'da cihaz kartında gösterilen serbest alanlar (userId, apiEndpoint, env…). */
+    /** Free-form fields shown on the device card in the UI (userId, apiEndpoint, env…). */
     meta?: Record<string, string>;
     modules?: RemoteModule[];
-    /** Eşleşme bilgisi ve cihaz kimliği için. React Native'de AsyncStorage verilmelidir. Varsayılan: localStorage veya bellek. */
+    /** For the pairing and the device id. On React Native, pass AsyncStorage. Default: localStorage or in-memory. */
     storage?: KeyValueStorage;
-    /** Depolama anahtarlarının öneki. */
+    /** Prefix for storage keys. */
     storageKey?: string;
-    /** Ön plan / arka plan kaynağı. React Native: `reactNativeLifecycle(AppState)`. Varsayılan: tarayıcı görünürlüğü. */
+    /** Foreground / background source. React Native: `reactNativeLifecycle(AppState)`. Default: browser visibility. */
     lifecycle?: LifecycleSource;
-    /** Bağlanmadan önceki log ve modül olaylarını bellekte tutup bağlanınca gönderir. Varsayılan kapalı. */
+    /** Keeps logs and module events from before the connection in memory and sends them once connected. Off by default. */
     history?: {enabled: boolean; maxEntries?: number};
     discovery?: {
-        /** Yerel relay'i `GET /discovery` ile arar (varsayılan açık, sadece `isDevelopment`). */
+        /** Looks for a local relay via `GET /discovery` (on by default, `isDevelopment` only). */
         localhost?: boolean | LocalhostDiscoveryOptions;
-        /** Ek keşif yöntemleri (ör. mDNS paketi). */
+        /** Additional discovery methods (e.g. an mDNS package). */
         providers?: DiscoveryProvider[];
-        /** Relay bulunamazsa tekrar deneme aralığı. */
+        /** Retry interval when no relay is found. */
         intervalMs?: number;
     };
-    /** `console.*` çağrılarını da log olarak gönderir (`true` = tüm seviyeler). */
+    /** Also sends `console.*` calls as logs (`true` = all levels). */
     captureConsole?: boolean | LogLevel[];
     reconnect?: {minDelayMs?: number; maxDelayMs?: number};
-    /** Varsayılan: global `WebSocket`. */
+    /** Default: the global `WebSocket`. */
     WebSocket?: WebSocketConstructor;
-    /** SDK'nın kendi iç loglarını konsola yazar. */
+    /** Writes the SDK's own internal logs to the console. */
     debug?: boolean;
 };
 
@@ -70,7 +70,7 @@ export type ConnectionApi = {
 
 const HISTORY_CHUNK_BYTES = 256 * 1024;
 const CONSOLE_METHODS: Record<LogLevel, 'debug' | 'log' | 'warn' | 'error'> = {debug: 'debug', info: 'log', warn: 'warn', error: 'error'};
-/** SDK'nın kendi çıktısı yakalanan konsola geri düşmesin diye orijinaller saklanır. */
+/** Originals are kept so the SDK's own output doesn't loop back into the captured console. */
 const originalConsole = {...console};
 
 const DISABLED_STATE: ConnectionState = {
@@ -88,14 +88,14 @@ type Handler = (payload: unknown, message: Envelope) => void;
 export class RemoteDevTools {
     static #instance: RemoteDevTools | null = null;
 
-    /** Uygulama genelinde tek örnek oluşturur ve başlatır. Tekrar çağrılırsa öncekini kapatır. */
+    /** Creates and starts the app-wide singleton. Calling it again destroys the previous one. */
     static init(options: RemoteDevToolsOptions): RemoteDevTools {
         RemoteDevTools.#instance?.destroy();
         RemoteDevTools.#instance = new RemoteDevTools(options);
         return RemoteDevTools.#instance;
     }
 
-    /** `init` ile oluşturulan örnek (yoksa `null`). */
+    /** The instance created by `init` (or `null`). */
     static get instance(): RemoteDevTools | null {
         return RemoteDevTools.#instance;
     }
@@ -132,7 +132,7 @@ export class RemoteDevTools {
         void this.#connection.start();
     }
 
-    /** `meta` alanlarını günceller; bağlıysa UI'a yeni `hello` gider. */
+    /** Updates the `meta` fields; if connected, a new `hello` is sent to the UI. */
     updateMeta(meta: Record<string, string>): void {
         if (!this.enabled) return;
         this.#meta = {...this.#meta, ...meta};
@@ -153,7 +153,7 @@ export class RemoteDevTools {
         if (RemoteDevTools.#instance === this) RemoteDevTools.#instance = null;
     }
 
-    // ─── Kurulum ─────────────────────────────────────────────────────────────
+    // ─── Setup ───────────────────────────────────────────────────────────────
 
     #createConnection(): Connection {
         const o = this.#options;
@@ -251,7 +251,7 @@ export class RemoteDevTools {
     }
 
     #moduleContext(module: RemoteModule): ModuleContext {
-        // Modüller sadece SDK etkinken kurulur; bağlantı her zaman vardır.
+        // Modules are only set up when the SDK is enabled, so the connection always exists.
         const connection = this.#connection!;
         const prefix = `${MODULE_TYPE_PREFIX}${module.name}.`;
         const assertType = (type: string) => {
@@ -282,7 +282,7 @@ export class RemoteDevTools {
         };
     }
 
-    // ─── Bağlantı olayları ───────────────────────────────────────────────────
+    // ─── Connection events ───────────────────────────────────────────────────
 
     #hello(): Hello {
         const capabilities: Capabilities = {};
@@ -323,13 +323,13 @@ export class RemoteDevTools {
         this.#connection?.send(JSON.stringify(createEnvelope(type, payload, {replyTo: request.id})));
     }
 
-    // ─── Gönderim ────────────────────────────────────────────────────────────
+    // ─── Sending ─────────────────────────────────────────────────────────────
 
     #sendNow(type: string, payload: unknown): boolean {
         return this.#connection?.send(JSON.stringify(createEnvelope(type, payload))) ?? false;
     }
 
-    /** Bağlıysa gönderir; değilse (izin varsa) geçmiş tamponuna alır. */
+    /** Sends if connected; otherwise (if allowed) puts it in the history buffer. */
     #send(type: string, payload: unknown, options: EmitOptions = {}) {
         if (!this.#connection || this.#destroyed) return;
         const safe = toSerializable(payload);

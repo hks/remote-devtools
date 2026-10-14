@@ -13,17 +13,17 @@ import type {DiscoveryProvider} from './discovery.ts';
 import type {KeyValueStorage} from './storage.ts';
 
 export type ConnectionStatus =
-    /** SDK kapalı (`enabled: false`). */
+    /** SDK is disabled (`enabled: false`). */
     | 'disabled'
-    /** Eşleşme yok veya `disconnect()` çağrıldı; QR/kod ya da `connect()` bekleniyor. */
+    /** No pairing, or `disconnect()` was called; waiting for a QR/code or `connect()`. */
     | 'idle'
-    /** `isDevelopment`: relay aranıyor. */
+    /** `isDevelopment`: looking for a relay. */
     | 'discovering'
     | 'connecting'
-    /** Bağlantı isteği UI'da onay bekliyor. */
+    /** The connect request is awaiting approval in the UI. */
     | 'pending-approval'
     | 'connected'
-    /** Bağlantı koptu; kayıtlı eşleşmeyle tekrar denenecek. */
+    /** Connection lost; will retry with the stored pairing. */
     | 'reconnecting';
 
 export type ConnectionError = { code: string; message: string };
@@ -33,11 +33,11 @@ export type ConnectionState = {
     deviceId: string | null;
     relayUrl: string | null;
     sessionId: string | null;
-    /** `pending-approval` iken bekleyen isteğin id'si. */
+    /** Id of the pending request while `pending-approval`. */
     requestId: string | null;
-    /** Son başarısız işlemin hatası; yeni bir bağlantı kurulunca temizlenir. */
+    /** Error of the last failed operation; cleared once a new connection is established. */
     error: ConnectionError | null;
-    /** `reconnecting` iken bir sonraki denemenin zamanı. */
+    /** Time of the next attempt while `reconnecting`. */
     retryAt: number | null;
 };
 
@@ -53,13 +53,13 @@ export type WebSocketLike = {
 
 export type WebSocketConstructor = new (url: string) => WebSocketLike;
 
-/** Cihazda saklanan eşleşme. Süre relay'de kayar; burada sadece "artık geçersizdir" tahmini için tutulur. */
+/** Pairing stored on the device. The expiry slides on the relay; it is kept here only to guess when it is no longer valid. */
 type StoredPairing = {
     relayUrl: string;
     sessionId: string;
     deviceSecret: string;
     idleTtlMs: number;
-    /** Son etkinlik anı (bağlıyken periyodik güncellenir). */
+    /** Last activity time (updated periodically while connected). */
     lastActiveAt: number;
 };
 
@@ -81,13 +81,13 @@ export type ConnectionOptions = {
 
 const OPEN = 1;
 const ACTIVITY_SAVE_INTERVAL_MS = 60_000;
-/** Kullanıcı bekleyen isteği cevaplamadıysa tekrar sormadan önce beklenen süre. */
+/** How long to wait before asking again if the user didn't answer the pending request. */
 const EXPIRED_REQUEST_BACKOFF_MS = 60_000;
 
-/** Relay'in kapanış kodları (bkz. docs/v2/PROTOCOL.md). */
+/** Relay close codes (see docs/v2/PROTOCOL.md). */
 const Close = {replaced: 4000, unpaired: 4002, unsupportedVersion: 4005} as const;
 
-/** Eşleşmeyi bu sebeplerle kaybeden geliştirme cihazı tekrar keşfe çıkar; kullanıcı kaldırdıysa çıkmaz. */
+/** A development device that loses its pairing for these reasons starts discovery again; not if the user removed it. */
 const REDISCOVER_AFTER: ReadonlySet<UnpairReason> = new Set(['expired', 'sessionNotFound', 'invalidSecret']);
 
 type FirstMessage = { type: 'pair.qr' | 'pair.code' | 'resume' | 'connect'; payload: unknown };
@@ -100,7 +100,7 @@ export function randomDeviceId(): string {
     return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-/** `https://host`, `ws://host:8080`, `host:8080` gibi girdileri cihaz WebSocket adresine çevirir. */
+/** Converts inputs like `https://host`, `ws://host:8080`, `host:8080` into the device WebSocket URL. */
 export function toDeviceWsUrl(input: string): string {
     let url = input.trim().replace(/\/+$/, '');
     if (!/^[a-z]+:\/\//i.test(url)) url = `ws://${url}`;
@@ -126,7 +126,7 @@ export class Connection {
     #ws: WebSocketLike | null = null;
     #wsUrl = '';
     #first: FirstMessage | null = null;
-    /** Bu soketin kapanışı beklenen bir kapanış (tepki verilmemeli). */
+    /** This socket's close is expected (should not be reacted to). */
     #expectClose = false;
     #attempt = 0;
     #retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -140,7 +140,7 @@ export class Connection {
         this.#o = options;
     }
 
-    // ─── Durum ───────────────────────────────────────────────────────────────
+    // ─── State ───────────────────────────────────────────────────────────────
 
     get state(): ConnectionState {
         return this.#state;
@@ -166,7 +166,7 @@ export class Connection {
         for (const listener of this.#listeners) listener(this.#state);
     }
 
-    // ─── Depolama ────────────────────────────────────────────────────────────
+    // ─── Storage ─────────────────────────────────────────────────────────────
 
     get #pairingKey() {
         return `${this.#o.storageKey}:pairing`;
@@ -187,7 +187,7 @@ export class Connection {
             const p = raw ? (JSON.parse(raw) as StoredPairing) : null;
             if (p && typeof p.relayUrl === 'string' && typeof p.sessionId === 'string' && typeof p.deviceSecret === 'string') return p;
         } catch {
-            // bozuk kayıt
+            // corrupt record
         }
         return null;
     }
@@ -206,9 +206,9 @@ export class Connection {
         return Date.now() > p.lastActiveAt + p.idleTtlMs;
     }
 
-    // ─── Dış API ─────────────────────────────────────────────────────────────
+    // ─── Public API ──────────────────────────────────────────────────────────
 
-    /** Kimliği ve kayıtlı eşleşmeyi yükler; eşleşme varsa devam eder, yoksa (geliştirmede) keşfe çıkar. */
+    /** Loads the device id and stored pairing; resumes if paired, otherwise (in development) starts discovery. */
     start(): Promise<void> {
         this.#ready ??= (async () => {
             this.#deviceId = await this.#loadDeviceId();
@@ -220,7 +220,7 @@ export class Connection {
         return this.#ready;
     }
 
-    /** Kayıtlı eşleşmeyle bağlanır; yoksa geliştirme modunda keşfe çıkar. */
+    /** Connects with the stored pairing; without one, starts discovery in development mode. */
     connect(): void {
         if (this.#destroyed || !this.#deviceId) return;
         if (['connected', 'connecting', 'pending-approval'].includes(this.#state.status)) return;
@@ -239,7 +239,7 @@ export class Connection {
         }
     }
 
-    /** QR içeriğiyle eşleşir. Mevcut eşleşme varsa bırakılır. */
+    /** Pairs using QR content. Any existing pairing is dropped. */
     async pairWithQr(raw: string): Promise<void> {
         const qr = parseQrPayload(raw);
         if (!qr) throw new Error('Not a Remote DevTools QR code');
@@ -248,7 +248,7 @@ export class Connection {
         this.#beginPairing(qr.url, {type: 'pair.qr', payload: {sessionId: qr.sessionId, qrToken: qr.qrToken, deviceId: this.#deviceId}});
     }
 
-    /** 6 haneli kodla eşleşir. `relayUrl`: relay'in adresi (`https://…`, `ws://host:port` veya tam cihaz adresi). */
+    /** Pairs using a 6-digit code. `relayUrl`: the relay's address (`https://…`, `ws://host:port` or the full device URL). */
     async pairWithCode(code: string, relayUrl: string): Promise<void> {
         const normalized = code.replace(/\s+/g, '');
         if (!/^\d{6}$/.test(normalized)) throw new Error('Pairing code must be 6 digits');
@@ -256,13 +256,13 @@ export class Connection {
         this.#beginPairing(toDeviceWsUrl(relayUrl), {type: 'pair.code', payload: {code: normalized, deviceId: this.#deviceId}});
     }
 
-    /** Bağlantıyı kapatır ama eşleşmeyi saklar; `connect()` ile devam edilir. */
+    /** Closes the connection but keeps the pairing; resume with `connect()`. */
     disconnect(): void {
         this.#stop();
         this.#set({status: 'idle', requestId: null, retryAt: null});
     }
 
-    /** Eşleşmeyi relay'den ve cihazdan siler. */
+    /** Removes the pairing from the relay and the device. */
     unpair(): void {
         if (this.isConnected) this.send(JSON.stringify(createEnvelope('unpair', {})));
         this.#stop();
@@ -270,7 +270,7 @@ export class Connection {
         this.#set({status: 'idle', relayUrl: null, requestId: null, retryAt: null, error: null});
     }
 
-    /** Geliştirme keşfini hemen başlatır (ör. kullanıcı reddettikten sonra tekrar denemek için). */
+    /** Starts development discovery immediately (e.g. to retry after the user rejected). */
     async discover(): Promise<void> {
         if (this.#destroyed || !this.#deviceId) return;
         this.#stop();
@@ -299,7 +299,7 @@ export class Connection {
         this.#open(url, {type: 'connect', payload: {deviceId: this.#deviceId, hello: this.#o.getHello()}});
     }
 
-    /** Ön plana dönüşte beklemeden yeniden dener. */
+    /** Retries right away when returning to the foreground. */
     onForeground(): void {
         if (this.#state.status === 'reconnecting' || (this.#state.status === 'discovering' && !this.#discoveryAbort)) this.connect();
     }
@@ -316,7 +316,7 @@ export class Connection {
         this.#listeners.clear();
     }
 
-    // ─── Soket ───────────────────────────────────────────────────────────────
+    // ─── Socket ──────────────────────────────────────────────────────────────
 
     #beginPairing(url: string, first: FirstMessage) {
         this.#forgetPairing();
@@ -328,7 +328,7 @@ export class Connection {
         this.#open(p.relayUrl, {type: 'resume', payload: {sessionId: p.sessionId, deviceId: this.#deviceId, deviceSecret: p.deviceSecret}});
     }
 
-    /** Zamanlayıcıları ve açık soketi (beklenen kapanış olarak) kapatır. */
+    /** Clears timers and closes the open socket (as an expected close). */
     #stop() {
         if (this.#retryTimer) clearTimeout(this.#retryTimer);
         if (this.#activityTimer) clearInterval(this.#activityTimer);
@@ -351,7 +351,7 @@ export class Connection {
         try {
             ws.close(code);
         } catch {
-            // zaten kapalı
+            // already closed
         }
     }
 
@@ -388,7 +388,7 @@ export class Connection {
             if (msg) this.#handleMessage(msg);
         };
         ws.onerror = () => {
-            // Ardından close gelir.
+            // A close event follows.
         };
         ws.onclose = (ev) => this.#handleClose(ws, ev.code);
     }
@@ -427,7 +427,7 @@ export class Connection {
                     this.#o.debug(`relay error: ${p.code}`, p.message);
                     this.#o.onMessage(msg);
                 } else {
-                    // Eşleşme başarısız (geçersiz kod/token, süre doldu, limit…). Relay soketi kapatacak.
+                    // Pairing failed (invalid code/token, expired, limit…). The relay will close the socket.
                     this.#expectClose = true;
                     this.#closeSocket();
                     this.#set({status: 'idle', error: {code: p.code, message: p.message}});
@@ -456,7 +456,7 @@ export class Connection {
         this.#closeSocket();
         switch (reason) {
             case 'noSession':
-                // UI henüz açık değil; açılınca isteği görsün diye tekrar denenir.
+                // The UI isn't open yet; retry so it sees the request once it opens.
                 this.#scheduleDiscovery(this.#o.discoveryIntervalMs);
                 return;
             case 'expired':
@@ -505,9 +505,9 @@ export class Connection {
         this.#afterSocketLost();
     }
 
-    /** Ağ hatası / relay kapandı: eşleşme varsa yeniden bağlan, keşifteysek tekrar ara. */
+    /** Network error / relay closed: reconnect if paired, search again if discovering. */
     #afterSocketLost() {
-        // Eşleşme sadece `paired`/`resumed` sonrası vardır; QR/kodla eşleşmeye çalışırken kopan soket yeniden denenmez.
+        // A pairing only exists after `paired`/`resumed`; a socket lost while pairing via QR/code is not retried.
         if (this.#pairing) {
             this.#scheduleReconnect();
         } else if (this.#first?.type === 'connect') {

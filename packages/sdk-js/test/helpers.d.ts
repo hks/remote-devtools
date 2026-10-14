@@ -4,7 +4,7 @@ import { type ConnectionStatus, RemoteDevTools, type RemoteDevToolsOptions } fro
 export declare const sleep: (ms: number) => Promise<unknown>;
 export declare function withRelay(overrides: Partial<RelayConfig>, fn: (relay: RunningServer) => Promise<void>): Promise<void>;
 export type Msg = Envelope<string, any>;
-/** UI yerine geçen basit istemci (global WebSocket). */
+/** Simple client standing in for the UI (global WebSocket). */
 export type Ui = {
     send(type: string, payload?: unknown, extra?: {
         deviceId?: string;

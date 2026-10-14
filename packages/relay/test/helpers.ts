@@ -42,7 +42,7 @@ export function makeHello(overrides: Partial<Hello> = {}): Hello {
     };
 }
 
-// ─── Test istemcisi ──────────────────────────────────────────────────────────
+// ─── Test client ─────────────────────────────────────────────────────────────
 
 export type Msg = Envelope<string, any>;
 
@@ -51,7 +51,7 @@ export type Client = {
     send(type: string, payload?: unknown, extra?: {deviceId?: string}): string;
     sendRaw(data: string): void;
     next(type: string, timeoutMs?: number): Promise<Msg>;
-    /** Belirtilen süre boyunca bu tipte mesaj gelmediğini doğrular. */
+    /** Asserts that no message of this type arrives within the given time. */
     none(type: string, waitMs?: number): Promise<void>;
     closed: Promise<{code: number; reason: string}>;
     close(): void;
@@ -122,10 +122,10 @@ export async function openUi(port: number) {
     return {ui, session};
 }
 
-/** UI oturumu + QR ile eşlenmiş bir cihaz. */
+/** A UI session + a device paired via QR. */
 export async function pairedDevice(port: number, existing?: {ui: Client; session: any}) {
     const {ui, session} = existing ?? (await openUi(port));
-    // Önceki eşleşmeler QR'ı tüketmiş olabilir; güncel token'ı kullan.
+    // Earlier pairings may have consumed the QR; use the current token.
     const pairing = existing ? await currentPairing(ui) : session.pairing;
     const deviceId = newDeviceId();
     const device = await connect(port, WS_PATH_DEVICE);
