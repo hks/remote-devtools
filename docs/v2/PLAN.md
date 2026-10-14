@@ -116,7 +116,7 @@ Swift, Kotlin ve Flutter SDK'ları ileride `sdks/` altına girer ve protokol sö
 ## 3. SDK (JS) API
 
 Çekirdek Faz 2'de, `functionsModule` ve `networkModule` Faz 4'te, `storageModule`, `stateModule` ve `flagsModule` Faz 7'de
-yazıldı (`packages/sdk-js`). Paneller (Faz 8) henüz yok.
+yazıldı; `panelsModule` Faz 8'de (`packages/sdk-js`).
 
 ```ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -175,6 +175,18 @@ const flags = flagsModule();
 const checkout = flags.define({key: 'checkout.v2', title: 'New checkout', group: 'Checkout', field: {type: 'boolean'}});
 checkout.get(); checkout.subscribe((on) => …);            // override > app değeri (flags.setValue) > field.default
 await flags.ready();                                      // async storage'daki override'lar yüklendi (senkron depolarda gerekmez)
+
+// Faz 8: özel paneller (her panel ayrı tab)
+const panels = panelsModule();
+const queue = panels.define({id: 'queue', title: 'Job queue', icon: '📬', blocks: [
+    {id: 'note', type: 'text', tone: 'info', text: 'Jobs retry three times.'},
+    {id: 'stats', type: 'stats', items: [{label: 'Pending', value: 0}]},
+    {id: 'jobs', type: 'table', columns: [{key: 'id', title: 'ID'}, {key: 'state', title: 'State'}], rows: [],
+     rowActions: [{id: 'retry', label: 'Retry', handler: (row) => jobs.retry(row.id)}]},
+    {id: 'tools', type: 'actions', actions: [{id: 'flush', label: 'Flush', danger: true, confirm: 'Flush all?', handler: () => jobs.flush()}]},
+    {id: 'add', type: 'form', fields: {name: {type: 'text', required: true}}, submit: {label: 'Enqueue', handler: ({name}) => jobs.add(name)}},
+]});
+queue.update('stats', {items: [{label: 'Pending', value: jobs.size}]});   // değişen alanlar UI'a gider
 ```
 - Komut, flag ve panel tanımları bağlantıdan önce de yapılabilir. Bağlanınca `hello` ile, sonradan değişirse
   `capabilities.update` ile gönderilir.
@@ -297,9 +309,17 @@ Pembe Panjur entegrasyonu bu fazda yapılmadı (doğrulama `examples/web` + `fak
       tsc (yeni hata yok), eslint, jest, iOS Hermes bundle; simülatörlerde kullanıcı tarafından denendi
 
 ### Faz 8 — Şemalı özel paneller
-- [ ] Protokol: `PanelDef` + blok tipleri (table, keyValue, json, actions, form) + `panel.update` (tam ve kısmi)
-- [ ] SDK: `panels.define`, `panels.update(id, blockId, data)`, aksiyon ve form handler'ları
-- [ ] UI: panel renderer'ı, her panel ayrı bir tab olarak
+Kararlar: her panel ayrı tab; handler'lar blokta inline; veri app'ten itilir (`panel.update`), UI'ın çektiği `load()` yok;
+planlanan 5 bloğa `text` ve `stats` eklendi. Pembe Panjur'da şimdilik kullanılmıyor.
+- [x] Protokol: `PanelDef` + 7 blok (text, stats, keyValue, table, json, actions, form), `BlockData`; `module.panels.update`
+      (blok alanları, kısmi) ve `module.panels.action` (`blockId` eklendi; `row` / `values`); tanım değişince `capabilities.update`
+- [x] SDK: `panelsModule()`, `define` → `{update(blockId, data), setBlocks, remove}`; aksiyon, satır aksiyonu (`handler(row)`) ve
+      form (`submit.handler(values)`, `fields`'a göre doğrulanır) handler'ları; handler'lar UI'a gitmez; blok id / tip denetimi
+- [x] UI: panel başına tab (ikon + başlık, 1–9 kısayolları), blok renderer'ları (8+ satırlı tabloda filtre, 200 satırlık sayfalama),
+      aksiyon sonucu blokta ve Logs'ta, onay ve tehlikeli aksiyonlar, form doğrulama, dar ekranda yatay kayan tablo
+- [x] 2 yeni SDK testi (toplam 52); `examples/web`'de tüm blokları kullanan "Todo panel", `fake-device`'da sayaç paneli
+- [x] Tarayıcıda uçtan uca doğrulandı: form ile ekleme, satır aksiyonu, onaylı aksiyon, canlı blok güncellemesi, sayfa
+      yenilenince panelin geri gelmesi, boş form doğrulaması, dar ekran
 
 ### Faz 9 — Açık kaynak yayını
 - [ ] README (İngilizce) baştan yazılır, Pembe Panjur referansları temizlenir; v1 PLAN/ROADMAP arşive taşınır
@@ -328,7 +348,8 @@ Pembe Panjur entegrasyonu bu fazda yapılmadı (doğrulama `examples/web` + `fak
 
 ## 6. Güncel durum (yeni oturum için)
 
-Son güncelleme: 2026-10-14. Tamamlanan: Faz 0–5, Faz 7 (Pembe Panjur dahil); Faz 6'nın bir kısmı (bkz. §4 işaretleri).
+Son güncelleme: 2026-10-14. Tamamlanan: Faz 0–5, Faz 7 (Pembe Panjur dahil), Faz 8 (Pembe Panjur'da kullanılmıyor);
+Faz 6'nın bir kısmı (bkz. §4 işaretleri).
 
 **Repolar**
 - relay-devtools (bu repo): `main` güncel ve push'lu; CI (typecheck, test, build, docker build) yeşil.
@@ -355,6 +376,9 @@ Son güncelleme: 2026-10-14. Tamamlanan: Faz 0–5, Faz 7 (Pembe Panjur dahil); 
 - `yarn install` çalışan Metro'nun dosya haritasını bozabiliyor (paketler yeniden bağlanırken "module not found");
   SDK güncellemesinden sonra Metro `-c` ile yeniden başlatılmalı.
 
-**Sıradaki seçenekler:** Faz 8 (şemalı paneller), Faz 0'daki lint/format, mobile-app PR'ı veya Faz 6'nın kalanı (Developer ID imzası + notarization +
-electron-updater için [MACOS_RELEASE.md](./MACOS_RELEASE.md)'deki sertifika/secret adımları kullanıcıdan gerekir; mDNS).
+- Kullanıcı kararıyla bekletilenler: mobile-app PR'ı (açılmayacak), Faz 0 lint/format, Faz 6'nın kalanı.
+  mobile-app'teki npm token konusu bu projenin kapsamı dışında.
+
+**Sıradaki seçenekler:** Faz 9 (açık kaynak yayını) hazırlığı veya bekletilen işlerden biri. Faz 6'nın kalanında Developer ID
+imzası + notarization + electron-updater için [MACOS_RELEASE.md](./MACOS_RELEASE.md)'deki sertifika/secret adımları kullanıcıdan gerekir.
 

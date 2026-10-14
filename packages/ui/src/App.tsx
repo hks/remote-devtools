@@ -54,7 +54,7 @@ export function App() {
                         <DeviceHeader device={device}/>
                         <TabBar modules={modules} active={active.id}/>
                         <div className="tab-content">
-                            <active.Component key={device.deviceId} deviceId={device.deviceId}/>
+                            <active.Component key={`${device.deviceId}:${active.id}`} deviceId={device.deviceId} panelId={active.panelId}/>
                         </div>
                     </>
                 )}

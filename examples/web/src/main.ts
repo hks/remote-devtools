@@ -3,6 +3,7 @@ import {
     functionsModule,
     ModuleError,
     networkModule,
+    panelsModule,
     RemoteDevTools,
     stateModule,
     storageModule,
@@ -21,6 +22,7 @@ const isDevelopment = localStorage.getItem(DEV_KEY) === '1';
 let counter = 0;
 const render = () => {
     $('counter').textContent = String(counter);
+    syncPanel();
 };
 
 const functions = functionsModule();
@@ -115,10 +117,11 @@ const storage = storageModule({
 type Todo = {id: number; title: string; done: boolean};
 type TodoState = {todos: Todo[]; filter: 'all' | 'open' | 'done'; add(title: string): void; toggle(id: number): void};
 
+let nextTodoId = 2;
 const todoStore = createStore<TodoState>()((set) => ({
     todos: [{id: 1, title: 'Try the State tab', done: false}],
     filter: 'all',
-    add: (title) => set((s) => ({todos: [...s.todos, {id: Date.now(), title, done: false}]})),
+    add: (title) => set((s) => ({todos: [...s.todos, {id: nextTodoId++, title, done: false}]})),
     toggle: (id) => set((s) => ({todos: s.todos.map((t) => (t.id === id ? {...t, done: !t.done} : t))})),
 }));
 
@@ -144,6 +147,97 @@ const renderFlags = () => {
 };
 flags.subscribe(renderFlags);
 
+// ─── Özel panel (tüm blok tipleri) ────────────────────────────────────────────
+
+const panels = panelsModule();
+
+type TodoRow = {id: number; title: string; status: string};
+
+const todoBlocks = () => {
+    const {todos, filter} = todoStore.getState();
+    const done = todos.filter((t) => t.done).length;
+    return {
+        stats: [
+            {label: 'Todos', value: todos.length},
+            {label: 'Open', value: todos.length - done, tone: todos.length - done > 3 ? ('warn' as const) : undefined},
+            {label: 'Done', value: done, tone: 'success' as const},
+        ],
+        rows: todos.map((t): TodoRow => ({id: t.id, title: t.title, status: t.done ? 'done' : 'open'})),
+        info: {filter, counter, url: location.pathname},
+    };
+};
+
+const initial = todoBlocks();
+const todoPanel = panels.define({
+    id: 'todos',
+    title: 'Todo panel',
+    icon: '✅',
+    blocks: [
+        {id: 'note', type: 'text', tone: 'info', text: 'A custom panel defined by the page with panelsModule(). It updates live as the todo list changes.'},
+        {id: 'stats', type: 'stats', items: initial.stats},
+        {
+            id: 'list',
+            type: 'table',
+            title: 'Todos',
+            columns: [{key: 'title', title: 'Title'}, {key: 'status', title: 'Status'}],
+            rows: initial.rows,
+            rowActions: [
+                {id: 'toggle', label: 'Toggle', handler: (row: TodoRow) => todoStore.getState().toggle(row.id)},
+                {
+                    id: 'delete',
+                    label: 'Delete',
+                    danger: true,
+                    confirm: 'Delete this todo?',
+                    handler: (row: TodoRow) => todoStore.setState((s) => ({todos: s.todos.filter((t) => t.id !== row.id)})),
+                },
+            ],
+        },
+        {
+            id: 'add',
+            type: 'form',
+            title: 'Add a todo',
+            fields: {title: {type: 'text', label: 'Title', required: true, placeholder: 'Water the plants'}, count: {type: 'number', label: 'How many', min: 1, max: 5, default: 1}},
+            submit: {
+                label: 'Add',
+                handler: ({title, count}: {title: string; count: number}) => {
+                    for (let i = 0; i < count; i++) todoStore.getState().add(count > 1 ? `${title} #${i + 1}` : title);
+                    return `${count} added`;
+                },
+            },
+        },
+        {
+            id: 'tools',
+            type: 'actions',
+            title: 'Tools',
+            actions: [
+                {id: 'complete', label: 'Complete all', handler: () => todoStore.setState((s) => ({todos: s.todos.map((t) => ({...t, done: true}))}))},
+                {
+                    id: 'clearDone',
+                    label: 'Remove done',
+                    danger: true,
+                    confirm: 'Remove all done todos?',
+                    handler: () => {
+                        const before = todoStore.getState().todos.length;
+                        todoStore.setState((s) => ({todos: s.todos.filter((t) => !t.done)}));
+                        return `${before - todoStore.getState().todos.length} removed`;
+                    },
+                },
+            ],
+        },
+        {id: 'info', type: 'keyValue', title: 'Page', data: initial.info},
+        {id: 'raw', type: 'json', title: 'Raw todos', data: todoStore.getState().todos},
+    ],
+});
+
+const syncPanel = () => {
+    const next = todoBlocks();
+    todoPanel.update('stats', {items: next.stats});
+    todoPanel.update('list', {rows: next.rows});
+    todoPanel.update('info', {data: next.info});
+    todoPanel.update('raw', {data: todoStore.getState().todos});
+};
+todoStore.subscribe(syncPanel);
+
 // ─── SDK ─────────────────────────────────────────────────────────────────────
 
 const devtools = RemoteDevTools.init({
@@ -153,7 +247,7 @@ const devtools = RemoteDevTools.init({
     meta: {page: location.pathname, environment: 'example'},
     history: {enabled: true},
     captureConsole: ['warn', 'error'],
-    modules: [functions, network, storage, state, flags],
+    modules: [functions, network, storage, state, flags, panels],
     debug: true,
 });
 renderFlags();

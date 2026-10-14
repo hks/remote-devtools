@@ -1,5 +1,7 @@
 import {create} from 'zustand';
 import type {
+    Block,
+    BlockData,
     Capabilities,
     ConnectRequest,
     DeviceSnapshot,
@@ -58,6 +60,8 @@ type DevtoolsState = {
     removeDevice(deviceId: string): void;
     setHello(deviceId: string, hello: Hello): void;
     mergeCapabilities(deviceId: string, patch: Partial<Capabilities>): void;
+    /** `module.panels.update`: panelin bir bloğunun alanlarını değiştirir. */
+    updatePanelBlock(deviceId: string, panelId: string, blockId: string, data: BlockData): void;
     setLifecycle(deviceId: string, lifecycle: Lifecycle): void;
     addPendingRequest(request: ConnectRequest): void;
     removePendingRequest(requestId: string): void;
@@ -147,6 +151,18 @@ export const useDevtoolsStore = create<DevtoolsState>((set) => ({
             const device = s.devices[deviceId];
             if (!device?.hello) return {};
             const hello = {...device.hello, capabilities: {...device.hello.capabilities, ...patch}};
+            return {devices: {...s.devices, [deviceId]: {...device, hello}}};
+        }),
+
+    updatePanelBlock: (deviceId, panelId, blockId, data) =>
+        set((s) => {
+            const device = s.devices[deviceId];
+            const panels = device?.hello?.capabilities.panels;
+            if (!device?.hello || !Array.isArray(panels)) return {};
+            const nextPanels = panels.map((panel) =>
+                panel.id !== panelId ? panel : {...panel, blocks: panel.blocks.map((block) => (block.id === blockId ? ({...block, ...data} as Block) : block))},
+            );
+            const hello = {...device.hello, capabilities: {...device.hello.capabilities, panels: nextPanels}};
             return {devices: {...s.devices, [deviceId]: {...device, hello}}};
         }),
 

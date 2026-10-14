@@ -64,6 +64,7 @@ Eşleşme uygulamada saklanır: uygulama yeniden açılınca kendiliğinden bağ
 | 🗄️ Storage | Uygulama `storage` modülünü bildirirse | AsyncStorage / MMKV / localStorage / SecureStore anahtarları; görüntüleme, düzenleme, silme |
 | 🧠 State | Uygulama `state` modülünü bildirirse | Redux / Zustand state'i JSON ağacı olarak; canlı değişiklik akışı (eski → yeni) |
 | 🚩 Flags | Uygulama `flags` modülünü bildirirse | Uygulamanın tanımladığı flag'ler; tipine göre düzenleyici, kalıcı override, sıfırlama |
+| 🧱 Özel paneller | Uygulama `panels` modülüyle panel tanımlarsa | Her panel ayrı tab; metin, sayı kartları, key-value, tablo (satır aksiyonlu), JSON, aksiyon butonları, form |
 
 Klavye: `1`–`9` tab · `[` / `]` cihaz · `/` ara · `p` duraklat (Network) · `↑`/`↓` gezin · `Esc` kapat · `?` tüm kısayollar
 
@@ -112,6 +113,17 @@ RemoteDevTools.init({
 });
 
 if (newCheckout.get()) { /* UI'dan override edilebilir */ }
+```
+
+Özel paneller (her panel UI'da ayrı tab):
+
+```ts
+const panels = panelsModule();
+const cache = panels.define({id: 'cache', title: 'Cache', icon: '🗃️', blocks: [
+    {id: 'size', type: 'stats', items: [{label: 'Entries', value: store.size}]},
+    {id: 'tools', type: 'actions', actions: [{id: 'clear', label: 'Clear', danger: true, handler: () => store.clear()}]},
+]});
+cache.update('size', {items: [{label: 'Entries', value: 0}]});
 ```
 
 React Native için ek seçenekler (`storage: AsyncStorage`, `lifecycle: reactNativeLifecycle(AppState)`, `device`) ve tüm API:

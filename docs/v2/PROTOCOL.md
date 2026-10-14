@@ -235,22 +235,31 @@ Değer, override veya tanım değişince cihaz `capabilities.update` ile güncel
 Override'lar cihazda saklanır (SDK'nın `storage`'ı) ve uygulama yeniden açılınca da geçerlidir.
 
 ### panels
+Her panel UI'da ayrı bir tab olur (`hello.capabilities.panels` sırasıyla, hazır modüllerden sonra). Panel eklenir, çıkarılır
+veya blokları değişirse cihaz `capabilities.update` ile tüm listeyi gönderir; tek bir bloğun verisi `module.panels.update` ile değişir.
+
 ```ts
-type PanelDef = { id: string; title: string; icon?: string; blocks: Block[] };
+type PanelDef = { id: string; title: string; icon?: string; blocks: Block[] };   // icon: emoji
+
+type BlockTone = 'info' | 'success' | 'warn' | 'error';
+type ActionDef = { id: string; label: string; confirm?: string; danger?: boolean };
 
 type Block =
+    | { id: string; type: 'text'; title?: string; text: string; tone?: BlockTone }
+    | { id: string; type: 'stats'; title?: string; items: { label: string; value: string | number; hint?: string; tone?: BlockTone }[] }
     | { id: string; type: 'keyValue'; title?: string; data: Record<string, string | number | boolean | null> }
     | { id: string; type: 'table'; title?: string; columns: { key: string; title: string }[]; rows: Record<string, unknown>[]; rowActions?: ActionDef[] }
     | { id: string; type: 'json'; title?: string; data: unknown }
     | { id: string; type: 'actions'; title?: string; actions: ActionDef[] }
-    | { id: string; type: 'form'; title?: string; fields: Fields; submit: { actionId: string; label: string } };
-
-type ActionDef = { id: string; label: string; confirm?: string; danger?: boolean };
+    | { id: string; type: 'form'; title?: string; fields: Fields; submit: { actionId: string; label: string; danger?: boolean } };
 ```
 | Yön | Tip | Payload |
 |---|---|---|
-| D→UI | `module.panels.update` | `{ panelId, blockId, data }` (bloğun veri alanlarını değiştirir) |
-| UI→D | `module.panels.action` | `{ panelId, actionId, row?: unknown, values?: Record<string, unknown> }` → ortak cevap |
+| D→UI | `module.panels.update` | `{ panelId, blockId, data }`: `data` bloğun `id` / `type` dışındaki alanlarından değişenler (ör. `{ rows }`) |
+| UI→D | `module.panels.action` | `{ panelId, blockId, actionId, row?, values? }` → handler'ın dönüş değeri |
+
+`row`: tablo satır aksiyonunda tıklanan satır. `values`: form gönderiminde alan değerleri; SDK `fields`'a göre doğrular
+(`INVALID_ARGS`). Hata kodları: `UNKNOWN_PANEL`, `UNKNOWN_BLOCK`, `UNKNOWN_ACTION`. UI tanımadığı blok tipini atlar ve bir not gösterir.
 
 ## 8. Sınırlar
 

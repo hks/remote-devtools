@@ -24,5 +24,7 @@ export {reduxAdapter, stateModule, zustandAdapter} from './modules/state.ts';
 export type {StateAdapter, StateAdapterOptions, StateModule, StateModuleOptions} from './modules/state.ts';
 export {flagsModule} from './modules/flags.ts';
 export type {Flag, FlagOptions, FlagsModule, FlagValue} from './modules/flags.ts';
+export {panelsModule} from './modules/panels.ts';
+export type {Panel, PanelAction, PanelBlock, PanelBlockData, PanelOptions, PanelRowAction, PanelsModule} from './modules/panels.ts';
 export {validateArgs} from '@himmetkaan/remote-devtools-protocol';
-export type {CommandDef, Field, Fields, FlagDef} from '@himmetkaan/remote-devtools-protocol';
+export type {Block, BlockTone, CommandDef, Field, Fields, FlagDef, PanelDef, StatItem} from '@himmetkaan/remote-devtools-protocol';

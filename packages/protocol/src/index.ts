@@ -96,7 +96,14 @@ export type StorageAdapterInfo = {
 
 export type ActionDef = { id: string; label: string; confirm?: string; danger?: boolean };
 
+export type BlockTone = 'info' | 'success' | 'warn' | 'error';
+
+export type StatItem = { label: string; value: string | number; hint?: string; tone?: BlockTone };
+
+/** Özel panel yapı taşları. `id` panel içinde benzersizdir; `module.panels.update` blokları `id` ile bulur. */
 export type Block =
+    | { id: string; type: 'text'; title?: string; text: string; tone?: BlockTone }
+    | { id: string; type: 'stats'; title?: string; items: StatItem[] }
     | { id: string; type: 'keyValue'; title?: string; data: Record<string, string | number | boolean | null> }
     | {
           id: string;
@@ -108,7 +115,12 @@ export type Block =
       }
     | { id: string; type: 'json'; title?: string; data: unknown }
     | { id: string; type: 'actions'; title?: string; actions: ActionDef[] }
-    | { id: string; type: 'form'; title?: string; fields: Fields; submit: { actionId: string; label: string } };
+    | { id: string; type: 'form'; title?: string; fields: Fields; submit: { actionId: string; label: string; danger?: boolean } };
+
+export type BlockType = Block['type'];
+
+/** Bir bloğun `id` ve `type` dışındaki alanları (kısmi güncelleme). */
+export type BlockData = { [T in BlockType]: Partial<Omit<Extract<Block, { type: T }>, 'id' | 'type'>> }[BlockType];
 
 export type PanelDef = { id: string; title: string; icon?: string; blocks: Block[] };
 
@@ -350,8 +362,12 @@ export type ModuleMessages = {
     'module.flags.reset': { key?: string };
     'module.flags.result': ModuleResult;
 
-    'module.panels.update': { panelId: string; blockId: string; data: Partial<Block> };
-    'module.panels.action': { panelId: string; actionId: string; row?: unknown; values?: Record<string, unknown> };
+    /** Bloğun verilen alanlarını değiştirir (ör. tablonun `rows`'u). Panel tanımı değişirse `capabilities.update` gelir. */
+    'module.panels.update': { panelId: string; blockId: string; data: BlockData };
+    /**
+     * Aksiyon (`actions` bloğu), satır aksiyonu (`table`, `row` ile) veya form gönderimi (`values` ile). → handler'ın dönüş değeri.
+     */
+    'module.panels.action': { panelId: string; blockId: string; actionId: string; row?: unknown; values?: Record<string, unknown> };
     'module.panels.result': ModuleResult;
 };
 

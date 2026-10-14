@@ -26,6 +26,7 @@ import {
     type LifecycleSource,
     memoryStorage,
     networkModule,
+    panelsModule,
     RemoteDevTools,
     stateModule,
     type StorageAdapter,
@@ -108,6 +109,22 @@ const flags = flagsModule();
 flags.define({key: 'checkout.v2', title: 'New checkout', field: {type: 'boolean'}});
 flags.define({key: 'api.timeout', title: 'API timeout (s)', field: {type: 'number', min: 1, max: 60, default: 30}});
 
+// Özel panel: sayaç store'unu gösterir.
+const panels = panelsModule();
+const counterPanel = panels.define({
+    id: 'counter',
+    title: 'Counter',
+    icon: '🔢',
+    blocks: [
+        {id: 'value', type: 'stats', items: [{label: 'Counter', value: 0}]},
+        {id: 'tools', type: 'actions', actions: [{id: 'inc', label: 'Increment', handler: () => (inc(), appState.counter)}]},
+    ],
+});
+function inc() {
+    dispatch('counter/increment', {...appState, counter: appState.counter + 1});
+    counterPanel.update('value', {items: [{label: 'Counter', value: appState.counter}]});
+}
+
 const devtools = RemoteDevTools.init({
     enabled: true,
     isDevelopment: mode === 'dev',
@@ -118,7 +135,7 @@ const devtools = RemoteDevTools.init({
     lifecycle,
     history: {enabled: true},
     discovery: {localhost: {port: Number(arg1 ?? 8080), hosts: ['127.0.0.1']}},
-    modules: [functions, network, storageModule({adapters: [memoryAdapter]}), stateModule({stores: [appStore]}), flags],
+    modules: [functions, network, storageModule({adapters: [memoryAdapter]}), stateModule({stores: [appStore]}), flags, panels],
 });
 
 let lastStatus = '';
@@ -143,7 +160,7 @@ createInterface({input: process.stdin}).on('line', (line) => {
     else if (cmd === 'name') devtools.updateMeta({user: text});
     else if (cmd === 'net') void fetch(text || 'https://example.com').then((r) => console.log(`  ${r.status} ${r.url}`), (e: Error) => console.log(`  ✖ ${e.message}`));
     else if (cmd === 'set' && rest[0]) memoryAdapter.set!(rest[0], rest.slice(1).join(' '));
-    else if (cmd === 'inc') dispatch('counter/increment', {...appState, counter: appState.counter + 1});
+    else if (cmd === 'inc') inc();
     else if (cmd === 'flags') console.log(`  checkout.v2=${flags.get('checkout.v2')} api.timeout=${flags.get('api.timeout')}`);
     else if (cmd === 'drop') devtools.connection.disconnect();
     else if (cmd === 'resume') devtools.connection.connect();
