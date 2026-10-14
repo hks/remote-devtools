@@ -7,9 +7,8 @@ Uygulamadaki Developer Menu'yü bilgisayardan kullanmak için web arayüzü + We
 - **Telefon → Web:** servis istekleri (canlı + Sync ile geçmiş), uygulama yaşam döngüsü, loglar
 - **Web → Telefon:** Dev Menu fonksiyonlarını tetikleme
 
-> ⚠️ **`feat/generic-platform` dalı:** relay, UI ve JS SDK protokol v2'ye geçti ([docs/v2](./docs/v2/PLAN.md)).
-> Pembe Panjur mobile-app'i henüz v1 konuştuğu için bu dala bağlanamaz (Faz 5'te taşınacak). Denemek için
-> `examples/web` veya `fake-device.ts` kullanılabilir (aşağıda).
+> ⚠️ **Protokol v2:** relay, UI, desktop app ve JS SDK v2 konuşur ([docs/v2](./docs/v2/PLAN.md)). Pembe Panjur entegrasyonu
+> mobile-app'te `hks/remote-devtools-v2` dalındadır; o sürüm yayına girene kadar v1 konuşan uygulama sürümleri bu relay'e bağlanamaz.
 
 Plan ve kararlar: [PLAN.md](./PLAN.md) · İlerleme: [ROADMAP.md](./ROADMAP.md)
 
