@@ -187,7 +187,7 @@ export function asyncStorageAdapter(storage: AsyncStorageLike, options: StorageA
 type MmkvLike = {
     getAllKeys(): string[];
     getString(key: string): string | undefined;
-    getNumber?(key: string): number;
+    getNumber?(key: string): number | undefined;
     getBoolean?(key: string): boolean | undefined;
     contains?(key: string): boolean;
     set(key: string, value: string): void;

@@ -19,7 +19,7 @@ import {toSerializable} from './serialize.ts';
 import {defaultStorage, type KeyValueStorage} from './storage.ts';
 
 export const SDK_NAME = '@himmetkaan/remote-devtools';
-export const SDK_VERSION = '0.1.0-alpha.1';
+export const SDK_VERSION = '0.1.0-alpha.3';
 
 export type RemoteDevToolsOptions = {
     /** Zorunlu kapı. `false` iken hiçbir şey yapılmaz: soket açılmaz, modüller kurulmaz, global yama yapılmaz. */
