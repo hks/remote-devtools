@@ -322,11 +322,20 @@ planlanan 5 bloğa `text` ve `stats` eklendi. Pembe Panjur'da şimdilik kullanı
       yenilenince panelin geri gelmesi, boş form doğrulaması, dar ekran
 
 ### Faz 9 — Açık kaynak yayını
-- [ ] README (İngilizce) baştan yazılır, Pembe Panjur referansları temizlenir; v1 PLAN/ROADMAP arşive taşınır
-- [ ] Dokümantasyon: Quick start (Expo, web), protokol spesifikasyonu, "kendi SDK'nı yaz" rehberi, modül referansı
-- [ ] `LICENSE` (MIT), `CONTRIBUTING.md`, issue şablonları
-- [ ] npm yayını (`@himmetkaan` organizasyonu altında), changesets ile sürümleme
-- [ ] Docker imajının GHCR'a yayınlanması
+Kararlar: repo `hks/remote-devtools` olarak yeniden adlandırılır, geçmiş korunur; kod yorumları ve dışa açık dokümanlar
+İngilizce, bu plan Türkçe kalır (`docs/internal`, siteye girmez); doküman sitesi VitePress (GitHub Pages); yayın altyapısı
+hazırlanır, ilk yayını kullanıcı tetikler. npm'e sadece SDK ve protokol paketleri çıkar; relay ve UI Docker imajı ve
+desktop app içinde dağıtılır.
+- [x] Kod yorumları İngilizce (80 dosya, sadece yorumlar)
+- [x] README (İngilizce) baştan yazıldı, Pembe Panjur referansları temizlendi; v1 PLAN/ROADMAP `docs/internal/v1`'e taşındı
+- [x] Doküman sitesi (`docs/`, VitePress 1.6.4): giriş, web ve RN/Expo quick start, bağlantı, desktop, self-hosting, güvenlik,
+      modül başına sayfa, SDK / field DSL / protokol referansı, "Writing an SDK", geliştirme ve yayın sayfaları
+- [x] `LICENSE` (MIT), `CONTRIBUTING.md`, `SECURITY.md`, issue formları, PR şablonu; paketlere npm README'leri ve metadata
+- [x] changesets (2.31.1; SDK + protokol birlikte sürümlenir, `0.1.0` changeset'i hazır), `Release` (version PR + npm, provenance),
+      `Docker image` (`v*` tag'lerinde GHCR, amd64 + arm64), `Docs` (Pages) workflow'ları; `version-packages` `SDK_VERSION`'ı eşitler
+- [ ] Repo adı: `hks/relay-devtools-sociallift` → `hks/remote-devtools` (kullanıcı onayıyla)
+- [ ] Kullanıcı: `NPM_TOKEN` secret'ı, Pages'in açılması (Source: GitHub Actions), Actions'ın PR açma izni,
+      version PR'ının birleştirilmesi (ilk npm yayını), ilk `v0.1.0` tag'i (GHCR) ve imajın public yapılması
 
 ### Sonraki fazlar (kapsam dışı, sırası belirlenecek)
 - Swift SDK (URLSession yakalama), Kotlin SDK (OkHttp interceptor), Flutter SDK (Dio)
@@ -348,7 +357,8 @@ planlanan 5 bloğa `text` ve `stats` eklendi. Pembe Panjur'da şimdilik kullanı
 
 ## 6. Güncel durum (yeni oturum için)
 
-Son güncelleme: 2026-10-14. Tamamlanan: Faz 0–5, Faz 7 (Pembe Panjur dahil), Faz 8 (Pembe Panjur'da kullanılmıyor);
+Son güncelleme: 2026-10-14. Tamamlanan: Faz 0–5, Faz 7 (Pembe Panjur dahil), Faz 8 (Pembe Panjur'da kullanılmıyor),
+Faz 9'un kod/doküman kısmı;
 Faz 6'nın bir kısmı (bkz. §4 işaretleri).
 
 **Repolar**
@@ -379,6 +389,6 @@ Faz 6'nın bir kısmı (bkz. §4 işaretleri).
 - Kullanıcı kararıyla bekletilenler: mobile-app PR'ı (açılmayacak), Faz 0 lint/format, Faz 6'nın kalanı.
   mobile-app'teki npm token konusu bu projenin kapsamı dışında.
 
-**Sıradaki seçenekler:** Faz 9 (açık kaynak yayını) hazırlığı veya bekletilen işlerden biri. Faz 6'nın kalanında Developer ID
+**Sıradaki seçenekler:** Faz 9'un kullanıcıya kalan adımları (repo adı, secret'lar, ilk yayın) veya bekletilen işlerden biri. Faz 6'nın kalanında Developer ID
 imzası + notarization + electron-updater için [macos-release.md](../maintainers/macos-release.md)'deki sertifika/secret adımları kullanıcıdan gerekir.
 
