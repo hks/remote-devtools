@@ -61,6 +61,9 @@ Eşleşme uygulamada saklanır: uygulama yeniden açılınca kendiliğinden bağ
 | 📜 Logs | Her zaman | Cihaz logları + bağlantı / yaşam döngüsü olayları; seviye, kaynak, tag filtresi, arama |
 | 🌐 Network | Uygulama `network` modülünü bildirirse | İstekler; filtre, arama, JSON ağacı, cURL, HAR/JSON export |
 | 🧩 Functions | Uygulama `functions` modülünü bildirirse | Uygulamanın kaydettiği fonksiyonlar; argümanlar için form (field DSL) |
+| 🗄️ Storage | Uygulama `storage` modülünü bildirirse | AsyncStorage / MMKV / localStorage / SecureStore anahtarları; görüntüleme, düzenleme, silme |
+| 🧠 State | Uygulama `state` modülünü bildirirse | Redux / Zustand state'i JSON ağacı olarak; canlı değişiklik akışı (eski → yeni) |
+| 🚩 Flags | Uygulama `flags` modülünü bildirirse | Uygulamanın tanımladığı flag'ler; tipine göre düzenleyici, kalıcı override, sıfırlama |
 
 Klavye: `1`–`9` tab · `[` / `]` cihaz · `/` ara · `p` duraklat (Network) · `↑`/`↓` gezin · `Esc` kapat · `?` tüm kısayollar
 
@@ -89,6 +92,26 @@ functions.register({
     handler: ({scope}) => cache.clear(scope),
 });
 devtools.log.info('Ready');
+```
+
+Storage, State ve Flags modülleri:
+
+```ts
+import {asyncStorageAdapter, flagsModule, mmkvAdapter, stateModule, storageModule, zustandAdapter} from '@himmetkaan/remote-devtools';
+
+const flags = flagsModule();
+const newCheckout = flags.define({key: 'checkout.v2', title: 'New checkout', field: {type: 'boolean'}});
+
+RemoteDevTools.init({
+    // …
+    modules: [
+        storageModule({adapters: [asyncStorageAdapter(AsyncStorage), mmkvAdapter(mmkv)]}),
+        stateModule({stores: [zustandAdapter(useCartStore, {id: 'cart', title: 'Cart'})]}),
+        flags,
+    ],
+});
+
+if (newCheckout.get()) { /* UI'dan override edilebilir */ }
 ```
 
 React Native için ek seçenekler (`storage: AsyncStorage`, `lifecycle: reactNativeLifecycle(AppState)`, `device`) ve tüm API:

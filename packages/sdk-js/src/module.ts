@@ -1,4 +1,5 @@
 import type {Envelope, LogLevel} from '@himmetkaan/remote-devtools-protocol';
+import type {KeyValueStorage} from './storage.ts';
 
 export type LogOptions = { tag?: string };
 
@@ -23,6 +24,8 @@ export type ModuleContext = {
     on<P = any>(type: string, listener: (payload: P, message: Envelope<string, P>) => void): void;
     /** `capabilities()` değiştiğinde çağrılır; bağlıysa UI'a `capabilities.update` gider, değilse bir sonraki `hello`'ya girer. */
     updateCapabilities(): void;
+    /** SDK'nın `storage` seçeneği; anahtarlar modüle özel bir önekle saklanır (ör. flag override'ları). */
+    storage: KeyValueStorage;
     log: Logger;
 };
 

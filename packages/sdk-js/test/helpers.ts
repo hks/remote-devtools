@@ -1,6 +1,6 @@
 import {createEnvelope, type Envelope, WS_PATH_UI} from '@himmetkaan/remote-devtools-protocol';
 import {createRelay, type RelayConfig, type RunningServer} from '@himmetkaan/remote-devtools-relay';
-import {type ConnectionStatus, memoryStorage, RemoteDevTools, type RemoteDevToolsOptions, staticLifecycle} from '../src/index.ts';
+import {type ConnectionStatus, memoryStorage, RemoteDevTools, type RemoteDevToolsOptions, type RemoteModule, staticLifecycle} from '../src/index.ts';
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -108,5 +108,22 @@ export function waitForStatus(client: RemoteDevTools, status: ConnectionStatus, 
             queueMicrotask(() => unsubscribe());
             resolve();
         });
+    });
+}
+
+/** UI + eşlenmiş istemci kurar, testi çalıştırır, temizler. */
+export async function withPairedClient(modules: RemoteModule[], fn: (ui: Ui, deviceId: string) => Promise<void>, extra: Partial<RemoteDevToolsOptions> = {}) {
+    await withRelay({}, async ({port}) => {
+        const ui = await openUi(port);
+        const client = createClient({modules, ...extra});
+        try {
+            await client.connection.pairWithCode(ui.session.pairing.code, relayUrl(port));
+            await waitForStatus(client, 'connected');
+            await ui.next('hello');
+            await fn(ui, client.connection.state.deviceId!);
+        } finally {
+            client.destroy();
+            ui.close();
+        }
     });
 }

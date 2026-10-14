@@ -115,8 +115,8 @@ Swift, Kotlin ve Flutter SDK'ları ileride `sdks/` altına girer ve protokol sö
 
 ## 3. SDK (JS) API
 
-Çekirdek Faz 2'de, `functionsModule` ve `networkModule` Faz 4'te yazıldı (`packages/sdk-js`). Storage, State, Flags (Faz 7)
-ve paneller (Faz 8) henüz yok.
+Çekirdek Faz 2'de, `functionsModule` ve `networkModule` Faz 4'te, `storageModule`, `stateModule` ve `flagsModule` Faz 7'de
+yazıldı (`packages/sdk-js`). Paneller (Faz 8) henüz yok.
 
 ```ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -161,7 +161,21 @@ devtools.connection.unpair();       // eşleşmeyi siler
 Notlar:
 - SDK `react-native`, AsyncStorage veya kamera paketlerini import etmez; hepsi seçeneklerle verilir. Aynı paket RN, tarayıcı ve Node'da çalışır.
 - Kendi modülünü yazmak için `defineModule({name, capabilities, setup(ctx)})`: `ctx.emit`, `ctx.handle` (cevaplı istek),
-  `ctx.on`, `ctx.updateCapabilities`. Bir modül sadece `module.<name>.*` tiplerini kullanabilir.
+  `ctx.on`, `ctx.updateCapabilities`, `ctx.storage` (modüle özel önekli kalıcı depo). Bir modül sadece `module.<name>.*` tiplerini kullanabilir.
+
+```ts
+// Faz 7: Storage, State, Flags
+const storage = storageModule({adapters: [
+    asyncStorageAdapter(AsyncStorage),                    // clear: sadece listelenen anahtarlar
+    mmkvAdapter(mmkv),                                    // v3/v4; değişiklikleri UI'a bildirir
+    secureStoreAdapter(SecureStore, {keys: ['auth.token']}),  // salt okunur + maskeli (SecureStore listeleyemez)
+]});                                                      // web: webStorageAdapter(localStorage | sessionStorage)
+const state = stateModule({stores: [zustandAdapter(useCartStore, {id: 'cart', title: 'Cart'}), reduxAdapter(store)]});
+const flags = flagsModule();
+const checkout = flags.define({key: 'checkout.v2', title: 'New checkout', group: 'Checkout', field: {type: 'boolean'}});
+checkout.get(); checkout.subscribe((on) => …);            // override > app değeri (flags.setValue) > field.default
+await flags.ready();                                      // async storage'daki override'lar yüklendi (senkron depolarda gerekmez)
+```
 - Komut, flag ve panel tanımları bağlantıdan önce de yapılabilir. Bağlanınca `hello` ile, sonradan değişirse
   `capabilities.update` ile gönderilir.
 - RN için QR okutma ekranı opsiyonel bir paket olur (`@himmetkaan/remote-devtools-react-native-ui`). Çekirdek kamera bağımlılığı taşımaz.
@@ -260,9 +274,22 @@ tamamlanana kadar v1 olarak çalışmaya devam eder.
 - [x] `appId`: `com.himmetkaan.remote-devtools` (imzalama kişisel Apple Developer hesabıyla yapılacak)
 
 ### Faz 7 — Storage, State, Flags modülleri
-- [ ] Storage: adapter arayüzü (`keys/get/set/remove/clear`); AsyncStorage, MMKV, localStorage adapter'ları; UI'da tablo, düzenleme ve silme (onaylı)
-- [ ] State: adapter arayüzü (`getSnapshot/subscribe`); Redux ve Zustand adapter'ları; UI'da JSON ağacı ve canlı değişiklik akışı (diff)
-- [ ] Flags: `flags.define`, `flags.get`, uzaktan override, override'ları sıfırlama; UI'da tip bazlı düzenleyici (field DSL)
+Kararlar: üç modül tek seferde; State'te farkı SDK hesaplar (JSON Patch); flag override'ları cihazda kalıcı; State salt okunur;
+Pembe Panjur entegrasyonu bu fazda yapılmadı (doğrulama `examples/web` + `fake-device` ile).
+- [x] Storage: adapter arayüzü (`keys/get/getMany/set/remove/clear/subscribe`, `masked`); AsyncStorage, MMKV (v3/v4), Web Storage
+      (localStorage/sessionStorage) adapter'ları, SecureStore (salt okunur, maskeli, anahtarlar elle verilir); UI'da tablo, filtre,
+      JSON/ham görünüm, düzenleme, yeni anahtar, silme ve tümünü silme (onaylı); `module.storage.changed` ile canlı yenileme
+- [x] State: adapter arayüzü (`getState/subscribe(action?)`); Redux (action adları için `dispatch` sarılır) ve Zustand adapter'ları;
+      kiralık abonelik (60 sn, UI 20 sn'de bir yeniler), throttle'lı JSON Patch, büyük farkta tam state; UI'da JSON ağacı ve
+      değişiklik zaman çizelgesi (yol, eski → yeni); yeniden abone olunca aradaki fark "Changes while not watching" olarak gösterilir
+- [x] Flags: `flags.define` (tipli handle: `get/subscribe`), `get`, `setValue` (app değeri), `reset`, `ready`; UI'dan override
+      (field DSL ile doğrulanır), tek tek / toplu sıfırlama; override'lar `ctx.storage` ile kalıcı, tanımla uyuşmayanlar atılır,
+      SDK kapalıyken uygulanmaz. Değişiklikler `capabilities.update` ile gider (`module.flags.changed` kaldırıldı)
+- [x] Protokol: `diffJson` / `applyPatch` / `getAtPointer` (SDK ve UI ortak), `STATE_SUBSCRIPTION_TTL_MS`, `module.storage.clear`
+- [x] 13 yeni SDK testi (JSON patch, dört storage adapter'ı, Redux/Zustand akışı, flag doğrulama/kalıcılık/async depo); toplam 50
+- [x] `examples/web`: localStorage + sessionStorage, Zustand todo store'u, banner/renk flag'leri; `fake-device`: bellek deposu, sayaç store'u, iki flag
+- [x] Tarayıcıda uçtan uca doğrulandı: storage listeleme/düzenleme/silme, canlı state akışı ve yeniden bağlanınca fark,
+      flag override → sayfa yeniden yüklenince korunması → toplu sıfırlama, dar ekran
 
 ### Faz 8 — Şemalı özel paneller
 - [ ] Protokol: `PanelDef` + blok tipleri (table, keyValue, json, actions, form) + `panel.update` (tam ve kısmi)
@@ -296,10 +323,11 @@ tamamlanana kadar v1 olarak çalışmaya devam eder.
 
 ## 6. Güncel durum (yeni oturum için)
 
-Son güncelleme: 2026-10-14. Tamamlanan: Faz 0–5, Faz 6'nın bir kısmı (bkz. §4 işaretleri).
+Son güncelleme: 2026-10-14. Tamamlanan: Faz 0–5, Faz 7; Faz 6'nın bir kısmı (bkz. §4 işaretleri).
 
 **Repolar**
 - relay-devtools (bu repo): `main` güncel ve push'lu; CI (typecheck, test, build, docker build) yeşil.
+  Faz 7 `feat/phase-7-modules` dalında (henüz push'lanmadı / birleştirilmedi).
 - mobile-app (Pembe Panjur): `~/WebstormProjects/experimental/iphone-duo`, dal `hks/remote-devtools-v2` (push'lu, PR yok).
   Entegrasyon: `helpers/developer/remote/RemoteDevtools.ts` (SDK kurulumu), `RemoteFunctions.ts` (17 fonksiyon),
   `RemoteNetwork.ts` (axios kancaları → `network.record()`), `components/ui/developer/components/DeveloperRemotePanel.tsx`.
@@ -318,6 +346,7 @@ Son güncelleme: 2026-10-14. Tamamlanan: Faz 0–5, Faz 6'nın bir kısmı (bkz.
 - Bu makinede iOS build'i Xcode 27 (Swift 6.4) ile Expo 57'nin hazır framework'leri (Swift 6.3.1) uyuşmadığı için alınamıyor.
 - Lint/format (Faz 0) hâlâ ekli değil.
 
-**Sıradaki seçenekler:** Faz 6'nın kalanı (Developer ID imzası + notarization + electron-updater için
-[MACOS_RELEASE.md](./MACOS_RELEASE.md)'deki sertifika/secret adımları kullanıcıdan gerekir; mDNS) veya Faz 7 (Storage, State, Flags).
+**Sıradaki seçenekler:** Faz 7 modüllerinin Pembe Panjur'a bağlanması (AsyncStorage, MMKV, SecureStore, Zustand store'ları;
+SDK sürümü artırılıp tarball yenilenir), Faz 8 (şemalı paneller) veya Faz 6'nın kalanı (Developer ID imzası + notarization +
+electron-updater için [MACOS_RELEASE.md](./MACOS_RELEASE.md)'deki sertifika/secret adımları kullanıcıdan gerekir; mDNS).
 

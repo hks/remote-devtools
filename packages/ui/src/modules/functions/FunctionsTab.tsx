@@ -4,6 +4,7 @@ import {FieldForm} from '../../components/FieldForm.tsx';
 import {type FormErrors, initialValues, toArgs} from '../../lib/fields.ts';
 import {formatClock, stringifyData} from '../../lib/format.ts';
 import {relayClient} from '../../lib/relayClient.ts';
+import {useUnavailable} from '../../lib/useUnavailable.ts';
 import {commandKey, useCommandsStore} from '../../store/useCommandsStore.ts';
 import {useDevtoolsStore} from '../../store/useDevtoolsStore.ts';
 
@@ -101,12 +102,10 @@ const CommandCard = memo(function CommandCard({deviceId, command, unavailable}: 
 
 export function FunctionsTab({deviceId}: {deviceId: string}) {
     const device = useDevtoolsStore((s) => s.devices[deviceId]);
-    const relay = useDevtoolsStore((s) => s.relay);
+    const unavailable = useUnavailable(deviceId);
     const [query, setQuery] = useState('');
 
     const commands = (device?.hello?.capabilities.functions?.commands ?? []) as CommandDef[];
-
-    const unavailable = relay !== 'open' ? 'Not connected to the relay' : !device?.connected ? 'Device is offline' : null;
 
     const q = query.trim().toLowerCase();
     const groups = useMemo(() => {

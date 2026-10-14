@@ -41,6 +41,9 @@ importers:
       '@himmetkaan/remote-devtools':
         specifier: workspace:*
         version: link:../../packages/sdk-js
+      zustand:
+        specifier: 5.0.15
+        version: 5.0.15(@types/react@19.3.0)(react@19.3.0)
     devDependencies:
       typescript:
         specifier: 7.0.2

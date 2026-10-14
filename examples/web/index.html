@@ -24,10 +24,13 @@
       code { font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
       #status { font-weight: 600; }
       #counter { font-size: 28px; font-weight: 700; }
+      .banner { padding: 10px 14px; border-radius: 10px; background: var(--accent); color: #fff; font-weight: 600; }
+      #todos { margin: 0; padding-left: 4px; list-style: none; }
     </style>
   </head>
   <body>
     <main>
+      <div id="banner" class="banner" hidden></div>
       <h1>🛠️ Remote DevTools — web example</h1>
       <p class="muted">A plain web page using <code>@himmetkaan/remote-devtools</code>. Open the Remote DevTools UI next to it and connect.</p>
 
@@ -71,6 +74,20 @@
           <button id="net-xhr">XMLHttpRequest</button>
         </div>
         <p class="muted"><code>networkModule()</code> captures fetch and XMLHttpRequest automatically.</p>
+      </section>
+
+      <section>
+        <h2>Storage, State and Flags</h2>
+        <div class="row">
+          <button id="storage-write">Write to localStorage + sessionStorage</button>
+        </div>
+        <ul id="todos"></ul>
+        <div class="row">
+          <input id="todo-title" placeholder="New todo" />
+          <button id="todo-add">Add todo</button>
+          <button id="todo-filter">Cycle filter</button>
+        </div>
+        <p class="muted">The todo list is a Zustand store shown live in the State tab. The banner and the accent colour are flags you can override in the Flags tab.</p>
       </section>
 
       <section>

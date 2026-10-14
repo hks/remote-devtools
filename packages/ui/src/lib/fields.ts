@@ -32,6 +32,19 @@ function initialValue(field: Field): string | boolean {
     }
 }
 
+/** Mevcut bir değeri (ör. flag'in geçerli değeri) form değerine çevirir. */
+export function toFormValue(field: Field, value: unknown): string | boolean {
+    if (value === undefined || value === null) return initialValue(field);
+    switch (field.type) {
+        case 'boolean':
+            return value === true;
+        case 'json':
+            return JSON.stringify(value, null, 2);
+        default:
+            return String(value);
+    }
+}
+
 export function initialValues(fields: Fields): FormValues {
     return Object.fromEntries(Object.entries(fields).map(([key, field]) => [key, initialValue(field)]));
 }

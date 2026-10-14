@@ -1,4 +1,15 @@
-import {functionsModule, ModuleError, networkModule, RemoteDevTools} from '@himmetkaan/remote-devtools';
+import {
+    flagsModule,
+    functionsModule,
+    ModuleError,
+    networkModule,
+    RemoteDevTools,
+    stateModule,
+    storageModule,
+    webStorageAdapter,
+    zustandAdapter,
+} from '@himmetkaan/remote-devtools';
+import {createStore} from 'zustand/vanilla';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -95,6 +106,44 @@ functions.register({
     },
 });
 
+// ─── Storage, State, Flags ───────────────────────────────────────────────────
+
+const storage = storageModule({
+    adapters: [webStorageAdapter(localStorage), webStorageAdapter(sessionStorage, {id: 'session-storage', title: 'sessionStorage'})],
+});
+
+type Todo = {id: number; title: string; done: boolean};
+type TodoState = {todos: Todo[]; filter: 'all' | 'open' | 'done'; add(title: string): void; toggle(id: number): void};
+
+const todoStore = createStore<TodoState>()((set) => ({
+    todos: [{id: 1, title: 'Try the State tab', done: false}],
+    filter: 'all',
+    add: (title) => set((s) => ({todos: [...s.todos, {id: Date.now(), title, done: false}]})),
+    toggle: (id) => set((s) => ({todos: s.todos.map((t) => (t.id === id ? {...t, done: !t.done} : t))})),
+}));
+
+const state = stateModule({stores: [zustandAdapter(todoStore, {id: 'todos', title: 'Todos'})]});
+
+const flags = flagsModule();
+const bannerVisible = flags.define({key: 'banner.visible', title: 'Show banner', group: 'Page', field: {type: 'boolean', default: true}});
+const bannerText = flags.define({key: 'banner.text', title: 'Banner text', group: 'Page', field: {type: 'text', default: 'Welcome to the example!'}});
+const accent = flags.define({
+    key: 'theme.accent',
+    title: 'Accent colour',
+    group: 'Theme',
+    description: 'Changes the colour of the primary buttons.',
+    field: {type: 'select', options: ['pink', 'blue', 'green'] as const, default: 'pink'},
+});
+flags.define({key: 'api.retries', title: 'API retries', group: 'Network', field: {type: 'number', min: 0, max: 5, default: 2}});
+
+const ACCENTS = {pink: '#d6336c', blue: '#0969da', green: '#1a7f37'} as const;
+const renderFlags = () => {
+    $('banner').hidden = !bannerVisible.get();
+    $('banner').textContent = bannerText.get();
+    document.documentElement.style.setProperty('--accent', ACCENTS[accent.get()]);
+};
+flags.subscribe(renderFlags);
+
 // ─── SDK ─────────────────────────────────────────────────────────────────────
 
 const devtools = RemoteDevTools.init({
@@ -104,9 +153,10 @@ const devtools = RemoteDevTools.init({
     meta: {page: location.pathname, environment: 'example'},
     history: {enabled: true},
     captureConsole: ['warn', 'error'],
-    modules: [functions, network],
+    modules: [functions, network, storage, state, flags],
     debug: true,
 });
+renderFlags();
 
 devtools.connection.subscribe((state) => {
     $('status').textContent = state.status + (state.error ? ` — ${state.error.message}` : '');
@@ -151,4 +201,37 @@ $('net-xhr').onclick = () => {
     const xhr = new XMLHttpRequest();
     xhr.open('GET', `${relayHttp()}/discovery`);
     xhr.send();
+};
+
+// ─── Storage ve state kontrolleri ─────────────────────────────────────────────
+
+$('storage-write').onclick = () => {
+    localStorage.setItem('example.lastClick', JSON.stringify({at: new Date().toISOString(), counter}));
+    sessionStorage.setItem('example.visits', String(Number(sessionStorage.getItem('example.visits') ?? 0) + 1));
+};
+
+const renderTodos = () => {
+    const list = $('todos');
+    list.replaceChildren(
+        ...todoStore.getState().todos.map((todo) => {
+            const item = document.createElement('li');
+            const box = document.createElement('input');
+            box.type = 'checkbox';
+            box.checked = todo.done;
+            box.onchange = () => todoStore.getState().toggle(todo.id);
+            item.append(box, ` ${todo.title}`);
+            return item;
+        }),
+    );
+};
+todoStore.subscribe(renderTodos);
+renderTodos();
+$('todo-add').onclick = () => {
+    const input = $<HTMLInputElement>('todo-title');
+    if (input.value.trim()) todoStore.getState().add(input.value.trim());
+    input.value = '';
+};
+$('todo-filter').onclick = () => {
+    const order = ['all', 'open', 'done'] as const;
+    todoStore.setState((s) => ({filter: order[(order.indexOf(s.filter) + 1) % order.length]!}));
 };

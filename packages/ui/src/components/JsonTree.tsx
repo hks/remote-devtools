@@ -29,7 +29,7 @@ function Primitive({value}: {value: unknown}) {
         <span className="jt-string">
             "{text.slice(0, MAX_STRING)}
             <button className="jt-more" onClick={() => setExpanded(true)}>
-                … +{text.length - MAX_STRING} karakter
+                … +{text.length - MAX_STRING} chars
             </button>
             "
         </span>

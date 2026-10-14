@@ -3,24 +3,7 @@ import {createServer, type Server} from 'node:http';
 import type {AddressInfo} from 'node:net';
 import {after, before, describe, it} from 'node:test';
 import {functionsModule, networkModule, type RemoteDevToolsOptions, type RemoteModule, validateArgs} from '../src/index.ts';
-import {createClient, openUi, relayUrl, sleep, type Ui, waitForStatus, withRelay} from './helpers.ts';
-
-/** UI + eşlenmiş istemci kurar, testi çalıştırır, temizler. */
-async function withPairedClient(modules: RemoteModule[], fn: (ui: Ui, deviceId: string) => Promise<void>, extra: Partial<RemoteDevToolsOptions> = {}) {
-    await withRelay({}, async ({port}) => {
-        const ui = await openUi(port);
-        const client = createClient({modules, ...extra});
-        try {
-            await client.connection.pairWithCode(ui.session.pairing.code, relayUrl(port));
-            await waitForStatus(client, 'connected');
-            await ui.next('hello');
-            await fn(ui, client.connection.state.deviceId!);
-        } finally {
-            client.destroy();
-            ui.close();
-        }
-    });
-}
+import {createClient, openUi, relayUrl, sleep, type Ui, waitForStatus, withPairedClient, withRelay} from './helpers.ts';
 
 describe('validateArgs', () => {
     const fields = {

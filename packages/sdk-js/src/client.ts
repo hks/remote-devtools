@@ -108,6 +108,7 @@ export class RemoteDevTools {
     readonly #connection: Connection | null;
     readonly #lifecycle: LifecycleSource;
     readonly #history: HistoryBuffer | null;
+    readonly #storage: KeyValueStorage;
     readonly #handlers = new Map<string, Handler>();
     readonly #teardown: (() => void)[] = [];
     #meta: Record<string, string>;
@@ -117,6 +118,7 @@ export class RemoteDevTools {
         this.#options = options;
         this.enabled = options.enabled === true;
         this.#meta = {...options.meta};
+        this.#storage = options.storage ?? defaultStorage();
         this.#lifecycle = options.lifecycle ?? browserLifecycle();
         this.#history = this.enabled && options.history?.enabled ? new HistoryBuffer(options.history.maxEntries ?? 500) : null;
         this.log = this.#createLogger();
@@ -164,7 +166,7 @@ export class RemoteDevTools {
         discovery.push(...(o.discovery?.providers ?? []));
 
         return new Connection({
-            storage: o.storage ?? defaultStorage(),
+            storage: this.#storage,
             storageKey: o.storageKey ?? 'remote-devtools',
             isDevelopment: o.isDevelopment === true,
             discovery,
@@ -275,6 +277,7 @@ export class RemoteDevTools {
             updateCapabilities: () => {
                 this.#send('capabilities.update', {[module.name]: module.capabilities?.() ?? {}}, {buffer: false});
             },
+            storage: prefixedStorage(this.#storage, `${this.#options.storageKey ?? 'remote-devtools'}:module:${module.name}:`),
             log: this.log,
         };
     }
@@ -352,6 +355,14 @@ export class RemoteDevTools {
         if (data === undefined) originalConsole.debug(`[remote-devtools] ${message}`);
         else originalConsole.debug(`[remote-devtools] ${message}`, data);
     }
+}
+
+function prefixedStorage(storage: KeyValueStorage, prefix: string): KeyValueStorage {
+    return {
+        getItem: (key) => storage.getItem(prefix + key),
+        setItem: (key, value) => storage.setItem(prefix + key, value),
+        removeItem: (key) => storage.removeItem(prefix + key),
+    };
 }
 
 function stringify(value: unknown): string {

@@ -133,7 +133,7 @@ type Hello = {
 type Capabilities = {
     network?: { autoCapture: boolean };
     functions?: { commands: CommandDef[] };
-    storage?: { adapters: { id: string; title: string; editable: boolean }[] };
+    storage?: { adapters: { id: string; title: string; editable: boolean; masked?: boolean }[] };
     state?: { stores: { id: string; title: string }[] };
     flags?: { flags: FlagDef[] };
     panels?: PanelDef[];
@@ -181,30 +181,58 @@ type CommandDef = { id: string; title: string; description?: string; group?: str
 | D→UI | `module.functions.result` | ortak cevap biçimi (`replyTo` ile) |
 
 ### storage
-| Yön | Tip | Payload |
-|---|---|---|
-| UI→D | `module.storage.list` | `{ adapterId }` → `{ entries: { key, size, preview }[] }` |
-| UI→D | `module.storage.get` | `{ adapterId, key }` → `{ value }` |
-| UI→D | `module.storage.set` | `{ adapterId, key, value }` |
-| UI→D | `module.storage.remove` | `{ adapterId, key }` |
-| D→UI | `module.storage.changed` | `{ adapterId, key }` (adapter destekliyorsa) |
+Değerler metindir. `masked` adapter'larda (ör. SecureStore) listede önizleme gönderilmez; UI değeri istenene kadar gizler.
+`editable: false` adapter'lar `set` / `remove` / `clear` isteklerine `READ_ONLY` hatası döner.
 
-### state
-| Yön | Tip | Payload |
-|---|---|---|
-| UI→D | `module.state.snapshot` | `{ storeId }` → `{ state }` |
-| UI→D | `module.state.subscribe` / `unsubscribe` | `{ storeId }` |
-| D→UI | `module.state.change` | `{ storeId, action?: string, state?: unknown, patch?: JsonPatch[] }` |
-
-### flags
 ```ts
-type FlagDef = { key: string; title?: string; description?: string; field: Field; value: unknown; overridden: boolean };
+type StorageEntry = { key: string; size: number; preview: string };   // size: karakter sayısı, preview: ilk 120 karakter
 ```
 | Yön | Tip | Payload |
 |---|---|---|
-| UI→D | `module.flags.set` | `{ key, value }` |
-| UI→D | `module.flags.reset` | `{ key? }` (boşsa hepsi) |
-| D→UI | `module.flags.changed` | `{ key, value, overridden }` |
+| UI→D | `module.storage.list` | `{ adapterId }` → `{ entries: StorageEntry[] }` (anahtara göre sıralı, değeri olmayanlar hariç) |
+| UI→D | `module.storage.get` | `{ adapterId, key }` → `{ value: string \| null }` |
+| UI→D | `module.storage.set` | `{ adapterId, key, value: string }` |
+| UI→D | `module.storage.remove` | `{ adapterId, key }` |
+| UI→D | `module.storage.clear` | `{ adapterId }` |
+| D→UI | `module.storage.changed` | `{ adapterId, key: string \| null }` — `null`: birden çok anahtar değişti. Adapter değişiklik bildiriyorsa (MMKV, başka sekmedeki localStorage) o bildirir; bildirmiyorsa SDK UI'dan gelen yazmalardan sonra gönderir |
+
+### state
+UI sadece State tab'ı açıkken abone olur. Abonelik `STATE_SUBSCRIPTION_TTL_MS` (60 sn) içinde `renew: true` ile
+yenilenmezse cihaz akışı durdurur; böylece kapanan bir UI `unsubscribe` gönderemese de akış sürmez. Fark, cihazın en son
+gönderdiği duruma göre hesaplanır ve en fazla `throttleMs` (varsayılan 100 ms) aralıkla gönderilir. Fark çok büyükse
+(`maxPatchOps`, varsayılan 500) `patch` yerine tam `state` gelir. Fonksiyonlar (ör. Zustand action'ları) gönderilmez.
+
+```ts
+type JsonPatchOp = { op: 'add' | 'remove' | 'replace'; path: string; value?: unknown };   // RFC 6902 alt kümesi, path: JSON pointer
+type StateChange = { storeId: string; at: number; actions: string[]; patch?: JsonPatchOp[]; state?: unknown };
+```
+| Yön | Tip | Payload |
+|---|---|---|
+| UI→D | `module.state.snapshot` | `{ storeId }` → `{ state }` |
+| UI→D | `module.state.subscribe` | `{ storeId, renew?: boolean }` → `{ state }`; `renew: true` ve abonelik sürüyorsa `{}` |
+| UI→D | `module.state.unsubscribe` | `{ storeId }` |
+| D→UI | `module.state.change` | `StateChange` |
+
+`actions`: aralıkta adapter'ın bildirdiği action adları (Redux'ta `store.dispatch` ile gönderilenler), bilinmiyorsa boş.
+Patch'i uygulayamayan (ör. bir mesajı kaçıran) UI baştan abone olur. `diffJson` ve `applyPatch` protokol paketindedir.
+
+### flags
+```ts
+type FlagDef = {
+    key: string; title?: string; description?: string; group?: string;
+    field: Field;            // değer tipi ve UI düzenleyicisi
+    value: unknown;          // geçerli değer: override varsa o, yoksa baseValue
+    baseValue: unknown;      // app'in değeri, yoksa field.default
+    overridden: boolean;
+};
+```
+| Yön | Tip | Payload |
+|---|---|---|
+| UI→D | `module.flags.set` | `{ key, value }` → `FlagDef` (değer `field`'a göre doğrulanır, geçersizse `INVALID_VALUE`) |
+| UI→D | `module.flags.reset` | `{ key? }` (boşsa tüm override'lar silinir) |
+
+Değer, override veya tanım değişince cihaz `capabilities.update` ile güncel `flags` listesini gönderir; ayrı bir olay yoktur.
+Override'lar cihazda saklanır (SDK'nın `storage`'ı) ve uygulama yeniden açılınca da geçerlidir.
 
 ### panels
 ```ts

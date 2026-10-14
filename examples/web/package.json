@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit -p ."
   },
   "dependencies": {
-    "@himmetkaan/remote-devtools": "workspace:*"
+    "@himmetkaan/remote-devtools": "workspace:*",
+    "zustand": "5.0.15"
   },
   "devDependencies": {
     "typescript": "7.0.2",
