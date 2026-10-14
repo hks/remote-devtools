@@ -1,5 +1,5 @@
 import {create} from 'zustand';
-import type {AppLifecycleState, DeviceInfo, DeviceSnapshot, LogLevel} from '@remote-devtools/protocol';
+import type {AppLifecycleState, DeviceInfo, DeviceSnapshot, LogLevel} from '@himmetkaan/remote-devtools-protocol/v1';
 
 export type RelayConnectionState = 'connecting' | 'open' | 'reconnecting';
 

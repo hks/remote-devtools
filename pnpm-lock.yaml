@@ -16,7 +16,7 @@ importers:
 
   packages/relay:
     dependencies:
-      '@remote-devtools/protocol':
+      '@himmetkaan/remote-devtools-protocol':
         specifier: workspace:*
         version: link:../protocol
       ws:
@@ -38,7 +38,7 @@ importers:
 
   packages/ui:
     dependencies:
-      '@remote-devtools/protocol':
+      '@himmetkaan/remote-devtools-protocol':
         specifier: workspace:*
         version: link:../protocol
       qrcode.react:

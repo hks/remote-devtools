@@ -1,4 +1,4 @@
-import type {DeviceSnapshot} from '@remote-devtools/protocol';
+import type {DeviceSnapshot} from '@himmetkaan/remote-devtools-protocol/v1';
 import {requestSync} from '../lib/network.ts';
 import {relayClient} from '../lib/relayClient.ts';
 import {useNetworkStore} from '../store/useNetworkStore.ts';

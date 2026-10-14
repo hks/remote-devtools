@@ -1,4 +1,4 @@
-import type {DeviceInfo} from '@remote-devtools/protocol';
+import type {DeviceInfo} from '@himmetkaan/remote-devtools-protocol/v1';
 
 export function platformLabel(platform: string): string {
     if (platform === 'ios') return 'iOS';

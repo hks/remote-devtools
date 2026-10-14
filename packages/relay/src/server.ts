@@ -1,5 +1,8 @@
-import {createServer, type Server} from 'node:http';
+import {createServer, type Server, type ServerResponse} from 'node:http';
 import type {AddressInfo} from 'node:net';
+import {hostname} from 'node:os';
+import {DISCOVERY_PATH, PROTOCOL_VERSION} from '@himmetkaan/remote-devtools-protocol';
+import pkg from '../package.json' with {type: 'json'};
 import type {RelayConfig} from './config.ts';
 import {attachRelay, type Relay} from './relay.ts';
 import {createStaticHandler} from './static.ts';
@@ -11,6 +14,12 @@ export type RunningServer = {
     close(): Promise<void>;
 };
 
+/** Sırrı olmayan, herkese açık JSON uç noktaları; tarayıcıdaki SDK'lar da okuyabilsin diye CORS açıktır. */
+function sendJson(res: ServerResponse, body: unknown) {
+    res.writeHead(200, {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store'});
+    res.end(JSON.stringify(body));
+}
+
 export async function startServer(config: RelayConfig): Promise<RunningServer> {
     const serveStatic = config.webDistDir ? createStaticHandler(config.webDistDir) : null;
     const startedAt = Date.now();
@@ -19,9 +28,18 @@ export async function startServer(config: RelayConfig): Promise<RunningServer> {
         const path = new URL(req.url ?? '/', 'http://localhost').pathname;
 
         if (path === '/health') {
-            res.writeHead(200, {'Content-Type': 'application/json'});
-            res.end(JSON.stringify({ok: true, sessions: relay.store.size, uptimeSec: Math.round((Date.now() - startedAt) / 1000)}));
-            return;
+            return sendJson(res, {ok: true, sessions: relay.store.size, uptimeSec: Math.round((Date.now() - startedAt) / 1000)});
+        }
+
+        // `isDevelopment` SDK'ları localhost'ta relay olup olmadığını buradan anlar.
+        if (path === DISCOVERY_PATH) {
+            return sendJson(res, {
+                name: 'remote-devtools',
+                version: pkg.version,
+                protocol: PROTOCOL_VERSION,
+                host: hostname(),
+                connectRequests: config.connectRequests,
+            });
         }
 
         try {
@@ -33,7 +51,7 @@ export async function startServer(config: RelayConfig): Promise<RunningServer> {
         }
 
         res.writeHead(404, {'Content-Type': 'text/plain; charset=utf-8'});
-        res.end('Remote DevTools relay — web arayüzü build edilmemiş.\n');
+        res.end('Remote DevTools relay — UI is not built.\n');
     });
 
     const relay = attachRelay(server, config);

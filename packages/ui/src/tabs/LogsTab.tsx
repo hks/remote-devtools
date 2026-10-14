@@ -1,5 +1,5 @@
 import {memo, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import type {LogLevel} from '@remote-devtools/protocol';
+import type {LogLevel} from '@himmetkaan/remote-devtools-protocol/v1';
 import {formatClock, stringifyData} from '../lib/format.ts';
 import {type LogEntry, type LogSource, useDevtoolsStore} from '../store/useDevtoolsStore.ts';
 

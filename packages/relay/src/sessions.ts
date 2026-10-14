@@ -1,5 +1,5 @@
-import type {AppLifecycleState, DeviceInfo, DeviceSnapshot} from '@remote-devtools/protocol';
-import {randomToken, safeEqual} from './secrets.ts';
+import type {DeviceSnapshot, Hello, Lifecycle, PairingInfo, TrustedDevice} from '@himmetkaan/remote-devtools-protocol';
+import {randomCode, randomToken, safeEqual} from './secrets.ts';
 
 /** Relay'in mesaj gönderebildiği uç (WebSocket'in ihtiyaç duyduğumuz alt kümesi). */
 export type Peer = {
@@ -7,39 +7,65 @@ export type Peer = {
     close(code?: number, reason?: string): void;
 };
 
-export type Session = {
-    id: string;
-    webSecret: string;
-    createdAt: number;
-    /** Son kez en az bir web sekmesinin bağlı olduğu an — TTL buna göre hesaplanır. */
-    lastWebSeenAt: number;
-    webs: Set<Peer>;
-
-    pairToken: string | null;
-    pairTokenExpiresAt: number | null;
-
-    /** `null` ise cihaz eşleşmemiş demektir. */
-    deviceSecret: string | null;
-    pairedAt: number | null;
-    device: Peer | null;
-    deviceLastSeenAt: number | null;
-    deviceInfo: DeviceInfo | null;
-    lifecycle: AppLifecycleState | null;
+export type DeviceRecord = {
+    deviceId: string;
+    secret: string;
+    pairedAt: number;
+    expiresAt: number;
+    lastSeenAt: number | null;
+    hello: Hello | null;
+    lifecycle: Lifecycle | null;
+    socket: Peer | null;
 };
 
-export type PairResult =
-    | { ok: true; deviceSecret: string }
-    | { ok: false; code: 'SESSION_NOT_FOUND' | 'INVALID_PAIR_TOKEN' | 'PAIR_TOKEN_EXPIRED' | 'DEVICE_ALREADY_PAIRED' };
+export type Session = {
+    id: string;
+    uiSecret: string;
+    createdAt: number;
+    /** Son kez en az bir UI'ın bağlı olduğu an — TTL buna göre hesaplanır. */
+    lastUiSeenAt: number;
+    uis: Set<Peer>;
+    pairing: PairingInfo;
+    devices: Map<string, DeviceRecord>;
+    trusted: Map<string, TrustedDevice>;
+};
+
+export type PairFailure = 'SESSION_NOT_FOUND' | 'INVALID_PAIR_TOKEN' | 'PAIR_TOKEN_EXPIRED' | 'INVALID_CODE' | 'DEVICE_LIMIT';
+
+/** `replaced`: aynı `deviceId` ile daha önce eşleşmiş kayıt (soketi varsa çağıran kapatmalıdır). */
+export type AddedDevice = { device: DeviceRecord; replaced: DeviceRecord | null };
+
+export type PairResult = ({ ok: true; session: Session } & AddedDevice) | { ok: false; code: PairFailure };
+
+export type DeviceAuthResult =
+    | { ok: true; session: Session; device: DeviceRecord }
+    | { ok: false; reason: 'sessionNotFound' | 'invalidSecret' | 'expired' };
+
+/** Diske yazılabilen, soket içermeyen oturum görüntüsü. */
+export type PersistedSession = {
+    id: string;
+    uiSecret: string;
+    createdAt: number;
+    lastUiSeenAt: number;
+    devices: Omit<DeviceRecord, 'socket' | 'lifecycle'>[];
+    trusted: TrustedDevice[];
+};
 
 export type SessionStoreOptions = {
-    pairTokenTtlMs: number;
+    pairingTtlMs: number;
+    devicePairingTtlMs: number;
     sessionTtlMs: number;
     maxSessions: number;
+    maxDevicesPerSession: number;
     now?: () => number;
+    /** Kalıcı metadata değiştiğinde çağrılır (dosyaya yazmak için). */
+    onChange?: () => void;
 };
 
 export class SessionStore {
     readonly #sessions = new Map<string, Session>();
+    /** 6 haneli kod → oturum id'si. Kodlar tüm oturumlar arasında benzersizdir. */
+    readonly #codes = new Map<string, string>();
     readonly #opts: SessionStoreOptions;
     readonly #now: () => number;
 
@@ -52,27 +78,33 @@ export class SessionStore {
         return this.#sessions.size;
     }
 
+    sessions(): IterableIterator<Session> {
+        return this.#sessions.values();
+    }
+
+    #changed() {
+        this.#opts.onChange?.();
+    }
+
+    // ─── Oturum ──────────────────────────────────────────────────────────────
+
     /** Limit doluysa `null` döner. */
     create(): Session | null {
         if (this.#sessions.size >= this.#opts.maxSessions) return null;
         const now = this.#now();
         const session: Session = {
             id: randomToken(12),
-            webSecret: randomToken(),
+            uiSecret: randomToken(),
             createdAt: now,
-            lastWebSeenAt: now,
-            webs: new Set(),
-            pairToken: null,
-            pairTokenExpiresAt: null,
-            deviceSecret: null,
-            pairedAt: null,
-            device: null,
-            deviceLastSeenAt: null,
-            deviceInfo: null,
-            lifecycle: null,
+            lastUiSeenAt: now,
+            uis: new Set(),
+            pairing: {qrToken: '', code: '', expiresAt: 0},
+            devices: new Map(),
+            trusted: new Map(),
         };
         this.#sessions.set(session.id, session);
-        this.issuePairToken(session);
+        this.issuePairing(session);
+        this.#changed();
         return session;
     }
 
@@ -80,89 +112,203 @@ export class SessionStore {
         return this.#sessions.get(sessionId);
     }
 
-    authenticateWeb(sessionId: string, webSecret: string): Session | null {
+    authenticateUi(sessionId: string, uiSecret: string): Session | null {
         const session = this.#sessions.get(sessionId);
-        if (!session || !safeEqual(session.webSecret, webSecret)) return null;
+        if (!session || !safeEqual(session.uiSecret, uiSecret)) return null;
         return session;
     }
 
-    authenticateDevice(sessionId: string, deviceSecret: string): Session | null {
-        const session = this.#sessions.get(sessionId);
-        if (!session || session.deviceSecret === null || !safeEqual(session.deviceSecret, deviceSecret)) return null;
-        return session;
+    touchUi(session: Session): void {
+        session.lastUiSeenAt = this.#now();
     }
 
-    isPaired(session: Session): boolean {
-        return session.deviceSecret !== null;
+    // ─── Eşleşme (QR + kod) ──────────────────────────────────────────────────
+
+    /** Eski QR token'ını ve kodu geçersiz kılıp yenilerini üretir. */
+    issuePairing(session: Session): PairingInfo {
+        this.#codes.delete(session.pairing.code);
+        let code: string;
+        do code = randomCode(); while (this.#codes.has(code));
+        this.#codes.set(code, session.id);
+        session.pairing = {qrToken: randomToken(16), code, expiresAt: this.#now() + this.#opts.pairingTtlMs};
+        return session.pairing;
     }
 
-    /** Cihaz eşleşmemişse yeni (tek kullanımlık) pair token üretir. */
-    issuePairToken(session: Session): { pairToken: string; expiresAt: number } | null {
-        if (this.isPaired(session)) return null;
-        session.pairToken = randomToken(16);
-        session.pairTokenExpiresAt = this.#now() + this.#opts.pairTokenTtlMs;
-        return {pairToken: session.pairToken, expiresAt: session.pairTokenExpiresAt};
+    /** Süresi dolmuşsa yeniler; UI tekrar bağlandığında güncel bir QR görsün diye. */
+    ensureFreshPairing(session: Session): PairingInfo {
+        return session.pairing.expiresAt <= this.#now() ? this.issuePairing(session) : session.pairing;
     }
 
-    pair(sessionId: string, pairToken: string): PairResult {
+    pairByQr(sessionId: string, qrToken: string, deviceId: string): PairResult {
         const session = this.#sessions.get(sessionId);
         if (!session) return {ok: false, code: 'SESSION_NOT_FOUND'};
-        if (this.isPaired(session)) return {ok: false, code: 'DEVICE_ALREADY_PAIRED'};
-        if (session.pairToken === null || !safeEqual(session.pairToken, pairToken)) {
-            return {ok: false, code: 'INVALID_PAIR_TOKEN'};
-        }
-        if (session.pairTokenExpiresAt === null || session.pairTokenExpiresAt < this.#now()) {
-            return {ok: false, code: 'PAIR_TOKEN_EXPIRED'};
-        }
-        session.pairToken = null;
-        session.pairTokenExpiresAt = null;
-        session.deviceSecret = randomToken();
-        session.pairedAt = this.#now();
-        return {ok: true, deviceSecret: session.deviceSecret};
+        if (!safeEqual(session.pairing.qrToken, qrToken)) return {ok: false, code: 'INVALID_PAIR_TOKEN'};
+        if (session.pairing.expiresAt <= this.#now()) return {ok: false, code: 'PAIR_TOKEN_EXPIRED'};
+        return this.#consumePairing(session, deviceId);
     }
 
-    /** Cihaz eşleşmesini kaldırır ve yeni pair token üretir. Bağlı cihaz soketini döndürür (kapatmak çağırana ait). */
-    unpair(session: Session): Peer | null {
-        const device = session.device;
-        session.deviceSecret = null;
-        session.pairedAt = null;
-        session.device = null;
-        session.deviceLastSeenAt = null;
-        session.deviceInfo = null;
-        session.lifecycle = null;
-        this.issuePairToken(session);
+    pairByCode(code: string, deviceId: string): PairResult {
+        const sessionId = this.#codes.get(code);
+        const session = sessionId ? this.#sessions.get(sessionId) : undefined;
+        if (!session || session.pairing.expiresAt <= this.#now()) return {ok: false, code: 'INVALID_CODE'};
+        return this.#consumePairing(session, deviceId);
+    }
+
+    #consumePairing(session: Session, deviceId: string): PairResult {
+        if (!this.canAddDevice(session, deviceId)) return {ok: false, code: 'DEVICE_LIMIT'};
+        // Tek kullanımlık: bir sonraki cihaz için hemen yenisi üretilir.
+        this.issuePairing(session);
+        return {ok: true, session, ...this.addDevice(session, deviceId)};
+    }
+
+    // ─── Cihazlar ────────────────────────────────────────────────────────────
+
+    canAddDevice(session: Session, deviceId: string): boolean {
+        return session.devices.has(deviceId) || session.devices.size < this.#opts.maxDevicesPerSession;
+    }
+
+    /**
+     * Cihazı oturuma ekler (aynı `deviceId` varsa yeni sırla değiştirir).
+     * Eski kaydın soketi kapatılmaz; çağıran kapatmalıdır.
+     */
+    addDevice(session: Session, deviceId: string): AddedDevice {
+        const now = this.#now();
+        const previous = session.devices.get(deviceId) ?? null;
+        const device: DeviceRecord = {
+            deviceId,
+            secret: randomToken(),
+            pairedAt: now,
+            expiresAt: now + this.#opts.devicePairingTtlMs,
+            lastSeenAt: now,
+            hello: previous?.hello ?? null,
+            lifecycle: null,
+            socket: null,
+        };
+        session.devices.set(deviceId, device);
+        this.#changed();
+        return {device, replaced: previous};
+    }
+
+    authenticateDevice(sessionId: string, deviceId: string, secret: string): DeviceAuthResult {
+        const session = this.#sessions.get(sessionId);
+        if (!session) return {ok: false, reason: 'sessionNotFound'};
+        const device = session.devices.get(deviceId);
+        if (!device || !safeEqual(device.secret, secret)) return {ok: false, reason: 'invalidSecret'};
+        if (device.expiresAt <= this.#now()) return {ok: false, reason: 'expired'};
+        return {ok: true, session, device};
+    }
+
+    removeDevice(session: Session, deviceId: string): DeviceRecord | null {
+        const device = session.devices.get(deviceId) ?? null;
+        if (device) {
+            session.devices.delete(deviceId);
+            this.#changed();
+        }
         return device;
     }
 
-    snapshot(session: Session): DeviceSnapshot | null {
-        if (session.pairedAt === null) return null;
+    touchDevice(device: DeviceRecord): void {
+        device.lastSeenAt = this.#now();
+    }
+
+    snapshot(device: DeviceRecord): DeviceSnapshot {
         return {
-            connected: session.device !== null,
-            pairedAt: session.pairedAt,
-            lastSeenAt: session.deviceLastSeenAt,
-            info: session.deviceInfo,
-            lifecycle: session.lifecycle,
+            deviceId: device.deviceId,
+            connected: device.socket !== null,
+            pairedAt: device.pairedAt,
+            expiresAt: device.expiresAt,
+            lastSeenAt: device.lastSeenAt,
+            hello: device.hello,
+            lifecycle: device.lifecycle,
         };
     }
 
-    touchWeb(session: Session): void {
-        session.lastWebSeenAt = this.#now();
+    snapshots(session: Session): DeviceSnapshot[] {
+        return [...session.devices.values()].map((d) => this.snapshot(d));
     }
 
-    touchDevice(session: Session): void {
-        session.deviceLastSeenAt = this.#now();
+    // ─── Onaylı cihazlar ─────────────────────────────────────────────────────
+
+    trust(session: Session, entry: Omit<TrustedDevice, 'trustedAt'>): void {
+        session.trusted.set(entry.deviceId, {...entry, trustedAt: this.#now()});
+        this.#changed();
     }
 
-    /** Hiçbir web sekmesinin TTL süresince bağlanmadığı oturumları siler ve döndürür. */
-    collectExpired(): Session[] {
+    untrust(session: Session, deviceId: string): boolean {
+        const removed = session.trusted.delete(deviceId);
+        if (removed) this.#changed();
+        return removed;
+    }
+
+    /** Bu cihazı (aynı uygulama için) onaylamış oturumu bulur. */
+    findTrustingSession(deviceId: string, appId: string): Session | null {
+        for (const session of this.#sessions.values()) {
+            const entry = session.trusted.get(deviceId);
+            if (entry && entry.appId === appId) return session;
+        }
+        return null;
+    }
+
+    // ─── Çöp toplama ─────────────────────────────────────────────────────────
+
+    /** Hiçbir UI'ın TTL süresince bağlanmadığı oturumları siler ve döndürür. */
+    collectExpiredSessions(): Session[] {
         const now = this.#now();
         const expired: Session[] = [];
         for (const session of this.#sessions.values()) {
-            if (session.webs.size === 0 && now - session.lastWebSeenAt > this.#opts.sessionTtlMs) {
+            if (session.uis.size === 0 && now - session.lastUiSeenAt > this.#opts.sessionTtlMs) {
                 expired.push(session);
                 this.#sessions.delete(session.id);
+                this.#codes.delete(session.pairing.code);
             }
         }
+        if (expired.length) this.#changed();
         return expired;
+    }
+
+    /** Eşleşme süresi dolmuş cihazları oturumlarından siler ve döndürür. */
+    collectExpiredDevices(): { session: Session; device: DeviceRecord }[] {
+        const now = this.#now();
+        const expired: { session: Session; device: DeviceRecord }[] = [];
+        for (const session of this.#sessions.values()) {
+            for (const device of session.devices.values()) {
+                if (device.expiresAt <= now) {
+                    expired.push({session, device});
+                    session.devices.delete(device.deviceId);
+                }
+            }
+        }
+        if (expired.length) this.#changed();
+        return expired;
+    }
+
+    // ─── Kalıcılık ───────────────────────────────────────────────────────────
+
+    export(): PersistedSession[] {
+        return [...this.#sessions.values()].map((s) => ({
+            id: s.id,
+            uiSecret: s.uiSecret,
+            createdAt: s.createdAt,
+            lastUiSeenAt: s.lastUiSeenAt,
+            devices: [...s.devices.values()].map(({socket: _s, lifecycle: _l, ...rest}) => rest),
+            trusted: [...s.trusted.values()],
+        }));
+    }
+
+    import(data: PersistedSession[]): void {
+        for (const p of data) {
+            const session: Session = {
+                id: p.id,
+                uiSecret: p.uiSecret,
+                createdAt: p.createdAt,
+                lastUiSeenAt: p.lastUiSeenAt,
+                uis: new Set(),
+                pairing: {qrToken: '', code: '', expiresAt: 0},
+                devices: new Map(p.devices.map((d) => [d.deviceId, {...d, lifecycle: null, socket: null}])),
+                trusted: new Map(p.trusted.map((t) => [t.deviceId, t])),
+            };
+            this.#sessions.set(session.id, session);
+            this.issuePairing(session);
+        }
     }
 }

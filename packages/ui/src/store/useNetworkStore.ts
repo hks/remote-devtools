@@ -1,5 +1,5 @@
 import {create} from 'zustand';
-import type {NetworkEntry, NetworkRequest, NetworkResponse} from '@remote-devtools/protocol';
+import type {NetworkEntry, NetworkRequest, NetworkResponse} from '@himmetkaan/remote-devtools-protocol/v1';
 
 export type NetworkRow = {
     uuid: string;

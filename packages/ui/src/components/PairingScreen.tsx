@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {QRCodeSVG} from 'qrcode.react';
-import {PROTOCOL_VERSION, type QrPayload} from '@remote-devtools/protocol';
+import {PROTOCOL_VERSION, type QrPayload} from '@himmetkaan/remote-devtools-protocol/v1';
 import {relayClient, resolveDeviceWsUrl} from '../lib/relayClient.ts';
 import {copyText} from '../lib/format.ts';
 import {useNow} from '../lib/useNow.ts';

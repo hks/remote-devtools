@@ -8,7 +8,7 @@ import {
     type WebToRelay,
     WS_PATH_DEVICE,
     WS_PATH_WEB,
-} from '@remote-devtools/protocol';
+} from '@himmetkaan/remote-devtools-protocol/v1';
 import {useDevtoolsStore} from '../store/useDevtoolsStore.ts';
 import {describeDevice} from './format.ts';
 

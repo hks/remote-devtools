@@ -7,6 +7,10 @@ Uygulamadaki Developer Menu'yü bilgisayardan kullanmak için web arayüzü + We
 - **Telefon → Web:** servis istekleri (canlı + Sync ile geçmiş), uygulama yaşam döngüsü, loglar
 - **Web → Telefon:** Dev Menu fonksiyonlarını tetikleme
 
+> ⚠️ **`feat/generic-platform` dalı:** relay protokol v2'ye geçti ([docs/v2](./docs/v2/PLAN.md)). UI ve mobile-app henüz v1
+> konuştuğu için bu dalda birlikte çalışmazlar (UI Faz 3'te, mobile-app Faz 5'te taşınacak). Relay'i denemek için
+> aşağıdaki `fake-device.ts` ve `smoke.ts` kullanılabilir.
+
 Plan ve kararlar: [PLAN.md](./PLAN.md) · İlerleme: [ROADMAP.md](./ROADMAP.md)
 
 ```
@@ -26,12 +30,12 @@ Plan ve kararlar: [PLAN.md](./PLAN.md) · İlerleme: [ROADMAP.md](./ROADMAP.md)
 ```
 package.json, pnpm-workspace.yaml   # pnpm workspaces monorepo
 packages/
-  protocol/              # @remote-devtools/protocol — mesaj sözleşmesi (relay + ui). mobile-app'te kopyası: helpers/developer/remote/RemoteProtocol.ts
-  relay/                 # @remote-devtools/relay — Node 24 + ws. Geliştirmede .ts dosyaları derlenmeden çalışır (type stripping)
+  protocol/              # @himmetkaan/remote-devtools-protocol — mesaj sözleşmesi (relay + ui). mobile-app'te kopyası: helpers/developer/remote/RemoteProtocol.ts
+  relay/                 # @himmetkaan/remote-devtools-relay — Node 24 + ws. Geliştirmede .ts dosyaları derlenmeden çalışır (type stripping)
     src/                 #   relay.ts (WebSocket akışı), sessions.ts (oturum deposu), static.ts, server.ts
     test/                #   uçtan uca testler (pnpm test)
     scripts/             #   build.ts (esbuild → dist/main.js), smoke.ts, fake-device.ts
-  ui/                    # @remote-devtools/ui — Vite + React + TS
+  ui/                    # @himmetkaan/remote-devtools-ui — Vite + React + TS
 apps/
   server/                # docker imajı: Dockerfile (ui build + paketlenmiş relay), docker-compose.yml (relay + caddy), Caddyfile, .env.example
 docs/v2/                 # generic platform planı (v2)
@@ -97,19 +101,28 @@ pnpm dev:relay        # :8080
 pnpm dev:ui           # :5173, /ws ve /health relay'e proxy'lenir
 ```
 
-**Telefon olmadan deneme:** QR ekranındaki "QR içeriği" alanını kopyala:
+**Cihaz olmadan deneme (v2):**
 
 ```bash
-node packages/relay/scripts/fake-device.ts '<QR içeriği>'
+node packages/relay/scripts/fake-device.ts qr '<QR içeriği>'
 ```
 
+```bash
+node packages/relay/scripts/fake-device.ts code <6 haneli kod> ws://127.0.0.1:8080/ws/device
+```
+
+```bash
+node packages/relay/scripts/fake-device.ts connect ws://127.0.0.1:8080/ws/device
+```
+
+`connect` modu relay'in `CONNECT_REQUESTS=local` ile çalışmasını gerektirir (`pnpm dev:relay` bunu açar).
 Komutlar (stdin): `bg`, `fg`, `log|debug|warn|err <mesaj>`, `name <cihaz adı>`, `drop`, `resume`, `unpair`, `quit`.
-Simülatörde uygulama varsa QR içeriği Remote tabındaki "QR içeriğini yapıştır" alanına da yapıştırılabilir.
+Sahte cihaz `ping` ve `echo` fonksiyonlarını bildirir ve `module.functions.invoke` isteklerine cevap verir.
 
 **Testler:**
 
 ```bash
-pnpm typecheck && pnpm test                              # tüm paketler; relay'de 23 senaryo
+pnpm typecheck && pnpm test                              # tüm paketler; relay'de 69 test
 ```
 
 ```bash
@@ -159,14 +172,22 @@ HTTPS_PORT=443
 | `PUBLIC_URL` | — | QR'a yazılan dış adres (`https://…` → `wss://…/ws/device`) |
 | `SITE_ADDRESS` | `:80` | Caddy site adresi; domain verilirse otomatik TLS |
 | `HTTP_PORT` / `HTTPS_PORT` | `8080` / `8443` | Host'a açılan portlar (sunucuda 80/443) |
-| `SESSION_TTL_HOURS` | `24` | Hiçbir web sekmesinin bağlı olmadığı oturum bu süre sonra silinir; cihaz eşleşmesi de düşer |
-| `PAIR_TOKEN_TTL_SEC` | `120` | QR geçerlilik süresi |
+| `SESSION_TTL_HOURS` | `24` | Hiçbir UI'ın bağlı olmadığı oturum bu süre sonra silinir; cihaz eşleşmeleri de düşer |
+| `PAIR_TOKEN_TTL_SEC` | `120` | QR token'ı ve 6 haneli kodun geçerlilik süresi (ikisi de tek kullanımlık) |
+| `DEVICE_PAIRING_TTL_HOURS` | `24` | Cihaz eşleşmesinin ömrü; uygulama yeniden açılınca bu süre içinde kendiliğinden bağlanır |
+| `CONNECT_REQUESTS` | `off` | Kodsuz geliştirme bağlantıları (UI'dan onaylı): `off` · `local` (loopback/özel ağ) · `any` |
+| `CONNECT_REQUEST_TTL_SEC` | `120` | Bekleyen bağlantı isteğinin cevaplanma süresi |
+| `TRUST_PROXY` | `false` | İstemci adresini `X-Forwarded-For`'dan oku (compose'da `true`) |
 | `HEARTBEAT_INTERVAL_SEC` | `15` | Ping aralığı; cevap vermeyen soket bir sonraki turda düşürülür |
-| `MAX_PAYLOAD_MB` | `5` | Tek mesaj sınırı (Sync zaten ~1 MB'lık parçalarla gönderilir) |
+| `MAX_PAYLOAD_MB` | `5` | Tek mesaj sınırı |
 | `MAX_SESSIONS` | `1000` | Eşzamanlı oturum sınırı |
+| `MAX_DEVICES_PER_SESSION` | `20` | Bir oturuma bağlanabilecek cihaz sayısı |
+| `DEVICE_MAX_MSGS_PER_SEC` | `200` | Cihaz başına mesaj hızı sınırı; aşanlar düşürülür |
+| `PAIR_FAILURE_LIMIT` / `PAIR_FAILURE_WINDOW_SEC` | `10` / `600` | IP başına başarısız eşleşme denemesi sınırı |
+| `STATE_FILE` | — | Oturum, eşleşme ve onaylı cihaz bilgisinin saklanacağı dosya; boşsa sadece bellek |
 
-Relay oturumları **bellekte** tutar: relay yeniden başlarsa web otomatik yeni oturum açar, telefonun eşleşmesi düşer
-ve QR'ın yeniden okutulması gerekir.
+Relay oturumları varsayılan olarak **bellekte** tutar: relay yeniden başlarsa eşleşmeler düşer. `STATE_FILE` verilirse
+oturumlar, cihaz eşleşmeleri ve onaylı cihazlar bu dosyada saklanır (veri değil, sadece bağlantı bilgisi; dosya `0600`).
 
 ---
 

@@ -10,7 +10,7 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
-    "dev:relay": "pnpm --filter @remote-devtools/relay dev",
-    "dev:ui": "pnpm --filter @remote-devtools/ui dev"
+    "dev:relay": "pnpm --filter @himmetkaan/remote-devtools-relay dev",
+    "dev:ui": "pnpm --filter @himmetkaan/remote-devtools-ui dev"
   }
 }

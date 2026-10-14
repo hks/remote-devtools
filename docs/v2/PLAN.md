@@ -32,7 +32,8 @@ Durum: `[ ]` yapılacak · `[~]` devam ediyor · `[x]` tamamlandı
 | G16 | Otomatik bağlanma | `isDevelopment: true` olan app ağdaki relay'i (mDNS/localhost) bulur ve **bağlantı isteği** gönderir. Desktop'ta Onayla/Reddet çıkar. Onaylanan cihazlar hatırlanır. |
 | G17 | Bağlantıyı hatırlama | QR veya kodla eşleşen app (production dahil) bağlantı bilgisini saklar. Uygulama öldürülüp açılsa da kaldığı yerden devam eder. Eşleşme **TTL** sonunda düşer (varsayılan 24 saat). Hem SDK'da hem relay'de ayarlanabilir. |
 | G18 | Pembe Panjur | Protokol v2'ye **kırıcı geçiş** yapılır. Pembe Panjur yeni JS SDK'nın ilk kullanıcısı olur, kendine özel komutlarını app tarafında tanımlar. v1 desteği kaldırılır. |
-| G20 | mDNS opsiyonel | mDNS keşfi çekirdeğe dahil değildir. SDK'da ayrı bir paketle (`@remote-devtools/sdk-mdns`) gelir ve `discovery.mdns` ile açılır, **varsayılan kapalıdır**. Desktop'ta mDNS yayını ayarlardan kapatılabilir. mDNS olmadan da her yol (QR, kod, localhost) çalışır. |
+| G21 | Paket adları | npm organizasyonu `@himmetkaan`. SDK: `@himmetkaan/remote-devtools`; diğerleri `@himmetkaan/remote-devtools-<ad>` (`-protocol`, `-relay`, `-ui`, `-mdns`, `-react-native-ui`). |
+| G20 | mDNS opsiyonel | mDNS keşfi çekirdeğe dahil değildir. SDK'da ayrı bir paketle (`@himmetkaan/remote-devtools-mdns`) gelir ve `discovery.mdns` ile açılır, **varsayılan kapalıdır**. Desktop'ta mDNS yayını ayarlardan kapatılabilir. mDNS olmadan da her yol (QR, kod, localhost) çalışır. |
 | G19 | macOS dağıtımı | App Store'a gönderilmez. **Developer ID ile imzalı ve notarize edilmiş .dmg**, GitHub Releases'ta yayınlanır ve otomatik güncellenir. |
 
 ---
@@ -42,8 +43,8 @@ Durum: `[ ]` yapılacak · `[~]` devam ediyor · `[x]` tamamlandı
 ```
 ┌──────────────────────────┐                ┌─────────────────────────────────┐
 │ App (developer'ın)       │   ws / wss     │ Relay                           │
-│  └─ @remote-devtools/    │◄──────────────►│  oturum · çoklu cihaz · onay    │
-│     sdk (+ modüller)     │  /ws/device    │  modül mesajlarını içine        │
+│  └─ @himmetkaan/remote-  │◄──────────────►│  oturum · çoklu cihaz · onay    │
+│     devtools (+ modüller)│  /ws/device    │  modül mesajlarını içine        │
 └──────────────────────────┘                │  bakmadan iletir                │
         ▲  mDNS keşfi (dev)                 └──────────────┬──────────────────┘
         └──────────────────────────────────────────────────┤ /ws/ui
@@ -59,10 +60,10 @@ Durum: `[ ]` yapılacak · `[~]` devam ediyor · `[x]` tamamlandı
 
 ```
 packages/
-  protocol/        # @remote-devtools/protocol — tipler, zarf, field DSL, sürüm sabitleri (bağımlılıksız)
-  relay/           # @remote-devtools/relay   — Node + ws; kütüphane + CLI (docker ve Electron aynı kodu kullanır)
-  ui/              # @remote-devtools/ui      — React UI; modül kayıt defteri, cihaz seçici
-  sdk-js/          # @remote-devtools/sdk     — çekirdek + modüller + adapter'lar (axios, AsyncStorage, MMKV, Redux, Zustand…)
+  protocol/        # @himmetkaan/remote-devtools-protocol — tipler, zarf, field DSL, sürüm sabitleri (bağımlılıksız)
+  relay/           # @himmetkaan/remote-devtools-relay   — Node + ws; kütüphane + CLI (docker ve Electron aynı kodu kullanır)
+  ui/              # @himmetkaan/remote-devtools-ui      — React UI; modül kayıt defteri, cihaz seçici
+  sdk-js/          # @himmetkaan/remote-devtools — çekirdek + modüller + adapter'lar (axios, AsyncStorage, MMKV, Redux, Zustand…)
 apps/
   desktop/         # Electron: gömülü relay + UI + mDNS yayını + onaylı cihaz listesi
   server/          # docker imajı: relay + build edilmiş UI (mevcut Dockerfile/compose/Caddy buraya)
@@ -115,10 +116,10 @@ Swift, Kotlin ve Flutter SDK'ları ileride `sdks/` altına girer ve protokol sö
 ## 3. SDK (JS) API taslağı
 
 ```ts
-import {RemoteDevTools} from '@remote-devtools/sdk';
-import {networkModule, functionsModule, storageModule, stateModule, flagsModule} from '@remote-devtools/sdk/modules';
-import {asyncStorageAdapter} from '@remote-devtools/sdk/adapters/async-storage';
-import {zustandAdapter} from '@remote-devtools/sdk/adapters/zustand';
+import {RemoteDevTools} from '@himmetkaan/remote-devtools';
+import {networkModule, functionsModule, storageModule, stateModule, flagsModule} from '@himmetkaan/remote-devtools/modules';
+import {asyncStorageAdapter} from '@himmetkaan/remote-devtools/adapters/async-storage';
+import {zustandAdapter} from '@himmetkaan/remote-devtools/adapters/zustand';
 
 const devtools = RemoteDevTools.init({
     enabled: showDevMenu,            // G13: zorunlu; false iken her şey no-op
@@ -126,7 +127,7 @@ const devtools = RemoteDevTools.init({
     app: {id: 'com.pembepanjur.app', name: 'Pembe Panjur', version, build},
     meta: {userId: String(user.id), apiEndpoint},  // UI'da cihaz kartında gösterilir
     history: {enabled: true, maxEntries: 500},     // G15
-    discovery: {localhost: true, mdns: false},     // G20: mdns için @remote-devtools/sdk-mdns kurulmalı
+    discovery: {localhost: true, mdns: false},     // G20: mdns için @himmetkaan/remote-devtools-mdns kurulmalı
     persistence: asyncStorageAdapter(AsyncStorage), // eşleşme bilgisi için
     modules: [
         networkModule({autoCapture: true}),
@@ -158,7 +159,7 @@ devtools.connection.subscribe((state) => {/* idle | discovering | pending-approv
 Notlar:
 - Komut, flag ve panel tanımları bağlantıdan önce de yapılabilir. Bağlanınca `hello` ile, sonradan değişirse
   `capabilities.update` ile gönderilir.
-- RN için QR okutma ekranı opsiyonel bir paket olur (`@remote-devtools/sdk-react-native-ui`). Çekirdek kamera bağımlılığı taşımaz.
+- RN için QR okutma ekranı opsiyonel bir paket olur (`@himmetkaan/remote-devtools-react-native-ui`). Çekirdek kamera bağımlılığı taşımaz.
 
 ---
 
@@ -177,15 +178,18 @@ tamamlanana kadar v1 olarak çalışmaya devam eder.
 - [x] CI: GitHub Actions (install, typecheck, test, build + docker build)
 
 ### Faz 1 — Protokol v2 + relay
-- [ ] `packages/protocol`: v2 zarfı, çekirdek mesajlar, `module.*` yönlendirme, field DSL ve panel tipleri ([PROTOCOL.md](./PROTOCOL.md))
-- [ ] Relay: çoklu cihazlı oturum, `deviceId` ile yönlendirme
-- [ ] Relay: `module.*` mesajlarını içeriğine bakmadan iletme, boyut sınırı, cihaz başına hız sınırı
-- [ ] Relay: 6 haneli kod ile eşleşme (deneme sınırı, kısa TTL)
-- [ ] Relay: `connectRequest` → UI onayı → `connectApproved` / `connectRejected`; onaylı cihaz listesi API'si
-- [ ] Relay: eşleşme TTL'i (`DEVICE_PAIRING_TTL_HOURS`), süresi dolunca `unpaired{reason:'expired'}`
-- [ ] Relay: kütüphane olarak dışa açılması (`createRelay({...})`) + CLI
-- [ ] Relay: opsiyonel `StateStore` arayüzü (bellek varsayılan, dosya deposu desktop ve `STATE_FILE` için)
-- [ ] Testler v2'ye taşınır ve çoklu cihaz, kod, onay, TTL senaryoları eklenir
+- [x] `packages/protocol`: v2 zarfı, çekirdek mesajlar, `module.*` yönlendirme, field DSL ve panel tipleri ([PROTOCOL.md](./PROTOCOL.md))
+- [x] v1 tipleri geçici olarak `@himmetkaan/remote-devtools-protocol/v1` altında; UI Faz 3'te v2'ye geçince silinecek
+- [x] Relay: çoklu cihazlı oturum, `deviceId` ile yönlendirme, cihaz mesajlarına `deviceId` damgası
+- [x] Relay: `module.*` mesajlarını içeriğine bakmadan iletme, boyut sınırı, cihaz başına hız sınırı
+- [x] Relay: 6 haneli kod ile eşleşme; QR ve kod tek kullanımlık, IP başına başarısız deneme sınırı
+- [x] Relay: `connect` → UI onayı → `paired` / `connect.rejected`; `CONNECT_REQUESTS=off|local|any`; onaylı cihaz listesi
+- [x] Relay: eşleşme TTL'i (`DEVICE_PAIRING_TTL_HOURS`, kesin süre), süresi dolunca `unpaired{reason:'expired'}`
+- [x] Relay: `GET /discovery` (CORS açık)
+- [x] Relay: kütüphane olarak dışa açılması (`createRelay({...})`) + CLI (`main.ts`)
+- [x] Relay: bağlantı metadata'sının `STATE_FILE`'a yazılması (atomik, `0600`); desktop app bunu kullanacak
+- [x] Testler v2'ye taşındı: 69 test (çoklu cihaz, kod, onay, onaylı cihaz, TTL, hız sınırı, kalıcılık, IP sınıflandırma)
+- [x] `fake-device.ts` (qr / code / connect modları, örnek fonksiyonlar) ve `smoke.ts` v2'ye taşındı
 
 ### Faz 2 — JS SDK çekirdeği
 - [ ] `RemoteDevTools.init`, `enabled` kapısı (kapalıyken no-op ve sıfır yan etki)
@@ -193,7 +197,7 @@ tamamlanana kadar v1 olarak çalışmaya devam eder.
 - [ ] Eşleşme bilgisinin saklanması + TTL (persistence adapter: AsyncStorage, SecureStore, localStorage)
 - [ ] `isDevelopment` keşfi: localhost (iOS sim `localhost`, Android emu `10.0.2.2`)
 - [ ] Keşif eklenti arayüzü (`DiscoveryProvider`); mDNS bu arayüzü uygulayan ayrı bir paket olarak gelir
-- [ ] `@remote-devtools/sdk-mdns` paketi (RN: zeroconf + Expo config plugin); `discovery.mdns` varsayılan kapalı
+- [ ] `@himmetkaan/remote-devtools-mdns` paketi (RN: zeroconf + Expo config plugin); `discovery.mdns` varsayılan kapalı
 - [ ] `log` API'si + `history` tamponu (halka tampon, `maxEntries`)
 - [ ] Modül arayüzü (`defineModule`) ve `capabilities.update`
 - [ ] `relay/scripts/fake-device.ts` SDK üzerine yeniden yazılır (Node ortamında SDK)
@@ -216,7 +220,7 @@ tamamlanana kadar v1 olarak çalışmaya devam eder.
 - [ ] UI: Functions tab'ı tamamen `capabilities.functions` üzerinden çizilir; `web/src/lib/commands.ts` silinir
 
 ### Faz 5 — Pembe Panjur geçişi (referans entegrasyon)
-- [ ] mobile-app'e `@remote-devtools/sdk` eklenmesi (`enabled: showDevMenu`)
+- [ ] mobile-app'e `@himmetkaan/remote-devtools` eklenmesi (`enabled: showDevMenu`)
 - [ ] `commands.ts` içindeki tüm komutların app tarafında `functions.register` ile tanımlanması
 - [ ] `userId` / `apiEndpoint` → `meta`
 - [ ] `helpers/developer/remote/` ve `RemoteProtocol.ts` kopyasının kaldırılması; Remote tab'ın SDK bağlantı API'sini kullanması
@@ -246,7 +250,7 @@ tamamlanana kadar v1 olarak çalışmaya devam eder.
 - [ ] README (İngilizce) baştan yazılır, Pembe Panjur referansları temizlenir; v1 PLAN/ROADMAP arşive taşınır
 - [ ] Dokümantasyon: Quick start (Expo, web), protokol spesifikasyonu, "kendi SDK'nı yaz" rehberi, modül referansı
 - [ ] `LICENSE` (MIT), `CONTRIBUTING.md`, issue şablonları
-- [ ] npm yayını (`@remote-devtools/*` scope'unun alınması), changesets ile sürümleme
+- [ ] npm yayını (`@himmetkaan` organizasyonu altında), changesets ile sürümleme
 - [ ] Docker imajının GHCR'a yayınlanması
 
 ### Sonraki fazlar (kapsam dışı, sırası belirlenecek)
@@ -258,7 +262,7 @@ tamamlanana kadar v1 olarak çalışmaya devam eder.
 
 ## 5. Açık noktalar
 
-- npm'de `@remote-devtools` scope'u ve GitHub org/repo adının müsaitliği kontrol edilmeli (Faz 0'da).
+- GitHub repo adı (şu an `relay-devtools-sociallift`) açık kaynak yayından önce generic bir adla değiştirilmeli.
 - mDNS için RN tarafında `react-native-zeroconf` gibi bir native bağımlılık ve Expo config plugin gerekir.
   Bu yüzden ayrı paket ve opsiyoneldir (G20). Expo Go'da çalışmaz; dev build şarttır. Kurulmayan projelerde
   çekirdek SDK hiçbir native bağımlılık taşımaz.

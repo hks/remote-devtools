@@ -1,106 +1,15 @@
 import assert from 'node:assert/strict';
 import {after, before, describe, it} from 'node:test';
-import {WebSocket} from 'ws';
-import {createEnvelope, type Envelope, PROTOCOL_VERSION, WS_PATH_DEVICE, WS_PATH_WEB} from '@remote-devtools/protocol';
-import type {RelayConfig} from '../src/config.ts';
+import {createEnvelope, PROTOCOL_VERSION, WS_PATH_DEVICE, WS_PATH_UI} from '@himmetkaan/remote-devtools-protocol';
 import {startServer, type RunningServer} from '../src/server.ts';
-
-const baseConfig: RelayConfig = {
-    port: 0,
-    host: '127.0.0.1',
-    publicUrl: null,
-    webDistDir: null,
-    sessionTtlMs: 60_000,
-    pairTokenTtlMs: 60_000,
-    heartbeatIntervalMs: 60_000,
-    authTimeoutMs: 5_000,
-    maxPayloadBytes: 1024 * 1024,
-    maxSessions: 100,
-    gcIntervalMs: 60_000,
-};
-
-// ─── Test istemcisi ──────────────────────────────────────────────────────────
-
-type Client = {
-    ws: WebSocket;
-    send(type: string, payload?: unknown): string;
-    sendRaw(data: string): void;
-    next(type: string, timeoutMs?: number): Promise<Envelope<string, any>>;
-    closed: Promise<{code: number; reason: string}>;
-    close(): void;
-};
-
-async function connect(port: number, path: string): Promise<Client> {
-    const ws = new WebSocket(`ws://127.0.0.1:${port}${path}`);
-    const inbox: Envelope<string, any>[] = [];
-    const waiters: {type: string; resolve: (m: Envelope<string, any>) => void}[] = [];
-
-    ws.on('message', (data) => {
-        const msg = JSON.parse(data.toString()) as Envelope<string, any>;
-        const idx = waiters.findIndex((w) => w.type === msg.type);
-        if (idx >= 0) waiters.splice(idx, 1)[0]!.resolve(msg);
-        else inbox.push(msg);
-    });
-
-    const closed = new Promise<{code: number; reason: string}>((resolve) => {
-        ws.on('close', (code, reason) => resolve({code, reason: reason.toString()}));
-    });
-
-    await new Promise<void>((resolve, reject) => {
-        ws.once('open', () => resolve());
-        ws.once('error', reject);
-    });
-
-    return {
-        ws,
-        send(type, payload = {}) {
-            const env = createEnvelope(type, payload);
-            ws.send(JSON.stringify(env));
-            return env.id;
-        },
-        sendRaw: (data) => ws.send(data),
-        next(type, timeoutMs = 2000) {
-            const idx = inbox.findIndex((m) => m.type === type);
-            if (idx >= 0) return Promise.resolve(inbox.splice(idx, 1)[0]!);
-            return new Promise((resolve, reject) => {
-                const waiter = {type, resolve: (m: Envelope<string, any>) => {
-                    clearTimeout(timer);
-                    resolve(m);
-                }};
-                const timer = setTimeout(() => {
-                    waiters.splice(waiters.indexOf(waiter), 1);
-                    reject(new Error(`Timed out waiting for "${type}". Inbox: ${inbox.map((m) => m.type).join(', ')}`));
-                }, timeoutMs);
-                waiters.push(waiter);
-            });
-        },
-        closed,
-        close: () => ws.close(),
-    };
-}
-
-/** Yeni oturum açan web + o oturuma eşlenmiş cihaz. */
-async function pairedPair(port: number) {
-    const web = await connect(port, WS_PATH_WEB);
-    web.send('createSession');
-    const session = (await web.next('session')).payload;
-
-    const device = await connect(port, WS_PATH_DEVICE);
-    device.send('pair', {sessionId: session.sessionId, pairToken: session.pairToken});
-    const paired = (await device.next('paired')).payload;
-    await web.next('deviceStatus');
-
-    return {web, device, session, deviceSecret: paired.deviceSecret as string};
-}
-
-// ─── Testler ─────────────────────────────────────────────────────────────────
+import {connect, makeHello, newDeviceId, openUi, pairedDevice, testConfig} from './helpers.ts';
 
 describe('relay', () => {
     let server: RunningServer;
     let port: number;
 
     before(async () => {
-        server = await startServer(baseConfig);
+        server = await startServer(testConfig);
         port = server.port;
     });
 
@@ -108,327 +17,323 @@ describe('relay', () => {
         await server.close();
     });
 
-    it('serves /health', async () => {
-        const res = await fetch(`http://127.0.0.1:${port}/health`);
-        assert.equal(res.status, 200);
-        const body = await res.json();
-        assert.equal(body.ok, true);
+    // ─── HTTP ────────────────────────────────────────────────────────────────
+
+    it('serves /health and /discovery', async () => {
+        const health = await fetch(`http://127.0.0.1:${port}/health`);
+        assert.equal(health.status, 200);
+        assert.equal((await health.json()).ok, true);
+
+        const discovery = await fetch(`http://127.0.0.1:${port}/discovery`);
+        assert.equal(discovery.headers.get('access-control-allow-origin'), '*');
+        const body = await discovery.json();
+        assert.equal(body.name, 'remote-devtools');
+        assert.equal(body.protocol, PROTOCOL_VERSION);
+        assert.equal(body.connectRequests, 'off');
     });
 
-    it('rejects upgrades on unknown paths', async () => {
+    it('rejects upgrades on unknown paths (including the v1 /ws/web path)', async () => {
         await assert.rejects(connect(port, '/ws/nope'));
+        await assert.rejects(connect(port, '/ws/web'));
     });
 
-    it('creates a session with a pair token', async () => {
-        const web = await connect(port, WS_PATH_WEB);
-        web.send('createSession');
-        const {payload} = await web.next('session');
-        assert.ok(payload.sessionId);
-        assert.ok(payload.webSecret);
-        assert.ok(payload.pairToken);
-        assert.ok(payload.pairTokenExpiresAt > Date.now());
-        assert.equal(payload.device, null);
-        assert.equal(payload.deviceWsUrl, null);
-        web.close();
+    // ─── Zarf / kimlik doğrulama ─────────────────────────────────────────────
+
+    it('creates a session with a QR token and a 6-digit code', async () => {
+        const {ui, session} = await openUi(port);
+        assert.ok(session.sessionId);
+        assert.ok(session.uiSecret);
+        assert.ok(session.pairing.qrToken);
+        assert.match(session.pairing.code, /^\d{6}$/);
+        assert.ok(session.pairing.expiresAt > Date.now());
+        assert.deepEqual(session.devices, []);
+        assert.deepEqual(session.pendingRequests, []);
+        assert.deepEqual(session.trustedDevices, []);
+        assert.equal(session.deviceWsUrl, null);
+        ui.close();
     });
 
-    it('requires authentication before other web messages', async () => {
-        const web = await connect(port, WS_PATH_WEB);
-        const id = web.send('sync');
-        const err = await web.next('error');
+    it('answers requests with replyTo on the envelope', async () => {
+        const ui = await connect(port, WS_PATH_UI);
+        const id = ui.send('session.create');
+        assert.equal((await ui.next('session')).replyTo, id);
+        ui.close();
+    });
+
+    it('requires authentication before other UI messages', async () => {
+        const ui = await connect(port, WS_PATH_UI);
+        const id = ui.send('pairing.refresh');
+        const err = await ui.next('error');
         assert.equal(err.payload.code, 'NOT_AUTHENTICATED');
-        assert.equal(err.payload.replyTo, id);
-        web.close();
+        assert.equal(err.replyTo, id);
+        ui.close();
     });
 
-    it('rejects invalid envelopes and other protocol versions', async () => {
-        const web = await connect(port, WS_PATH_WEB);
-        web.sendRaw('not json');
-        assert.equal((await web.next('error')).payload.code, 'BAD_MESSAGE');
-        web.sendRaw(JSON.stringify({...createEnvelope('createSession', {}), v: PROTOCOL_VERSION + 1}));
-        assert.equal((await web.next('error')).payload.code, 'UNSUPPORTED_VERSION');
-        web.close();
+    it('rejects invalid envelopes', async () => {
+        const ui = await connect(port, WS_PATH_UI);
+        ui.sendRaw('not json');
+        assert.equal((await ui.next('error')).payload.code, 'BAD_MESSAGE');
+        ui.close();
+    });
+
+    it('rejects other protocol versions and closes the socket', async () => {
+        const ui = await connect(port, WS_PATH_UI);
+        ui.sendRaw(JSON.stringify({...createEnvelope('session.create', {}), v: 1}));
+        assert.equal((await ui.next('error')).payload.code, 'UNSUPPORTED_VERSION');
+        assert.equal((await ui.closed).code, 4005);
     });
 
     it('returns SESSION_NOT_FOUND for a bad resume', async () => {
-        const web = await connect(port, WS_PATH_WEB);
-        web.send('resumeSession', {sessionId: 'nope', webSecret: 'nope'});
-        assert.equal((await web.next('error')).payload.code, 'SESSION_NOT_FOUND');
-        web.close();
+        const ui = await connect(port, WS_PATH_UI);
+        ui.send('session.resume', {sessionId: 'nope', uiSecret: 'nope'});
+        assert.equal((await ui.next('error')).payload.code, 'SESSION_NOT_FOUND');
+        ui.close();
     });
 
-    it('pairs a device and notifies the web', async () => {
-        const web = await connect(port, WS_PATH_WEB);
-        web.send('createSession');
-        const session = (await web.next('session')).payload;
+    // ─── Eşleşme ─────────────────────────────────────────────────────────────
 
-        const device = await connect(port, WS_PATH_DEVICE);
-        device.send('pair', {sessionId: session.sessionId, pairToken: session.pairToken});
-        const paired = await device.next('paired');
-        assert.equal(paired.payload.sessionId, session.sessionId);
-        assert.ok(paired.payload.deviceSecret);
-
-        const status = await web.next('deviceStatus');
-        assert.equal(status.payload.state, 'connected');
-        assert.equal(status.payload.device.connected, true);
-
-        web.close();
+    it('pairs a device by QR and notifies the UI', async () => {
+        const {ui, device, deviceId, deviceSecret, status} = await pairedDevice(port);
+        assert.ok(deviceSecret);
+        assert.equal(status.deviceId, deviceId);
+        assert.equal(status.state, 'connected');
+        assert.equal(status.device.connected, true);
+        assert.ok(status.device.expiresAt > Date.now());
+        ui.close();
         device.close();
     });
 
-    it('rejects a wrong pair token and closes the device socket', async () => {
-        const web = await connect(port, WS_PATH_WEB);
-        web.send('createSession');
-        const session = (await web.next('session')).payload;
-
-        const device = await connect(port, WS_PATH_DEVICE);
-        device.send('pair', {sessionId: session.sessionId, pairToken: 'wrong'});
-        assert.equal((await device.next('error')).payload.code, 'INVALID_PAIR_TOKEN');
-        assert.equal((await device.closed).code, 4001);
-        web.close();
-    });
-
-    it('allows only one device per session (pair token is single-use)', async () => {
-        const {web, device, session} = await pairedPair(port);
+    it('rotates the QR token after use so it is single-use', async () => {
+        const {ui, session} = await openUi(port);
+        const first = await connect(port, WS_PATH_DEVICE);
+        first.send('pair.qr', {sessionId: session.sessionId, qrToken: session.pairing.qrToken, deviceId: newDeviceId()});
+        await first.next('paired');
+        const fresh = (await ui.next('pairing')).payload;
+        assert.notEqual(fresh.qrToken, session.pairing.qrToken);
+        assert.notEqual(fresh.code, session.pairing.code);
 
         const second = await connect(port, WS_PATH_DEVICE);
-        second.send('pair', {sessionId: session.sessionId, pairToken: session.pairToken});
-        assert.equal((await second.next('error')).payload.code, 'DEVICE_ALREADY_PAIRED');
+        second.send('pair.qr', {sessionId: session.sessionId, qrToken: session.pairing.qrToken, deviceId: newDeviceId()});
+        assert.equal((await second.next('error')).payload.code, 'INVALID_PAIR_TOKEN');
+        assert.equal((await second.closed).code, 4001);
+        ui.close();
+        first.close();
+    });
 
-        web.send('refreshPairToken');
-        assert.equal((await web.next('error')).payload.code, 'DEVICE_ALREADY_PAIRED');
-
-        web.close();
+    it('pairs a device with the 6-digit code', async () => {
+        const {ui, session} = await openUi(port);
+        const device = await connect(port, WS_PATH_DEVICE);
+        const deviceId = newDeviceId();
+        device.send('pair.code', {code: session.pairing.code, deviceId});
+        const paired = (await device.next('paired')).payload;
+        assert.equal(paired.sessionId, session.sessionId);
+        assert.equal((await ui.next('device.status')).payload.deviceId, deviceId);
+        ui.close();
         device.close();
     });
 
-    it('forwards device → web and web → device messages', async () => {
-        const {web, device} = await pairedPair(port);
+    it('rejects a wrong code', async () => {
+        const device = await connect(port, WS_PATH_DEVICE);
+        device.send('pair.code', {code: 'abc', deviceId: newDeviceId()});
+        assert.equal((await device.next('error')).payload.code, 'INVALID_CODE');
+        assert.equal((await device.closed).code, 4001);
+    });
 
-        device.send('hello', {platform: 'ios', commands: ['tryBoost']});
-        assert.equal((await web.next('hello')).payload.platform, 'ios');
+    it('requires a valid deviceId', async () => {
+        const {ui, session} = await openUi(port);
+        const device = await connect(port, WS_PATH_DEVICE);
+        device.send('pair.qr', {sessionId: session.sessionId, qrToken: session.pairing.qrToken, deviceId: 'x'});
+        assert.equal((await device.next('error')).payload.code, 'BAD_MESSAGE');
+        ui.close();
+    });
 
-        device.send('request', {uuid: 'u1', method: 'get', url: '/x'});
-        assert.equal((await web.next('request')).payload.uuid, 'u1');
+    it('lets several devices join the same session', async () => {
+        const first = await pairedDevice(port);
+        const second = await pairedDevice(port, first);
+        assert.notEqual(first.deviceId, second.deviceId);
 
-        const invokeId = web.send('invoke', {commandId: 'tryBoost', args: null});
-        const invoke = await device.next('invoke');
-        assert.equal(invoke.id, invokeId);
-        assert.equal(invoke.payload.commandId, 'tryBoost');
+        const ui2 = await connect(port, WS_PATH_UI);
+        ui2.send('session.resume', {sessionId: first.session.sessionId, uiSecret: first.session.uiSecret});
+        const snapshot = (await ui2.next('session')).payload;
+        assert.deepEqual(snapshot.devices.map((d: any) => d.deviceId).sort(), [first.deviceId, second.deviceId].sort());
+        first.ui.close();
+        ui2.close();
+        first.device.close();
+        second.device.close();
+    });
 
-        device.send('invokeResult', {replyTo: invokeId, commandId: 'tryBoost', ok: true, error: null});
-        assert.equal((await web.next('invokeResult')).payload.replyTo, invokeId);
+    // ─── Yönlendirme ─────────────────────────────────────────────────────────
 
-        web.send('sync');
-        await device.next('sync');
+    it('forwards device messages to the UI stamped with deviceId', async () => {
+        const {ui, device, deviceId} = await pairedDevice(port);
 
-        device.send('createSession');
-        assert.equal((await device.next('error')).payload.code, 'UNKNOWN_TYPE');
+        device.send('hello', makeHello());
+        const hello = await ui.next('hello');
+        assert.equal(hello.deviceId, deviceId);
+        assert.equal(hello.payload.app.id, 'com.example.app');
 
-        web.close();
+        device.send('log', {level: 'info', message: 'hi', at: Date.now()}, {deviceId: 'spoofed'});
+        assert.equal((await ui.next('log')).deviceId, deviceId);
+
+        device.send('module.custom.event', {anything: true});
+        const custom = await ui.next('module.custom.event');
+        assert.equal(custom.deviceId, deviceId);
+        assert.deepEqual(custom.payload, {anything: true});
+
+        ui.close();
         device.close();
     });
 
-    it('reports DEVICE_OFFLINE when forwarding without a device', async () => {
-        const web = await connect(port, WS_PATH_WEB);
-        web.send('createSession');
-        await web.next('session');
-        const id = web.send('sync');
-        const err = await web.next('error');
-        assert.equal(err.payload.code, 'DEVICE_OFFLINE');
-        assert.equal(err.payload.replyTo, id);
-        web.close();
+    it('routes UI module messages only to the targeted device', async () => {
+        const a = await pairedDevice(port);
+        const b = await pairedDevice(port, a);
+
+        const id = a.ui.send('module.functions.invoke', {commandId: 'ping', args: {}}, {deviceId: b.deviceId});
+        const received = await b.device.next('module.functions.invoke');
+        assert.equal(received.id, id);
+        await a.device.none('module.functions.invoke');
+
+        b.device.ws.send(JSON.stringify(createEnvelope('module.functions.result', {ok: true, result: 'pong'}, {replyTo: id})));
+        const result = await a.ui.next('module.functions.result');
+        assert.equal(result.replyTo, id);
+        assert.equal(result.deviceId, b.deviceId);
+
+        a.ui.close();
+        a.device.close();
+        b.device.close();
     });
 
-    it('lets the device resume after disconnecting and keeps its snapshot', async () => {
-        const {web, device, session, deviceSecret} = await pairedPair(port);
-        device.send('hello', {platform: 'android', commands: []});
-        await web.next('hello');
+    it('validates the target of UI module messages', async () => {
+        const {ui, device, deviceId} = await pairedDevice(port);
+
+        ui.send('module.functions.invoke', {});
+        assert.equal((await ui.next('error')).payload.code, 'BAD_MESSAGE');
+
+        ui.send('module.functions.invoke', {}, {deviceId: 'unknown-device'});
+        assert.equal((await ui.next('error')).payload.code, 'DEVICE_NOT_FOUND');
+
+        device.close();
+        await ui.next('device.status');
+        ui.send('module.functions.invoke', {}, {deviceId});
+        assert.equal((await ui.next('error')).payload.code, 'DEVICE_OFFLINE');
+        ui.close();
+    });
+
+    it('does not forward core relay types from the UI', async () => {
+        const {ui, device, deviceId} = await pairedDevice(port);
+        ui.send('paired', {}, {deviceId});
+        assert.equal((await ui.next('error')).payload.code, 'UNKNOWN_TYPE');
+        await device.none('paired');
+        ui.close();
+        device.close();
+    });
+
+    it('rejects module messages from an unauthenticated device', async () => {
+        const device = await connect(port, WS_PATH_DEVICE);
+        device.send('module.network.request', {});
+        assert.equal((await device.next('error')).payload.code, 'NOT_AUTHENTICATED');
+        assert.equal((await device.closed).code, 4001);
+    });
+
+    // ─── Resume / değiştirme ─────────────────────────────────────────────────
+
+    it('lets the device resume and keeps its snapshot', async () => {
+        const {ui, session, device, deviceId, deviceSecret} = await pairedDevice(port);
+        device.send('hello', makeHello());
         device.send('lifecycle', {state: 'background'});
-        await web.next('lifecycle');
-
+        await ui.next('hello');
+        await ui.next('lifecycle');
         device.close();
-        const down = await web.next('deviceStatus');
-        assert.equal(down.payload.state, 'disconnected');
-        assert.equal(down.payload.device.connected, false);
-        assert.equal(down.payload.device.lifecycle, 'background');
+        assert.equal((await ui.next('device.status')).payload.state, 'disconnected');
 
         const again = await connect(port, WS_PATH_DEVICE);
-        again.send('resume', {sessionId: session.sessionId, deviceSecret});
-        assert.equal((await again.next('resumed')).payload.sessionId, session.sessionId);
-        const up = await web.next('deviceStatus');
-        assert.equal(up.payload.state, 'connected');
-        assert.equal(up.payload.device.info.platform, 'android');
-
-        web.close();
+        again.send('resume', {sessionId: session.sessionId, deviceId, deviceSecret});
+        const resumed = (await again.next('resumed')).payload;
+        assert.equal(resumed.sessionId, session.sessionId);
+        const status = (await ui.next('device.status')).payload;
+        assert.equal(status.state, 'connected');
+        assert.equal(status.device.hello.app.id, 'com.example.app');
+        assert.equal(status.device.lifecycle, 'background');
+        ui.close();
         again.close();
     });
 
-    it('replaces a stale device connection on resume', async () => {
-        const {web, device, session, deviceSecret} = await pairedPair(port);
-
-        const again = await connect(port, WS_PATH_DEVICE);
-        again.send('resume', {sessionId: session.sessionId, deviceSecret});
-        await again.next('resumed');
-        assert.equal((await device.closed).code, 4000);
-
-        // Eski soketin kapanması "disconnected" yayınlamamalı; yeni bağlantı "connected" yayınlar.
-        assert.equal((await web.next('deviceStatus')).payload.state, 'connected');
-        again.send('log', {level: 'info', message: 'still here', data: null});
-        assert.equal((await web.next('log')).payload.message, 'still here');
-
-        web.close();
-        again.close();
-    });
-
-    it('shares a session between tabs of the same browser', async () => {
-        const {web, device, session} = await pairedPair(port);
-
-        const tab2 = await connect(port, WS_PATH_WEB);
-        tab2.send('resumeSession', {sessionId: session.sessionId, webSecret: session.webSecret});
-        const resumed = (await tab2.next('session')).payload;
-        assert.equal(resumed.device.connected, true);
-        assert.equal(resumed.pairToken, null);
-
-        device.send('lifecycle', {state: 'active'});
-        await web.next('lifecycle');
-        await tab2.next('lifecycle');
-
-        web.close();
-        tab2.close();
+    it('rejects a resume with the wrong secret', async () => {
+        const {ui, session, device, deviceId} = await pairedDevice(port);
+        const other = await connect(port, WS_PATH_DEVICE);
+        other.send('resume', {sessionId: session.sessionId, deviceId, deviceSecret: 'wrong'});
+        assert.equal((await other.next('unpaired')).payload.reason, 'invalidSecret');
+        ui.close();
         device.close();
     });
 
-    it('unpairs from the web: device is told, web gets a fresh pair token', async () => {
-        const {web, device, session, deviceSecret} = await pairedPair(port);
-
-        web.send('unpair');
-        assert.equal((await device.next('unpaired')).payload.reason, 'unpairedByWeb');
+    it('tells a device with an unknown session to forget its pairing', async () => {
+        const device = await connect(port, WS_PATH_DEVICE);
+        device.send('resume', {sessionId: 'gone', deviceId: newDeviceId(), deviceSecret: 'x'});
+        assert.equal((await device.next('unpaired')).payload.reason, 'sessionNotFound');
         assert.equal((await device.closed).code, 4002);
+    });
 
-        assert.equal((await web.next('deviceStatus')).payload.state, 'unpaired');
-        const fresh = (await web.next('pairToken')).payload;
-        assert.notEqual(fresh.pairToken, session.pairToken);
+    it('replaces a stale connection of the same device on resume', async () => {
+        const {ui, session, device, deviceId, deviceSecret} = await pairedDevice(port);
+        const fresh = await connect(port, WS_PATH_DEVICE);
+        fresh.send('resume', {sessionId: session.sessionId, deviceId, deviceSecret});
+        await fresh.next('resumed');
+        assert.equal((await device.closed).code, 4000);
+        // Eski soketin kapanması "disconnected" yayınlamamalı.
+        assert.equal((await ui.next('device.status')).payload.state, 'connected');
+        await ui.none('device.status');
+        ui.close();
+        fresh.close();
+    });
+
+    it('replaces the old record when the same device pairs again', async () => {
+        const first = await pairedDevice(port);
+        const again = await connect(port, WS_PATH_DEVICE);
+        first.ui.send('pairing.refresh');
+        const pairing = (await first.ui.next('pairing')).payload;
+        again.send('pair.qr', {sessionId: first.session.sessionId, qrToken: pairing.qrToken, deviceId: first.deviceId});
+        const paired = (await again.next('paired')).payload;
+        assert.notEqual(paired.deviceSecret, first.deviceSecret);
+        assert.equal((await first.device.closed).code, 4000);
 
         const stale = await connect(port, WS_PATH_DEVICE);
-        stale.send('resume', {sessionId: session.sessionId, deviceSecret});
+        stale.send('resume', {sessionId: first.session.sessionId, deviceId: first.deviceId, deviceSecret: first.deviceSecret});
         assert.equal((await stale.next('unpaired')).payload.reason, 'invalidSecret');
+        first.ui.close();
+        again.close();
+    });
 
-        const next = await connect(port, WS_PATH_DEVICE);
-        next.send('pair', {sessionId: session.sessionId, pairToken: fresh.pairToken});
-        await next.next('paired');
+    // ─── Eşleşmeyi kaldırma ──────────────────────────────────────────────────
 
-        web.close();
-        next.close();
+    it('unpairs one device from the UI and leaves the others', async () => {
+        const a = await pairedDevice(port);
+        const b = await pairedDevice(port, a);
+
+        a.ui.send('device.unpair', {deviceId: a.deviceId});
+        assert.equal((await a.device.next('unpaired')).payload.reason, 'byUi');
+        assert.equal((await a.device.closed).code, 4002);
+        const status = (await a.ui.next('device.status')).payload;
+        assert.equal(status.state, 'unpaired');
+        assert.equal(status.deviceId, a.deviceId);
+        assert.equal(status.device, null);
+
+        b.device.send('log', {level: 'info', message: 'still here', at: Date.now()});
+        assert.equal((await a.ui.next('log')).deviceId, b.deviceId);
+
+        a.ui.send('device.unpair', {deviceId: a.deviceId});
+        assert.equal((await a.ui.next('error')).payload.code, 'DEVICE_NOT_FOUND');
+        a.ui.close();
+        b.device.close();
     });
 
     it('unpairs from the device', async () => {
-        const {web, device} = await pairedPair(port);
+        const {ui, device, deviceId} = await pairedDevice(port);
         device.send('unpair');
-        assert.equal((await device.next('unpaired')).payload.reason, 'unpairedByDevice');
-        assert.equal((await web.next('deviceStatus')).payload.state, 'unpaired');
-        await web.next('pairToken');
-        web.close();
-    });
-
-    it('tells an unknown session device to forget its pairing', async () => {
-        const device = await connect(port, WS_PATH_DEVICE);
-        device.send('resume', {sessionId: 'gone', deviceSecret: 'x'});
-        assert.equal((await device.next('unpaired')).payload.reason, 'sessionNotFound');
-    });
-});
-
-describe('relay timing', () => {
-    it('rejects an expired pair token and refreshes on request', async () => {
-        const server = await startServer({...baseConfig, pairTokenTtlMs: 50});
-        try {
-            const web = await connect(server.port, WS_PATH_WEB);
-            web.send('createSession');
-            const session = (await web.next('session')).payload;
-            await new Promise((r) => setTimeout(r, 80));
-
-            const device = await connect(server.port, WS_PATH_DEVICE);
-            device.send('pair', {sessionId: session.sessionId, pairToken: session.pairToken});
-            assert.equal((await device.next('error')).payload.code, 'PAIR_TOKEN_EXPIRED');
-
-            web.send('refreshPairToken');
-            const fresh = (await web.next('pairToken')).payload;
-            assert.ok(fresh.expiresAt > Date.now());
-            web.close();
-        } finally {
-            await server.close();
-        }
-    });
-
-    it('closes sockets that do not authenticate in time', async () => {
-        const server = await startServer({...baseConfig, authTimeoutMs: 50});
-        try {
-            const device = await connect(server.port, WS_PATH_DEVICE);
-            assert.equal((await device.closed).code, 4003);
-        } finally {
-            await server.close();
-        }
-    });
-
-    it('expires sessions without a web tab and unpairs the device', async () => {
-        const server = await startServer({...baseConfig, sessionTtlMs: 30, gcIntervalMs: 50});
-        try {
-            const {web, device} = await pairedPair(server.port);
-            web.close();
-            assert.equal((await device.next('unpaired', 1000)).payload.reason, 'sessionExpired');
-            assert.equal((await device.closed).code, 4004);
-            assert.equal(server.relay.store.size, 0);
-        } finally {
-            await server.close();
-        }
-    });
-
-    it('terminates sockets that stop answering heartbeats and reports the device offline', async () => {
-        const server = await startServer({...baseConfig, heartbeatIntervalMs: 40});
-        try {
-            const web = await connect(server.port, WS_PATH_WEB);
-            web.send('createSession');
-            const session = (await web.next('session')).payload;
-
-            // Pong'a cevap vermeyen (ör. arka planda askıya alınmış) cihaz.
-            const silent = new WebSocket(`ws://127.0.0.1:${server.port}${WS_PATH_DEVICE}`, {autoPong: false});
-            await new Promise((r) => silent.once('open', r));
-            silent.send(JSON.stringify(createEnvelope('pair', {sessionId: session.sessionId, pairToken: session.pairToken})));
-            assert.equal((await web.next('deviceStatus')).payload.state, 'connected');
-
-            const down = await web.next('deviceStatus', 1000);
-            assert.equal(down.payload.state, 'disconnected');
-            web.close();
-        } finally {
-            await server.close();
-        }
-    });
-
-    it('enforces the session limit', async () => {
-        const server = await startServer({...baseConfig, maxSessions: 1});
-        try {
-            const a = await connect(server.port, WS_PATH_WEB);
-            a.send('createSession');
-            await a.next('session');
-            const b = await connect(server.port, WS_PATH_WEB);
-            b.send('createSession');
-            assert.equal((await b.next('error')).payload.code, 'SESSION_LIMIT');
-            a.close();
-            b.close();
-        } finally {
-            await server.close();
-        }
-    });
-
-    it('builds deviceWsUrl from PUBLIC_URL', async () => {
-        const server = await startServer({...baseConfig, publicUrl: 'https://devtools.example.com'});
-        try {
-            const web = await connect(server.port, WS_PATH_WEB);
-            web.send('createSession');
-            assert.equal((await web.next('session')).payload.deviceWsUrl, `wss://devtools.example.com${WS_PATH_DEVICE}`);
-            web.close();
-        } finally {
-            await server.close();
-        }
+        assert.equal((await device.next('unpaired')).payload.reason, 'byDevice');
+        const status = (await ui.next('device.status')).payload;
+        assert.equal(status.state, 'unpaired');
+        assert.equal(status.deviceId, deviceId);
+        ui.close();
     });
 });

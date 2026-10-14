@@ -1,7 +1,12 @@
-import {randomBytes, timingSafeEqual} from 'node:crypto';
+import {randomBytes, randomInt, timingSafeEqual} from 'node:crypto';
 
 export function randomToken(bytes = 24): string {
     return randomBytes(bytes).toString('base64url');
+}
+
+/** 6 haneli eşleşme kodu (baştaki sıfırlar korunur). */
+export function randomCode(): string {
+    return randomInt(0, 1_000_000).toString().padStart(6, '0');
 }
 
 export function safeEqual(a: string, b: string): boolean {

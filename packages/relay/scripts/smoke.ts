@@ -3,8 +3,9 @@
  *   node scripts/smoke.ts                       # ws://127.0.0.1:8080
  *   node scripts/smoke.ts wss://devtools.example.com
  */
+import {randomUUID} from 'node:crypto';
 import {WebSocket} from 'ws';
-import {createEnvelope, type Envelope, WS_PATH_DEVICE, WS_PATH_WEB} from '@remote-devtools/protocol';
+import {createEnvelope, type Envelope, WS_PATH_DEVICE, WS_PATH_UI} from '@himmetkaan/remote-devtools-protocol';
 
 const base = (process.argv[2] ?? 'ws://127.0.0.1:8080').replace(/\/+$/, '');
 
@@ -35,33 +36,36 @@ function next(ws: WebSocket, type: string): Promise<Envelope<string, any>> {
     });
 }
 
-const send = (ws: WebSocket, type: string, payload: unknown = {}) => ws.send(JSON.stringify(createEnvelope(type, payload)));
+const send = (ws: WebSocket, type: string, payload: unknown = {}, extra: {deviceId?: string} = {}) =>
+    ws.send(JSON.stringify(createEnvelope(type, payload, extra)));
 const step = (label: string) => console.log(`✔ ${label}`);
+const deviceId = randomUUID().replaceAll('-', '');
 
-const web = await open(WS_PATH_WEB);
-send(web, 'createSession');
-const session = (await next(web, 'session')).payload;
+const ui = await open(WS_PATH_UI);
+send(ui, 'session.create');
+const session = (await next(ui, 'session')).payload;
 step(`session ${session.sessionId} (deviceWsUrl: ${session.deviceWsUrl ?? 'origin'})`);
 
 const device = await open(WS_PATH_DEVICE);
-send(device, 'pair', {sessionId: session.sessionId, pairToken: session.pairToken});
+send(device, 'pair.code', {code: session.pairing.code, deviceId});
 await next(device, 'paired');
-await next(web, 'deviceStatus');
-step('device paired');
+await next(ui, 'device.status');
+step('device paired with code');
 
-send(device, 'hello', {platform: 'smoke', commands: []});
-await next(web, 'hello');
-step('device → web forwarded');
+send(device, 'log', {level: 'info', message: 'smoke', at: Date.now()});
+await next(ui, 'log');
+step('device → UI forwarded');
 
-send(web, 'sync');
-await next(device, 'sync');
-step('web → device forwarded');
+send(ui, 'module.smoke.ping', {}, {deviceId});
+await next(device, 'module.smoke.ping');
+step('UI → device forwarded');
 
-send(web, 'unpair');
+send(ui, 'device.unpair', {deviceId});
 await next(device, 'unpaired');
-await next(web, 'pairToken');
-step('unpaired, fresh pair token issued');
+const status = (await next(ui, 'device.status')).payload;
+if (status.state !== 'unpaired') throw new Error(`expected unpaired, got ${status.state}`);
+step('device unpaired');
 
-web.close();
+ui.close();
 device.close();
 console.log('smoke OK');

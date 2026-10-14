@@ -1,6 +1,7 @@
-# Remote DevTools — Protokol v2 (taslak)
+# Remote DevTools — Protokol v2
 
-Bu doküman Faz 1'de `packages/protocol` olarak koda dökülecek sözleşmenin taslağıdır.
+Kaynak kod: [`packages/protocol/src/index.ts`](../../packages/protocol/src/index.ts). Relay tarafı Faz 1'de uygulandı;
+modül mesajları (§7) SDK ve UI ile birlikte Faz 2–8'de netleşecek.
 Tüm SDK'lar (JS, Swift, Kotlin, Flutter) bu dokümana bağlıdır. Taşıma katmanı JSON metin mesajlı WebSocket'tir.
 
 ---
@@ -11,8 +12,10 @@ Tüm SDK'lar (JS, Swift, Kotlin, Flutter) bu dokümana bağlıdır. Taşıma kat
 |---|---|
 | `/ws/device` | SDK (app) |
 | `/ws/ui` | UI (desktop veya tarayıcı) |
-| `GET /health` | İzleme |
-| `GET /discovery` | `isDevelopment` keşfi: `{ name, version, protocol: 2 }` |
+| `GET /health` | İzleme: `{ ok, sessions, uptimeSec }` |
+| `GET /discovery` | `isDevelopment` keşfi: `{ name: 'remote-devtools', version, protocol: 2, host, connectRequests }` |
+
+`/health` ve `/discovery` sır içermez ve `Access-Control-Allow-Origin: *` döner (tarayıcıdaki SDK'lar da okuyabilsin diye).
 
 mDNS (opsiyonel): servis tipi `_remotedevtools._tcp`. TXT kaydında `v=2`, `path=/ws/device` ve `name` bulunur.
 mDNS protokolün zorunlu bir parçası değildir; bir SDK sadece QR, kod ve localhost yollarını destekleyerek de uyumlu sayılır.
@@ -25,16 +28,17 @@ type Envelope<T extends string, P> = {
     type: T;
     id: string;            // gönderen üretir
     ts: number;            // epoch ms
-    replyTo?: string;      // bir isteğe cevapsa, isteğin id'si
+    replyTo?: string;      // bir isteğe cevapsa, isteğin id'si (relay'in kendi cevapları ve hataları dahil)
     deviceId?: string;     // UI ↔ relay yönünde hangi cihaz (UI'dan cihaza giderken hedef, cihazdan gelirken kaynak)
     payload: P;
 };
 ```
 
 Kurallar:
-- `v` uyuşmazsa relay `error{code:'UNSUPPORTED_VERSION'}` gönderir ve bağlantıyı kapatır.
+- `v` uyuşmazsa relay `error{code:'UNSUPPORTED_VERSION'}` gönderir ve bağlantıyı `4005` ile kapatır.
 - Bilinmeyen bir `module.*` tipi relay için hata **değildir**; iletilir. Bilinmeyen çekirdek tipi `UNKNOWN_TYPE` hatası alır.
-- `deviceId` cihaz bağlantısında relay tarafından doldurulur. Cihazın gönderdiği değer dikkate alınmaz.
+- `deviceId` cihazdan gelen mesajlarda relay tarafından doldurulur. Cihazın gönderdiği değerin üzerine yazılır.
+- Hatalar: `error { code, message }`, isteğe bağlıysa `replyTo` ile.
 
 ## 3. Çekirdek mesajlar — UI ↔ Relay
 
@@ -44,18 +48,24 @@ Kurallar:
 | UI→R | `session.resume` | `{ sessionId, uiSecret }` |
 | R→UI | `session` | `{ sessionId, uiSecret, deviceWsUrl, pairing: PairingInfo, devices: DeviceSnapshot[], pendingRequests: ConnectRequest[], trustedDevices: TrustedDevice[] }` |
 | UI→R | `pairing.refresh` | `{}` → yeni QR token'ı ve 6 haneli kod |
-| R→UI | `pairing` | `PairingInfo` |
+| R→UI | `pairing` | `PairingInfo` — yenilendiğinde ve her eşleşmeden sonra (QR/kod tek kullanımlıktır) |
 | R→UI | `device.status` | `{ deviceId, state: 'connected' \| 'disconnected' \| 'unpaired', device: DeviceSnapshot \| null }` |
 | R→UI | `connect.request` | `ConnectRequest` (onay bekleyen cihaz) |
 | UI→R | `connect.respond` | `{ requestId, approve: boolean, trust: boolean }` |
+| R→UI | `connect.resolved` | `{ requestId, outcome: 'approved' \| 'rejected' \| 'expired' \| 'cancelled' }` — istek listeden kalkar |
 | UI→R | `device.unpair` | `{ deviceId }` |
 | UI→R | `trusted.remove` | `{ deviceId }` |
+| R→UI | `trusted` | `{ devices: TrustedDevice[] }` — liste değiştiğinde |
+| UI→D | `module.*` | zarfta hedef `deviceId` zorunlu; cihaz yoksa `DEVICE_NOT_FOUND`, çevrimdışıysa `DEVICE_OFFLINE` |
 
 ```ts
 type PairingInfo = { qrToken: string; code: string; expiresAt: number };
-type ConnectRequest = { requestId: string; deviceId: string; hello: Hello; via: 'mdns' | 'localhost'; at: number };
+type ConnectRequest = { requestId: string; deviceId: string; hello: Hello; via: 'local' | 'remote'; at: number; expiresAt: number };
 type DeviceSnapshot = { deviceId: string; connected: boolean; pairedAt: number; expiresAt: number; lastSeenAt: number | null; hello: Hello | null; lifecycle: Lifecycle | null };
+type TrustedDevice = { deviceId: string; appId: string; name: string; trustedAt: number };
 ```
+
+`via`: relay mDNS ile localhost'u ayırt edemez; sadece adresin sınıfını bilir (loopback/özel ağ = `local`).
 
 ## 4. Çekirdek mesajlar — Device ↔ Relay
 
@@ -63,21 +73,40 @@ type DeviceSnapshot = { deviceId: string; connected: boolean; pairedAt: number; 
 |---|---|---|
 | D→R | `pair.qr` | `{ sessionId, qrToken, deviceId }` |
 | D→R | `pair.code` | `{ code, deviceId }` |
-| D→R | `connect` | `{ deviceId, hello }` (sadece `isDevelopment`, mDNS/localhost) |
-| R→D | `connect.pending` | `{ requestId }` |
+| D→R | `connect` | `{ deviceId, hello }` (sadece `isDevelopment`; relay'in `CONNECT_REQUESTS` ayarına bağlı) |
+| R→D | `connect.pending` | `{ requestId, expiresAt }` |
 | R→D | `paired` | `{ sessionId, deviceSecret, expiresAt }` (QR, kod veya onaylanmış `connect` sonrası) |
-| R→D | `connect.rejected` | `{ requestId }` |
+| R→D | `connect.rejected` | `{ requestId \| null, reason: 'rejected' \| 'expired' \| 'disabled' \| 'noSession' \| 'deviceLimit' }` |
 | D→R | `resume` | `{ sessionId, deviceId, deviceSecret }` |
 | R→D | `resumed` | `{ sessionId, expiresAt }` |
 | D→R | `unpair` | `{}` |
-| R→D | `unpaired` | `{ reason: 'byUi' \| 'byDevice' \| 'expired' \| 'sessionNotFound' \| 'invalidSecret' }` → SDK sakladığı bilgiyi siler |
+| R→D | `unpaired` | `{ reason: 'byUi' \| 'byDevice' \| 'expired' \| 'sessionNotFound' \| 'invalidSecret' \| 'replaced' }` → SDK sakladığı bilgiyi siler |
 
-Onaylı (trusted) bir cihaz `connect` gönderirse relay onay sormadan `paired` döner.
+- `deviceId`: SDK'nın kurulum başına ürettiği sabit kimlik, `[A-Za-z0-9_-]{8,128}`.
+- QR token'ı ve kod birlikte üretilir, **tek kullanımlıktır**; bir cihaz eşleşince ikisi de yenilenir.
+- Aynı `deviceId` ile yeniden eşleşme eski kaydın yerini alır; eski sır geçersiz olur, eski soket `4000` ile kapanır.
+- Eşleşme ömrü (`expiresAt`) kesin bir süredir; `resume` onu uzatmaz. Süre dolunca cihaz `unpaired{reason:'expired'}` alır.
+- `connect` isteği UI'ı açık olan tüm oturumlara gösterilir; ilk cevap geçerlidir. Aynı cihazdan yeni bir istek eskisini iptal eder.
+- Onaylı (trusted) bir cihaz, aynı `hello.app.id` ile `connect` gönderirse relay onay sormadan `paired` döner.
+  Onay `deviceId` + `app.id` eşleşmesine dayanır; bu yüzden `CONNECT_REQUESTS` sadece güvenilen ağlarda açılmalıdır.
 
 QR içeriği:
 ```json
 { "v": 2, "url": "wss://host/ws/device", "sessionId": "…", "qrToken": "…" }
 ```
+
+### Kapanış kodları
+
+| Kod | Anlamı |
+|---|---|
+| `4000` | Aynı cihazın yeni bağlantısı eskisinin yerini aldı |
+| `4001` | Kimlik doğrulama/eşleşme başarısız |
+| `4002` | Eşleşme kaldırıldı (`unpaired`) |
+| `4003` | Süresinde kimlik doğrulanmadı |
+| `4004` | Oturum süresi doldu |
+| `4005` | Desteklenmeyen protokol sürümü |
+| `4006` | Çok fazla başarısız eşleşme denemesi |
+| `4007` | `connect` isteği reddedildi |
 
 ## 5. Device → UI çekirdek mesajları (relay iletir)
 
@@ -93,7 +122,7 @@ QR içeriği:
 type Hello = {
     app: { id: string; name: string; version: string; build?: string };
     device: { platform: 'ios' | 'android' | 'web' | 'macos' | 'windows' | 'linux' | string; os: string; model?: string; name?: string };
-    sdk: { name: string; version: string };      // ör. "@remote-devtools/sdk", "remote-devtools-swift"
+    sdk: { name: string; version: string };      // ör. "@himmetkaan/remote-devtools", "remote-devtools-swift"
     isDevelopment: boolean;
     meta: Record<string, string>;                // developer'ın serbest alanları (userId, apiEndpoint, env…)
     capabilities: Capabilities;
@@ -130,7 +159,8 @@ SDK'lar `invoke` geldiğinde argümanları bu tanıma göre doğrular. Geçersiz
 ## 7. Modül mesajları
 
 Tüm modül mesajları `module.<modül>.<olay>` biçimindedir. Relay bunların içine bakmaz.
-UI→Device istekleri `id` taşır; cevaplar `replyTo` ile döner. Ortak cevap biçimi:
+UI→Device istekleri `id` taşır; cevap `module.<modül>.result` tipiyle ve `replyTo` ile döner
+(tablolarda `→` ile gösterilen değer cevabın `result` alanıdır). Ortak cevap biçimi:
 `{ ok: true, result } | { ok: false, error: { code, message } }`.
 
 ### network
@@ -194,7 +224,10 @@ type ActionDef = { id: string; label: string; confirm?: string; danger?: boolean
 
 ## 8. Sınırlar
 
-- Mesaj boyutu: varsayılan 1 MB (`MAX_PAYLOAD_BYTES`). SDK büyük body'leri kısaltır ve `bodyTruncated` bilgisini ekler.
+- Mesaj boyutu: varsayılan 5 MB (`MAX_PAYLOAD_MB`); aşan mesajda relay soketi kapatır. SDK büyük body'leri kısaltır ve `bodyTruncated` bilgisini ekler.
 - `history` ve büyük listeler `final` bayrağıyla parçalanır.
-- Hız sınırı: cihaz başına saniyede N mesaj (relay ayarı). Aşılırsa mesajlar düşürülür ve UI'a bir kez `warn` logu gider.
+- Hız sınırı: cihaz başına saniyede `DEVICE_MAX_MSGS_PER_SEC` (varsayılan 200) mesaj. Aşan mesajlar düşürülür ve UI'a
+  saniyelik pencere başına bir kez `log { level: 'warn', tag: 'relay' }` gider.
+- Eşleşme denemeleri: aynı IP'den pencere içinde `PAIR_FAILURE_LIMIT` (varsayılan 10 / 10 dk) başarısız denemeden sonra `RATE_LIMITED`.
+- Oturum başına en fazla `MAX_DEVICES_PER_SESSION` (varsayılan 20) cihaz.
 - Heartbeat: 15 sn ping/pong (v1 ile aynı).

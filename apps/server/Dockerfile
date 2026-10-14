@@ -11,7 +11,7 @@ COPY packages/relay/package.json ./packages/relay/
 COPY packages/ui/package.json ./packages/ui/
 RUN pnpm install --frozen-lockfile
 COPY packages ./packages
-RUN pnpm --filter @remote-devtools/relay --filter @remote-devtools/ui build
+RUN pnpm --filter @himmetkaan/remote-devtools-relay --filter @himmetkaan/remote-devtools-ui build
 
 FROM node:24.11.0-alpine
 ENV NODE_ENV=production \

@@ -1,5 +1,5 @@
 {
-  "name": "@remote-devtools/relay",
+  "name": "@himmetkaan/remote-devtools-relay",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -8,14 +8,14 @@
   },
   "scripts": {
     "start": "node src/main.ts",
-    "dev": "node --watch src/main.ts",
+    "dev": "CONNECT_REQUESTS=local node --watch src/main.ts",
     "build": "node scripts/build.ts",
     "test": "node --test test/*.test.ts",
     "typecheck": "tsc --noEmit -p .",
     "smoke": "node scripts/smoke.ts"
   },
   "dependencies": {
-    "@remote-devtools/protocol": "workspace:*",
+    "@himmetkaan/remote-devtools-protocol": "workspace:*",
     "ws": "8.22.0"
   },
   "devDependencies": {
@@ -23,5 +23,8 @@
     "@types/ws": "8.18.2",
     "esbuild": "0.28.2",
     "typescript": "7.0.2"
+  },
+  "exports": {
+    ".": "./src/index.ts"
   }
 }

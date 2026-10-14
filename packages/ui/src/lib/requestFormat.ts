@@ -1,4 +1,4 @@
-import type {NetworkRequest} from '@remote-devtools/protocol';
+import type {NetworkRequest} from '@himmetkaan/remote-devtools-protocol/v1';
 import type {NetworkRow} from '../store/useNetworkStore.ts';
 
 export function fullUrl(request: NetworkRequest): string {

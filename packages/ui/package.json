@@ -1,5 +1,5 @@
 {
-  "name": "@remote-devtools/ui",
+  "name": "@himmetkaan/remote-devtools-ui",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit -p ."
   },
   "dependencies": {
-    "@remote-devtools/protocol": "workspace:*",
+    "@himmetkaan/remote-devtools-protocol": "workspace:*",
     "qrcode.react": "4.2.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",

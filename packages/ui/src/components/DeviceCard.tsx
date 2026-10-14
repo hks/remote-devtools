@@ -1,4 +1,4 @@
-import type {DeviceSnapshot} from '@remote-devtools/protocol';
+import type {DeviceSnapshot} from '@himmetkaan/remote-devtools-protocol/v1';
 import {formatRelative, platformLabel} from '../lib/format.ts';
 import {useNow} from '../lib/useNow.ts';
 import {type DeviceStatus, getDeviceStatus} from '../store/useDevtoolsStore.ts';
