@@ -39,6 +39,7 @@ export function DeviceHeader({device}: {device: DeviceSnapshot}) {
                 <span className="toolbar-spacer" />
                 <Shortcuts />
                 <button
+                    type="button"
                     className="btn btn-small btn-danger"
                     disabled={relay !== 'open'}
                     onClick={() => {

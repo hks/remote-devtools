@@ -21,6 +21,7 @@ const LogRow = memo(function LogRow({entry}: {entry: LogEntry}) {
     return (
         <li className={`log-row is-${entry.level}${entry.historic ? ' is-historic' : ''}`}>
             <button
+                type="button"
                 className="log-line"
                 onClick={() => hasData && setOpen((v) => !v)}
                 aria-expanded={hasData ? open : undefined}
@@ -84,6 +85,7 @@ export function LogsTab({deviceId}: {deviceId: string}) {
         [logs, levels, source, tag, deferredQuery],
     );
 
+    // biome-ignore lint/correctness/useExhaustiveDependencies: `visible` is a trigger: keep the list scrolled to the bottom when it changes.
     useLayoutEffect(() => {
         const el = listRef.current;
         if (autoScroll && el) el.scrollTop = el.scrollHeight;
@@ -123,6 +125,7 @@ export function LogsTab({deviceId}: {deviceId: string}) {
                 <div className="chip-group" role="group" aria-label="Level filter">
                     {LEVELS.map((level) => (
                         <button
+                            type="button"
                             key={level}
                             className={`chip is-${level}${levels.has(level) ? ' is-on' : ''}`}
                             aria-pressed={levels.has(level)}
@@ -163,7 +166,7 @@ export function LogsTab({deviceId}: {deviceId: string}) {
                     <input type="checkbox" checked={autoScroll} onChange={(e) => setAutoScroll(e.target.checked)} />
                     Auto-scroll
                 </label>
-                <button className="btn btn-small" onClick={() => clearLogs(deviceId)} disabled={logs.length === 0}>
+                <button type="button" className="btn btn-small" onClick={() => clearLogs(deviceId)} disabled={logs.length === 0}>
                     Clear
                 </button>
             </div>

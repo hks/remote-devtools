@@ -35,6 +35,7 @@ export type RemoteModule = {
     /** Capabilities reported to the UI. If not defined, the module is reported with `{}`. */
     capabilities?(): unknown;
     /** Called once if the SDK is enabled. The returned function is called on `destroy()`. Global patches (fetch etc.) belong here. */
+    // biome-ignore lint/suspicious/noConfusingVoidType: lets setup functions without a return statement type-check.
     setup?(ctx: ModuleContext): void | (() => void);
 };
 

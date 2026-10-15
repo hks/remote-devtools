@@ -23,6 +23,7 @@ export function Sidebar() {
                     const active = !showPairing && device.deviceId === selectedId;
                     return (
                         <button
+                            type="button"
                             key={device.deviceId}
                             className={`device-item${active ? ' is-active' : ''}`}
                             aria-current={active ? 'true' : undefined}
@@ -41,7 +42,7 @@ export function Sidebar() {
                     );
                 })}
             </nav>
-            <button className={`btn add-device${showPairing ? ' is-active-nav' : ''}`} onClick={() => setShowPairing(true)}>
+            <button type="button" className={`btn add-device${showPairing ? ' is-active-nav' : ''}`} onClick={() => setShowPairing(true)}>
                 ＋ Add device
                 {pendingCount > 0 && <span className="count-pill">{pendingCount}</span>}
             </button>

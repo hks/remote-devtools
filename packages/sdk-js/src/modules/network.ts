@@ -201,7 +201,7 @@ export function networkModule(options: NetworkModuleOptions = {}): NetworkModule
         const original = g.fetch;
         if (typeof original !== 'function') return null;
 
-        const patched = async function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+        const patched = (async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
             const req = input as Request;
             const url = typeof input === 'string' ? input : input instanceof URL ? input.href : req.url;
             const started = start({
@@ -231,7 +231,7 @@ export function networkModule(options: NetworkModuleOptions = {}): NetworkModule
                     .catch(() => finish(started, {status: response.status, headers, body: '[unreadable body]'}));
             }
             return response;
-        } as typeof fetch & {[ORIGINAL_FETCH]?: typeof fetch};
+        }) as typeof fetch & {[ORIGINAL_FETCH]?: typeof fetch};
         patched[ORIGINAL_FETCH] = original;
         g.fetch = patched;
         return () => {

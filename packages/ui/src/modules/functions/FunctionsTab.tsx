@@ -92,6 +92,7 @@ const CommandCard = memo(function CommandCard({
 
             <div className="cmd-actions">
                 <button
+                    type="button"
                     className={`btn btn-small ${command.danger ? 'btn-danger' : 'btn-primary'}`}
                     onClick={run}
                     disabled={Boolean(unavailable) || running}

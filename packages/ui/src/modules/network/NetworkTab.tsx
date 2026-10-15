@@ -83,6 +83,7 @@ export function NetworkTab({deviceId}: {deviceId: string}) {
 
     const selectedRow = useMemo(() => rows.find((r) => r.uuid === selectedUuid) ?? null, [rows, selectedUuid]);
 
+    // biome-ignore lint/correctness/useExhaustiveDependencies: `visible` is a trigger: keep the list scrolled to the bottom when it changes.
     useLayoutEffect(() => {
         const el = listRef.current;
         if (autoScroll && el) el.scrollTop = el.scrollHeight;
@@ -152,6 +153,7 @@ export function NetworkTab({deviceId}: {deviceId: string}) {
                 <div className="chip-group" role="group" aria-label="Result filter">
                     {STATUSES.map((s) => (
                         <button
+                            type="button"
                             key={s.id}
                             className={`chip is-${s.id}${statuses.has(s.id) ? ' is-on' : ''}`}
                             aria-pressed={statuses.has(s.id)}
@@ -163,6 +165,7 @@ export function NetworkTab({deviceId}: {deviceId: string}) {
                 </div>
                 <span className="toolbar-spacer" />
                 <button
+                    type="button"
                     className={`btn btn-small${paused ? ' is-active' : ''}`}
                     onClick={() => setPaused(deviceId, !paused)}
                     title={paused ? 'Apply buffered requests and resume (p)' : 'Pause adding new requests to the list (p)'}
@@ -178,6 +181,7 @@ export function NetworkTab({deviceId}: {deviceId: string}) {
                     </summary>
                     <div className="menu-items" role="menu">
                         <button
+                            type="button"
                             role="menuitem"
                             disabled={visible.length === 0}
                             onClick={(e) => {
@@ -188,6 +192,7 @@ export function NetworkTab({deviceId}: {deviceId: string}) {
                             HAR <span className="muted small">Chrome DevTools, Charles, Proxyman</span>
                         </button>
                         <button
+                            type="button"
                             role="menuitem"
                             disabled={visible.length === 0}
                             onClick={(e) => {
@@ -199,7 +204,7 @@ export function NetworkTab({deviceId}: {deviceId: string}) {
                         </button>
                     </div>
                 </details>
-                <button className="btn btn-small" onClick={() => clear(deviceId)} disabled={rows.length === 0}>
+                <button type="button" className="btn btn-small" onClick={() => clear(deviceId)} disabled={rows.length === 0}>
                     Clear
                 </button>
             </div>

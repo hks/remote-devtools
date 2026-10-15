@@ -201,7 +201,11 @@ tamamlanana kadar v1 olarak çalışmaya devam eder.
 
 ### Faz 0 — Monorepo iskeleti (davranış değişikliği yok)
 - [x] pnpm workspaces, kök `package.json`, ortak `tsconfig.base.json`, `.editorconfig`
-- [ ] Lint/format (ESLint + Prettier): mevcut kodun stiline göre ayarlanıp ayrı bir PR'da eklenecek, toplu yeniden biçimlendirme diff'ini bu fazdan ayırmak için
+- [x] Lint/format: Biome 2.5 (typescript-eslint TS 7'yi desteklemediği için ESLint değil). Mevcut stile göre ayarlı (4 boşluk,
+      tek tırnak, `{a}`, 140 sütun); CSS formatter kapalı (sıkı tek satırlık kurallar korunur), lint açık. `pnpm lint` /
+      `pnpm format`, CI'da `biome ci`, VS Code önerisi; commit hook yok. Toplu biçimlendirme ayrı commit ve
+      `.git-blame-ignore-revs`'te. Lint düzeltmeleri: 65 butona `type="button"`, birkaç a11y düzeltmesi, gerekçeli susturmalar.
+      Kodun bilinçli tercihleri olan kurallar kapalı (`any`, `!`, testlerde atama ifadesi, forEach dönüşü)
 - [x] `shared/` → `packages/protocol`, `relay/` → `packages/relay`, `web/` → `packages/ui`
 - [x] Docker dosyaları → `apps/server` (build context repo kökü; çalışma imajında node_modules yok)
 - [x] Relay için build adımı (esbuild → `dist/main.js`, bağımlılıklar dahil); Electron'da type stripping'e güvenilmez
@@ -399,7 +403,7 @@ Faz 6'nın bir kısmı (bkz. §4 işaretleri).
 - `yarn install` çalışan Metro'nun dosya haritasını bozabiliyor (paketler yeniden bağlanırken "module not found");
   SDK güncellemesinden sonra Metro `-c` ile yeniden başlatılmalı.
 
-- Kullanıcı kararıyla bekletilenler: mobile-app PR'ı (açılmayacak), Faz 0 lint/format, Faz 6'nın kalanı.
+- mobile-app PR'ını kullanıcı kendisi yönetiyor.
   mobile-app'teki npm token konusu bu projenin kapsamı dışında.
 
 **Sıradaki seçenekler:** Faz 9'un kullanıcıya kalan adımları (repo adı, secret'lar, ilk yayın) veya bekletilen işlerden biri. Faz 6'nın kalanında Developer ID

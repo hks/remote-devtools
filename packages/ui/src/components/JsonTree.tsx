@@ -28,7 +28,7 @@ function Primitive({value}: {value: unknown}) {
     return (
         <span className="jt-string">
             "{text.slice(0, MAX_STRING)}
-            <button className="jt-more" onClick={() => setExpanded(true)}>
+            <button type="button" className="jt-more" onClick={() => setExpanded(true)}>
                 … +{text.length - MAX_STRING} chars
             </button>
             "
@@ -81,7 +81,7 @@ const JsonNode = memo(function JsonNode({name, value, depth, defaultExpandDepth,
 
     return (
         <div className="jt-node">
-            <button className="jt-row jt-toggle" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+            <button type="button" className="jt-row jt-toggle" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
                 <span className="jt-caret">{open ? '▾' : '▸'}</span>
                 {label}
                 <span className="jt-punct">{openBracket}</span>
@@ -107,7 +107,7 @@ const JsonNode = memo(function JsonNode({name, value, depth, defaultExpandDepth,
                             />
                         ))}
                         {entries.length > visible && (
-                            <button className="jt-more" onClick={() => setVisible((v) => v + PAGE_SIZE)}>
+                            <button type="button" className="jt-more" onClick={() => setVisible((v) => v + PAGE_SIZE)}>
                                 … show {entries.length - visible} more
                             </button>
                         )}

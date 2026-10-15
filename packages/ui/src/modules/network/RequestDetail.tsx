@@ -11,6 +11,7 @@ function CopyButton({label, text}: {label: string; text: () => string}) {
     const [done, setDone] = useState(false);
     return (
         <button
+            type="button"
             className="btn btn-small"
             onClick={async () => {
                 setDone(await copyText(text()));
@@ -96,12 +97,12 @@ export function RequestDetail({row, onClose}: {row: NetworkRow; onClose: () => v
                 </span>
                 {request && <CopyButton label="cURL" text={() => toCurl(request)} />}
                 <CopyButton label="JSON" text={() => toEntryJson(row)} />
-                <button className="icon-btn" onClick={onClose} aria-label="Close" title="Close (Esc)">
+                <button type="button" className="icon-btn" onClick={onClose} aria-label="Close" title="Close (Esc)">
                     ✕
                 </button>
             </header>
 
-            <nav className="detail-tabs" role="tablist">
+            <div className="detail-tabs" role="tablist">
                 {(
                     [
                         ['summary', 'Summary'],
@@ -110,6 +111,7 @@ export function RequestDetail({row, onClose}: {row: NetworkRow; onClose: () => v
                     ] as const
                 ).map(([id, title]) => (
                     <button
+                        type="button"
                         key={id}
                         role="tab"
                         aria-selected={tab === id}
@@ -119,7 +121,7 @@ export function RequestDetail({row, onClose}: {row: NetworkRow; onClose: () => v
                         {title}
                     </button>
                 ))}
-            </nav>
+            </div>
 
             <div className="detail-body">
                 {tab === 'summary' && (

@@ -175,6 +175,7 @@ export function StorageTab({deviceId}: {deviceId: string}) {
                     <div className="chip-group" role="group" aria-label="Storage">
                         {adapters.map((a) => (
                             <button
+                                type="button"
                                 key={a.id}
                                 className={`chip is-plain${a.id === adapter.id ? ' is-on' : ''}`}
                                 aria-pressed={a.id === adapter.id}
@@ -195,6 +196,7 @@ export function StorageTab({deviceId}: {deviceId: string}) {
                 <span className="toolbar-spacer" />
                 {!adapter.editable && <span className="badge">Read-only</span>}
                 <button
+                    type="button"
                     className="btn btn-small"
                     onClick={() => void loadList()}
                     disabled={Boolean(unavailable) || loading}
@@ -205,6 +207,7 @@ export function StorageTab({deviceId}: {deviceId: string}) {
                 {adapter.editable && (
                     <>
                         <button
+                            type="button"
                             className="btn btn-small"
                             disabled={!editable}
                             title={unavailable ?? 'Add a new key'}
@@ -213,6 +216,7 @@ export function StorageTab({deviceId}: {deviceId: string}) {
                             ＋ Add
                         </button>
                         <button
+                            type="button"
                             className="btn btn-small btn-danger"
                             disabled={!editable || busy || !entries?.length}
                             title={unavailable ?? 'Delete every key'}
@@ -282,7 +286,7 @@ export function StorageTab({deviceId}: {deviceId: string}) {
                                     {selection.key}
                                 </code>
                             )}
-                            <button className="icon-btn" onClick={() => setSelection(null)} aria-label="Close">
+                            <button type="button" className="icon-btn" onClick={() => setSelection(null)} aria-label="Close">
                                 ✕
                             </button>
                         </header>
@@ -296,6 +300,7 @@ export function StorageTab({deviceId}: {deviceId: string}) {
                                         <>
                                             {selection.value !== null && (
                                                 <button
+                                                    type="button"
                                                     className="btn btn-small"
                                                     onClick={() => void navigator.clipboard?.writeText(selection.value ?? '')}
                                                     disabled={Boolean(adapter.masked) && !revealed}
@@ -306,6 +311,7 @@ export function StorageTab({deviceId}: {deviceId: string}) {
                                             {adapter.editable && (
                                                 <>
                                                     <button
+                                                        type="button"
                                                         className="btn btn-small"
                                                         disabled={!editable || selection.loading}
                                                         onClick={() =>
@@ -315,6 +321,7 @@ export function StorageTab({deviceId}: {deviceId: string}) {
                                                         Edit
                                                     </button>
                                                     <button
+                                                        type="button"
                                                         className="btn btn-small btn-danger"
                                                         disabled={!editable || busy}
                                                         onClick={() => void remove(selection.key)}
@@ -369,7 +376,7 @@ function ValueView({
                 <h3>Value{selection.value !== null && ` · ${formatBytes(selection.value.length)}`}</h3>
                 <div className="row-actions">
                     {json !== undefined && !masked && (
-                        <button className="btn btn-small" onClick={() => setRaw((v) => !v)}>
+                        <button type="button" className="btn btn-small" onClick={() => setRaw((v) => !v)}>
                             {raw ? 'Tree' : 'Raw'}
                         </button>
                     )}
@@ -383,7 +390,7 @@ function ValueView({
             ) : masked ? (
                 <div className="masked">
                     <span className="mono">••••••••••••</span>
-                    <button className="btn btn-small" onClick={onReveal}>
+                    <button type="button" className="btn btn-small" onClick={onReveal}>
                         Reveal
                     </button>
                 </div>
@@ -451,15 +458,24 @@ function Editor({
             </div>
             <div className="row-actions">
                 {json !== undefined && (
-                    <button className="btn btn-small" onClick={() => onChange({...selection, draft: JSON.stringify(json, null, 2)})}>
+                    <button
+                        type="button"
+                        className="btn btn-small"
+                        onClick={() => onChange({...selection, draft: JSON.stringify(json, null, 2)})}
+                    >
                         Format JSON
                     </button>
                 )}
                 <span className="toolbar-spacer" />
-                <button className="btn btn-small" onClick={onCancel}>
+                <button type="button" className="btn btn-small" onClick={onCancel}>
                     Cancel
                 </button>
-                <button className="btn btn-small btn-primary" disabled={disabled || busy || !selection.key.trim()} onClick={onSave}>
+                <button
+                    type="button"
+                    className="btn btn-small btn-primary"
+                    disabled={disabled || busy || !selection.key.trim()}
+                    onClick={onSave}
+                >
                     {busy ? <span className="spin">⟳</span> : null} Save
                 </button>
             </div>

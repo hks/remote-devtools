@@ -1,5 +1,5 @@
 import type {ActionDef, Block, PanelDef} from '@himmetkaan/remote-devtools-protocol';
-import {memo, useMemo, useState} from 'react';
+import {memo, type ReactNode, useMemo, useState} from 'react';
 import {FieldForm} from '../../components/FieldForm.tsx';
 import {JsonTree} from '../../components/JsonTree.tsx';
 import {type FormErrors, initialValues, toArgs} from '../../lib/fields.ts';
@@ -98,6 +98,7 @@ function StatsBlock({block}: BlockProps<'stats'>) {
     return (
         <div className="stat-grid">
             {block.items.map((item, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: labels may repeat; the index keeps keys unique.
                 <div key={`${item.label}:${i}`} className={`stat${item.tone ? ` is-${item.tone}` : ''}`}>
                     <span className="stat-label">{item.label}</span>
                     <span className="stat-value">{item.value}</span>
@@ -136,6 +137,7 @@ function ActionsBlock({deviceId, panel, block, unavailable}: BlockProps<'actions
             <div className="panel-actions">
                 {block.actions.map((action) => (
                     <button
+                        type="button"
                         key={action.id}
                         className={`btn btn-small ${action.danger ? 'btn-danger' : ''}`}
                         disabled={Boolean(unavailable) || running !== null}
@@ -188,6 +190,7 @@ function TableBlock({deviceId, panel, block, unavailable}: BlockProps<'table'>) 
                         </thead>
                         <tbody>
                             {rows.slice(0, visibleCount).map((row, i) => (
+                                // biome-ignore lint/suspicious/noArrayIndexKey: rows have no identity; the list is replaced, not reordered.
                                 <tr key={i}>
                                     {block.columns.map((c) => (
                                         <td key={c.key} title={cellText(row[c.key])}>
@@ -199,6 +202,7 @@ function TableBlock({deviceId, panel, block, unavailable}: BlockProps<'table'>) 
                                             <div className="panel-row-buttons">
                                                 {rowActions.map((action) => (
                                                     <button
+                                                        type="button"
                                                         key={action.id}
                                                         className={`btn btn-small ${action.danger ? 'btn-danger' : ''}`}
                                                         disabled={Boolean(unavailable) || running !== null}
@@ -218,7 +222,7 @@ function TableBlock({deviceId, panel, block, unavailable}: BlockProps<'table'>) 
                 </div>
             )}
             {rows.length > visibleCount && (
-                <button className="jt-more" onClick={() => setVisibleCount((n) => n + TABLE_PAGE)}>
+                <button type="button" className="jt-more" onClick={() => setVisibleCount((n) => n + TABLE_PAGE)}>
                     … show {rows.length - visibleCount} more
                 </button>
             )}
@@ -272,7 +276,7 @@ function FormBlock({deviceId, panel, block, unavailable}: BlockProps<'form'>) {
 
 const PanelBlock = memo(function PanelBlock(props: BlockProps<Block['type']>) {
     const {block} = props;
-    let content;
+    let content: ReactNode;
     switch (block.type) {
         case 'text':
             content = <TextBlock {...(props as BlockProps<'text'>)} />;

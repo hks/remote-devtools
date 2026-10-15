@@ -28,10 +28,10 @@ function RequestCard({request}: {request: ConnectRequest}) {
                 <input type="checkbox" checked={trust} onChange={(e) => setTrust(e.target.checked)} />
                 Always allow
             </label>
-            <button className="btn btn-small" onClick={() => respond(false)}>
+            <button type="button" className="btn btn-small" onClick={() => respond(false)}>
                 Reject
             </button>
-            <button className="btn btn-small btn-primary" onClick={() => respond(true)}>
+            <button type="button" className="btn btn-small btn-primary" onClick={() => respond(true)}>
                 Approve
             </button>
         </article>

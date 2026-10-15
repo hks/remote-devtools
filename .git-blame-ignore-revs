@@ -1,0 +1,2 @@
+# Bulk formatting with Biome; `git config blame.ignoreRevsFile .git-blame-ignore-revs` to skip it in git blame.
+ea94d3ca2cd9120394d025841b72d974ca2e3a44

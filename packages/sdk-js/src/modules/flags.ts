@@ -55,6 +55,7 @@ type Entry = {options: FlagOptions; value: unknown};
 
 const OVERRIDES_KEY = 'overrides';
 
+// biome-ignore lint/suspicious/noPrototypeBuiltins: Object.hasOwn is ES2022; the SDK targets ES2020 (older Hermes).
 const hasOwn = (object: object, key: string) => Object.prototype.hasOwnProperty.call(object, key);
 
 function fieldDefault(field: Field): unknown {

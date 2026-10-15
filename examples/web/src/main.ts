@@ -66,7 +66,7 @@ functions.register({
     handler: ({text, tone, emoji}) => {
         let value = text;
         if (tone === 'excited') value += '!';
-        if (tone === 'shouting') value = value.toUpperCase() + '!!!';
+        if (tone === 'shouting') value = `${value.toUpperCase()}!!!`;
         if (emoji) value += ' 👋';
         $('greeting').textContent = value;
         return value;

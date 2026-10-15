@@ -5,9 +5,10 @@ export function TabBar({modules, active}: {modules: UiModule[]; active: string})
     const setActiveTab = useDevtoolsStore((s) => s.setActiveTab);
 
     return (
-        <nav className="tabbar" role="tablist">
+        <div className="tabbar" role="tablist">
             {modules.map((module, i) => (
                 <button
+                    type="button"
                     key={module.id}
                     role="tab"
                     aria-selected={active === module.id}
@@ -18,6 +19,6 @@ export function TabBar({modules, active}: {modules: UiModule[]; active: string})
                     {module.icon} {module.title}
                 </button>
             ))}
-        </nav>
+        </div>
     );
 }

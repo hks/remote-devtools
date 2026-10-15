@@ -18,7 +18,11 @@ export function TrustedDevices() {
                                 {t.appId} · added {formatRelative(t.trustedAt)}
                             </span>
                         </span>
-                        <button className="btn btn-small" onClick={() => relayClient.send('trusted.remove', {deviceId: t.deviceId})}>
+                        <button
+                            type="button"
+                            className="btn btn-small"
+                            onClick={() => relayClient.send('trusted.remove', {deviceId: t.deviceId})}
+                        >
                             Remove
                         </button>
                     </li>

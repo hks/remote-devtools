@@ -24,6 +24,7 @@ function CopyButton({text, label}: {text: string; label: string}) {
     const [copied, setCopied] = useState(false);
     return (
         <button
+            type="button"
             className="btn btn-small"
             onClick={async () => {
                 setCopied(await copyText(text));
@@ -95,7 +96,7 @@ export function PairingPanel() {
                     </div>
                     <div className="pairing-code-box">
                         <span className="muted small">Pairing code</span>
-                        <span className={`pairing-code${dim ? ' is-dim' : ''}`} aria-label="Pairing code">
+                        <span className={`pairing-code${dim ? ' is-dim' : ''}`}>
                             {pairing ? `${pairing.code.slice(0, 3)} ${pairing.code.slice(3)}` : '––– –––'}
                         </span>
                         {relayUrl && (
@@ -109,7 +110,7 @@ export function PairingPanel() {
                     </div>
                 </div>
 
-                <div className="qr-timer" aria-label="Time left">
+                <div className="qr-timer" aria-hidden="true">
                     <div className="qr-timer-bar" style={{transform: `scaleX(${progress})`}} />
                 </div>
                 <p className="qr-timer-text">

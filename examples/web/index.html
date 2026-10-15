@@ -40,14 +40,14 @@
         <div class="row">
           <input id="code" placeholder="6-digit code" inputmode="numeric" maxlength="7" size="10" />
           <input id="relay" placeholder="Relay address" size="28" />
-          <button id="pair-code" class="primary">Pair with code</button>
+          <button type="button" id="pair-code" class="primary">Pair with code</button>
         </div>
         <textarea id="qr" rows="3" placeholder="…or paste the QR content here"></textarea>
         <div class="row">
-          <button id="pair-qr">Pair with QR content</button>
-          <button id="disconnect">Disconnect</button>
-          <button id="connect">Connect</button>
-          <button id="unpair">Unpair</button>
+          <button type="button" id="pair-qr">Pair with QR content</button>
+          <button type="button" id="disconnect">Disconnect</button>
+          <button type="button" id="connect">Connect</button>
+          <button type="button" id="unpair">Unpair</button>
           <label><input id="dev" type="checkbox" /> Development mode (find the local relay and ask to connect)</label>
         </div>
       </section>
@@ -55,11 +55,11 @@
       <section>
         <h2>Logs</h2>
         <div class="row">
-          <button data-log="debug">debug</button>
-          <button data-log="info">info</button>
-          <button data-log="warn">warn</button>
-          <button data-log="error">error</button>
-          <button id="console">console.warn()</button>
+          <button type="button" data-log="debug">debug</button>
+          <button type="button" data-log="info">info</button>
+          <button type="button" data-log="warn">warn</button>
+          <button type="button" data-log="error">error</button>
+          <button type="button" id="console">console.warn()</button>
         </div>
         <p class="muted">Logs written before connecting are sent once the device connects (<code>history: {enabled: true}</code>).</p>
       </section>
@@ -67,11 +67,11 @@
       <section>
         <h2>Network</h2>
         <div class="row">
-          <button id="net-ok">GET relay /health</button>
-          <button id="net-404">GET 404</button>
-          <button id="net-post">POST httpbin.org</button>
-          <button id="net-fail">Unreachable host</button>
-          <button id="net-xhr">XMLHttpRequest</button>
+          <button type="button" id="net-ok">GET relay /health</button>
+          <button type="button" id="net-404">GET 404</button>
+          <button type="button" id="net-post">POST httpbin.org</button>
+          <button type="button" id="net-fail">Unreachable host</button>
+          <button type="button" id="net-xhr">XMLHttpRequest</button>
         </div>
         <p class="muted"><code>networkModule()</code> captures fetch and XMLHttpRequest automatically.</p>
       </section>
@@ -79,13 +79,13 @@
       <section>
         <h2>Storage, State and Flags</h2>
         <div class="row">
-          <button id="storage-write">Write to localStorage + sessionStorage</button>
+          <button type="button" id="storage-write">Write to localStorage + sessionStorage</button>
         </div>
         <ul id="todos"></ul>
         <div class="row">
           <input id="todo-title" placeholder="New todo" />
-          <button id="todo-add">Add todo</button>
-          <button id="todo-filter">Cycle filter</button>
+          <button type="button" id="todo-add">Add todo</button>
+          <button type="button" id="todo-filter">Cycle filter</button>
         </div>
         <p class="muted">The todo list is a Zustand store shown live in the State tab. The banner and the accent colour are flags you can override in the Flags tab.</p>
       </section>

@@ -57,6 +57,7 @@ export function Shortcuts() {
     return (
         <>
             <button
+                type="button"
                 className="icon-btn shortcuts-btn"
                 onClick={() => setOpen(true)}
                 title="Keyboard shortcuts (?)"
@@ -65,11 +66,14 @@ export function Shortcuts() {
                 ⌨︎
             </button>
             {open && (
+                // biome-ignore lint/a11y/useKeyWithClickEvents: backdrop click closes the dialog; Escape is handled globally.
+                // biome-ignore lint/a11y/noStaticElementInteractions: see above.
                 <div className="overlay" onClick={() => setOpen(false)}>
+                    {/* biome-ignore lint/a11y/useKeyWithClickEvents: only stops the backdrop click from closing the dialog. */}
                     <div className="dialog" role="dialog" aria-label="Keyboard shortcuts" onClick={(e) => e.stopPropagation()}>
                         <header>
                             <h2>Keyboard shortcuts</h2>
-                            <button className="icon-btn" onClick={() => setOpen(false)} aria-label="Close">
+                            <button type="button" className="icon-btn" onClick={() => setOpen(false)} aria-label="Close">
                                 ✕
                             </button>
                         </header>

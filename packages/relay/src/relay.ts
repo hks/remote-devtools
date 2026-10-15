@@ -296,7 +296,7 @@ export function attachRelay(server: Server, config: RelayConfig): Relay {
             return sendError(ws, 'BAD_MESSAGE', 'requestId and approve are required', msg.id);
         }
         const entry = pending.get(payload.requestId);
-        if (!entry || !entry.sessionIds.has(session.id)) {
+        if (!entry?.sessionIds.has(session.id)) {
             return sendError(ws, 'REQUEST_NOT_FOUND', 'Connect request not found or already resolved', msg.id);
         }
         const {request} = entry;

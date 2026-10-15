@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import {createServer, type Server} from 'node:http';
 import type {AddressInfo} from 'node:net';
 import {after, before, describe, it} from 'node:test';
-import {functionsModule, networkModule, type RemoteDevToolsOptions, type RemoteModule, validateArgs} from '../src/index.ts';
-import {createClient, openUi, relayUrl, sleep, type Ui, waitForStatus, withPairedClient, withRelay} from './helpers.ts';
+import {functionsModule, networkModule, validateArgs} from '../src/index.ts';
+import {createClient, openUi, relayUrl, sleep, waitForStatus, withPairedClient, withRelay} from './helpers.ts';
 
 describe('validateArgs', () => {
     const fields = {

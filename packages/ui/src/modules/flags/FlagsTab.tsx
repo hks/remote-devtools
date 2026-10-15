@@ -129,6 +129,7 @@ const FlagCard = memo(function FlagCard({deviceId, flag, unavailable}: {deviceId
                 </span>
                 {flag.overridden && (
                     <button
+                        type="button"
                         className="btn btn-small"
                         onClick={() => void reset()}
                         disabled={disabled}
@@ -185,6 +186,7 @@ export function FlagsTab({deviceId}: {deviceId: string}) {
                     {flags.length} flag(s) · {overridden} overridden
                 </span>
                 <button
+                    type="button"
                     className="btn btn-small btn-danger"
                     disabled={overridden === 0 || Boolean(unavailable)}
                     title={unavailable ?? undefined}

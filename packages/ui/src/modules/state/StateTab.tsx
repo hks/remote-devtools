@@ -68,11 +68,12 @@ const Entry = memo(function Entry({entry}: {entry: TimelineEntry}) {
             </header>
             <ul className="change-lines">
                 {lines.map((line, i) => (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: change lines are static once rendered.
                     <Line key={i} line={line} />
                 ))}
             </ul>
             {hidden > 0 && (
-                <button className="jt-more" onClick={() => setExpanded((v) => !v)}>
+                <button type="button" className="jt-more" onClick={() => setExpanded((v) => !v)}>
                     {expanded ? 'Show less' : `… ${hidden} more`}
                 </button>
             )}
@@ -99,6 +100,7 @@ export function StateTab({deviceId}: {deviceId: string}) {
     }, [view.stale]);
 
     // Subscribe while the tab is open (and the device connected); unsubscribe when it closes.
+    // biome-ignore lint/correctness/useExhaustiveDependencies: `refreshToken` is a trigger: Refresh and stale patches resubscribe.
     useEffect(() => {
         if (!activeId || unavailable) return;
         let cancelled = false;
@@ -133,6 +135,7 @@ export function StateTab({deviceId}: {deviceId: string}) {
                     <div className="chip-group" role="group" aria-label="Store">
                         {stores.map((s) => (
                             <button
+                                type="button"
                                 key={s.id}
                                 className={`chip is-plain${s.id === store.id ? ' is-on' : ''}`}
                                 aria-pressed={s.id === store.id}
@@ -153,6 +156,7 @@ export function StateTab({deviceId}: {deviceId: string}) {
                     </span>
                 )}
                 <button
+                    type="button"
                     className="btn btn-small"
                     disabled={Boolean(unavailable)}
                     title={unavailable ?? 'Fetch the whole state again'}
@@ -161,6 +165,7 @@ export function StateTab({deviceId}: {deviceId: string}) {
                     ⟳ Refresh
                 </button>
                 <button
+                    type="button"
                     className="btn btn-small"
                     disabled={view.timeline.length === 0}
                     onClick={() => useStateStore.getState().clearTimeline(key)}

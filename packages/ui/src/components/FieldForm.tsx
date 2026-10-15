@@ -39,7 +39,7 @@ export function FieldForm({fields, values, errors, disabled, onChange, idPrefix}
                                 <label className="field-label" htmlFor={id}>
                                     {fieldLabel(key, field)}
                                     {required && (
-                                        <span className="field-required" aria-label="required">
+                                        <span className="field-required" aria-hidden="true">
                                             *
                                         </span>
                                     )}
