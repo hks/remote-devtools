@@ -45,12 +45,11 @@ Repository → Settings → Secrets and variables → Actions:
    git tag desktop-v0.2.0 && git push origin desktop-v0.2.0
    ```
 
-The **Desktop release** workflow (macOS runner) checks that the tag matches the version, builds the app, signs it with
-the certificate from `CSC_LINK`, notarizes and staples it, publishes `RemoteDevTools-<version>-mac-arm64.dmg`, the
-`.zip` and `latest-mac.yml` as a GitHub release, and finally verifies the signature with `codesign`, `spctl` and
-`stapler`.
-
-Releases are published directly. Installed apps check for updates on launch and every six hours, download the update in
+The **Desktop release** workflow (macOS runner) checks that the tag matches the version, creates a draft release,
+builds the app, signs it with the certificate from `CSC_LINK`, notarizes and staples it, uploads
+`RemoteDevTools-<version>-mac-arm64.dmg`, the `.zip` and `latest-mac.yml`, verifies the signature with `codesign`,
+`spctl` and `stapler`, and only then publishes the release as the latest one. If any step fails, the draft stays
+unpublished and installed apps are not offered the build. Installed apps check for updates on launch and every six hours, download the update in
 the background and offer **Restart now** or **Later** (the update then installs when the app quits). **Check for
 Updates…** in the app menu checks on demand.
 

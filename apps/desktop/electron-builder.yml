@@ -39,11 +39,13 @@ mac:
 
 # Releases (and the auto-update feed, latest-mac.yml) live on GitHub Releases of the public repository, tagged
 # desktop-vX.Y.Z. electron-updater reads the repository's *latest* release, so no other workflow creates releases.
+# The release workflow creates the draft first (parallel uploads would otherwise each create a release) and publishes it
+# once the signature checks pass.
 publish:
   provider: github
   owner: hks
   repo: remote-devtools
-  releaseType: release
+  releaseType: draft
   tagNamePrefix: desktop-v
 
 # Windows and Linux are not part of the release for now (the npm scripts only call --mac).

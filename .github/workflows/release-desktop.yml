@@ -28,6 +28,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # electron-builder uploads the dmg and the zip in parallel; without an existing release each upload creates one.
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "$GITHUB_REF_NAME" --draft --verify-tag --title "${GITHUB_REF_NAME#desktop-v}" --generate-notes
+
       - name: Write the App Store Connect API key
         env:
           APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
@@ -35,7 +41,7 @@ jobs:
           echo "$APPLE_API_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
           echo "APPLE_API_KEY=$RUNNER_TEMP/AuthKey.p8" >> "$GITHUB_ENV"
 
-      # Signs with the Developer ID certificate, notarizes, staples, and publishes dmg + zip + latest-mac.yml.
+      # Signs with the Developer ID certificate, notarizes, staples, and uploads dmg + zip + latest-mac.yml to the draft.
       - run: pnpm --filter @himmetkaan/remote-devtools-desktop release
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
@@ -50,6 +56,12 @@ jobs:
           codesign --verify --deep --strict --verbose=2 "$app"
           spctl -a -vvv -t execute "$app"   # expects "source=Notarized Developer ID"
           xcrun stapler validate "$app"
+
+      # Only now does the release become visible, and the latest one installed apps update to.
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "$GITHUB_REF_NAME" --draft=false --latest
 
       - name: Remove the API key
         if: always()
