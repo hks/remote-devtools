@@ -406,6 +406,10 @@ Faz 6'nın bir kısmı (bkz. §4 işaretleri).
 - mobile-app PR'ını kullanıcı kendisi yönetiyor.
   mobile-app'teki npm token konusu bu projenin kapsamı dışında.
 
+- Yayınlanmamış değişiklikler: `desktop-v0.3.0` ve Docker `v0.1.0`'dan sonra sadece Biome biçimlendirmesi ve lint düzeltmeleri var
+  (işlevsel değişiklik yok). Bir sonraki gerçek değişiklikle birlikte en az masaüstü `0.3.1` (`desktop-v0.3.1`) ve Docker
+  `v0.1.1` yayınlanacak. Tag serileri ayrı: `desktop-v*` masaüstü, `v*` Docker, `@himmetkaan/…@*` npm (changesets).
+
 **Sıradaki seçenekler:** Faz 9'un kullanıcıya kalan adımları (repo adı, secret'lar, ilk yayın) veya bekletilen işlerden biri. Faz 6'nın kalanında Developer ID
 imzası + notarization + electron-updater için [macos-release.md](../maintainers/macos-release.md)'deki sertifika/secret adımları kullanıcıdan gerekir.
 
