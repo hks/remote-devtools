@@ -19,7 +19,7 @@ import {toSerializable} from './serialize.ts';
 import {defaultStorage, type KeyValueStorage} from './storage.ts';
 
 export const SDK_NAME = '@himmetkaan/remote-devtools';
-export const SDK_VERSION = '0.1.0-alpha.3';
+export const SDK_VERSION = '0.1.0';
 
 export type RemoteDevToolsOptions = {
     /** Required gate. When `false` nothing happens: no socket is opened, no modules are set up, no globals are patched. */
