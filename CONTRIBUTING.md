@@ -26,9 +26,9 @@ servers and the fake device you can use instead of a phone.
 - Keep changes focused; unrelated refactors are easier to review separately.
 - Add or update tests: relay behaviour in `packages/relay/test`, SDK behaviour in `packages/sdk-js/test` (both run
   against a real relay).
-- Run `pnpm typecheck`, `pnpm test` and `pnpm build` before pushing; CI runs the same.
-- Match the surrounding code style: 4-space indentation, single quotes, semicolons, short comments that
-  explain why.
+- Run `pnpm lint`, `pnpm typecheck`, `pnpm test` and `pnpm build` before pushing; CI runs the same.
+- Formatting and linting use [Biome](https://biomejs.dev): `pnpm format` fixes what it can. The repository recommends the
+  Biome editor extension with format on save. Keep comments short and about why.
 - If your change affects the published SDK or protocol packages, add a changeset with `pnpm changeset` and describe the
   change for users.
 - Update the documentation in `docs/` when behaviour or APIs change.

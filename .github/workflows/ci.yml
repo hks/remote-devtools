@@ -16,6 +16,7 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm exec biome ci .
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
