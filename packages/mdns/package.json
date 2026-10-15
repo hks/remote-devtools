@@ -1,6 +1,6 @@
 {
   "name": "@himmetkaan/remote-devtools-mdns",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Optional mDNS (Bonjour) discovery for the Remote DevTools SDK: finds relays on the local network from React Native and Node.",
   "keywords": [
     "remote-devtools",
