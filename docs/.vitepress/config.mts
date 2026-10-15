@@ -11,9 +11,14 @@ export default defineConfig({
     cleanUrls: true,
     lastUpdated: true,
     srcExclude: ['internal/**', 'scripts/**', 'README.md'],
-    head: [['link', {rel: 'icon', href: `${base}favicon.svg`}]],
+    // The desktop app's icon (apps/desktop/build/icon.png), resized.
+    head: [
+        ['link', {rel: 'icon', type: 'image/png', sizes: '32x32', href: `${base}favicon-32.png`}],
+        ['link', {rel: 'icon', type: 'image/png', sizes: '64x64', href: `${base}favicon-64.png`}],
+        ['link', {rel: 'apple-touch-icon', sizes: '180x180', href: `${base}favicon-180.png`}],
+    ],
     themeConfig: {
-        logo: '/favicon.svg',
+        logo: '/landing/logo.webp',
         nav: [
             {text: 'Guide', link: '/guide/introduction'},
             {text: 'Modules', link: '/modules/logs'},
