@@ -333,9 +333,13 @@ desktop app içinde dağıtılır.
 - [x] `LICENSE` (MIT), `CONTRIBUTING.md`, `SECURITY.md`, issue formları, PR şablonu; paketlere npm README'leri ve metadata
 - [x] changesets (2.31.1; SDK + protokol birlikte sürümlenir, `0.1.0` changeset'i hazır), `Release` (version PR + npm, provenance),
       `Docker image` (`v*` tag'lerinde GHCR, amd64 + arm64), `Docs` (Pages) workflow'ları; `version-packages` `SDK_VERSION`'ı eşitler
-- [ ] Repo adı: `hks/relay-devtools-sociallift` → `hks/remote-devtools` (kullanıcı onayıyla)
-- [ ] Kullanıcı: `NPM_TOKEN` secret'ı, Pages'in açılması (Source: GitHub Actions), Actions'ın PR açma izni,
-      version PR'ının birleştirilmesi (ilk npm yayını), ilk `v0.1.0` tag'i (GHCR) ve imajın public yapılması
+- [x] Temiz public repo: commit e-postası (iş adresi) geçmişte GitHub noreply adresine çevrildi ve yeni public
+      `hks/remote-devtools` reposuna push'landı (27 commit, içerik aynı). Eski repo `hks/remote-devtools-private` olarak
+      private yedek; eski PR #1 ve `desktop-v0.1.0` release'i orada kaldı. Yerelde `origin` = public, `private` = yedek
+- [x] Pages (GitHub Actions) ve Actions'ın PR açma izni açıldı; CI, Release ve Docs yeşil; site yayında
+      (https://hks.github.io/remote-devtools/); Release workflow'u "Version packages" PR'ını açtı (0.1.0)
+- [ ] Kullanıcı: `NPM_TOKEN` secret'ı → version PR'ındaki CI'ı onaylayıp PR'ı birleştirmek (ilk npm yayını);
+      ilk `v0.1.0` tag'i (GHCR imajı) ve imajın public yapılması
 
 ### Sonraki fazlar (kapsam dışı, sırası belirlenecek)
 - Swift SDK (URLSession yakalama), Kotlin SDK (OkHttp interceptor), Flutter SDK (Dio)
@@ -362,7 +366,8 @@ Faz 9'un kod/doküman kısmı;
 Faz 6'nın bir kısmı (bkz. §4 işaretleri).
 
 **Repolar**
-- relay-devtools (bu repo): `main` güncel ve push'lu; CI (typecheck, test, build, docker build) yeşil.
+- remote-devtools (bu repo, public `hks/remote-devtools`; eski geçmiş private `hks/remote-devtools-private`'ta):
+  `main` güncel ve push'lu; CI (typecheck, test, build, docker build) yeşil.
   Faz 7 `main`'e birleştirildi ve push'landı.
 - mobile-app (Pembe Panjur): `~/WebstormProjects/experimental/iphone-duo`, dal `hks/remote-devtools-v2` (push'lu, PR yok), SDK `0.1.0-alpha.3`.
   Entegrasyon: `helpers/developer/remote/RemoteDevtools.ts` (SDK kurulumu), `RemoteFunctions.ts` (17 fonksiyon),
