@@ -10,7 +10,7 @@ export default defineConfig({
     base,
     cleanUrls: true,
     lastUpdated: true,
-    srcExclude: ['internal/**', 'README.md'],
+    srcExclude: ['internal/**', 'scripts/**', 'README.md'],
     head: [['link', {rel: 'icon', href: `${base}favicon.svg`}]],
     themeConfig: {
         logo: '/favicon.svg',

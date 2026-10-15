@@ -23,7 +23,8 @@
     "release": "pnpm --filter @himmetkaan/remote-devtools-protocol --filter @himmetkaan/remote-devtools --filter @himmetkaan/remote-devtools-mdns build && changeset publish",
     "dist:desktop:signed": "pnpm --filter @himmetkaan/remote-devtools-desktop dist:signed",
     "lint": "biome check .",
-    "format": "biome check --write ."
+    "format": "biome check --write .",
+    "docs:screenshots": "pnpm --filter @himmetkaan/remote-devtools-docs screenshots"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

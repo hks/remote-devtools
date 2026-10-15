@@ -60,6 +60,20 @@ The relay smoke test runs the whole pairing flow against a running relay:
 node packages/relay/scripts/smoke.ts ws://127.0.0.1:8080
 ```
 
+## Landing page screenshots
+
+The home page (`docs/.vitepress/theme/LandingPage.vue`) uses real UI screenshots from `docs/public/landing/`. After UI
+changes, regenerate them:
+
+```bash
+pnpm docs:screenshots
+```
+
+The script builds the UI, starts a relay, opens it in headless Chrome (dark scheme, 2× pixel density), pairs a demo
+device with realistic data (`docs/scripts/demo-device.ts`), lets a second device ask to connect and captures every tab.
+It needs Google Chrome; set `CHROME_PATH` for another Chromium build. Spotlight positions on the landing page are
+percentages of the screenshot, so check them when a tab's layout changes.
+
 ## Adding a UI tab for a module
 
 1. Create `packages/ui/src/modules/<name>/<Name>Tab.tsx`; it receives `{deviceId}`.

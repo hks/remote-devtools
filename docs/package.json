@@ -6,9 +6,12 @@
   "scripts": {
     "dev": "vitepress dev",
     "build": "vitepress build",
-    "preview": "vitepress preview"
+    "preview": "vitepress preview",
+    "screenshots": "pnpm --filter @himmetkaan/remote-devtools-ui build && node scripts/screenshots.ts"
   },
   "devDependencies": {
+    "@himmetkaan/remote-devtools": "workspace:*",
+    "@himmetkaan/remote-devtools-relay": "workspace:*",
     "vitepress": "1.6.4",
     "vue": "3.5.22"
   }
