@@ -1,0 +1,72 @@
+{
+  "name": "@himmetkaan/remote-devtools-mdns",
+  "version": "0.0.0",
+  "description": "Optional mDNS (Bonjour) discovery for the Remote DevTools SDK: finds relays on the local network from React Native and Node.",
+  "keywords": [
+    "remote-devtools",
+    "mdns",
+    "bonjour",
+    "zeroconf",
+    "react-native",
+    "expo"
+  ],
+  "homepage": "https://hks.github.io/remote-devtools/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hks/remote-devtools.git",
+    "directory": "packages/mdns"
+  },
+  "bugs": "https://github.com/hks/remote-devtools/issues",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./plugin": "./plugin.cjs"
+  },
+  "files": [
+    "dist",
+    "plugin.cjs",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "main": "./dist/index.cjs",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs"
+      },
+      "./plugin": "./plugin.cjs"
+    }
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts",
+    "typecheck": "tsc --noEmit -p .",
+    "build": "node ../../scripts/build-lib.ts"
+  },
+  "peerDependencies": {
+    "@himmetkaan/remote-devtools": ">=0.1.0",
+    "bonjour-service": ">=1.2.0",
+    "react-native-zeroconf": ">=0.13.0"
+  },
+  "peerDependenciesMeta": {
+    "bonjour-service": {
+      "optional": true
+    },
+    "react-native-zeroconf": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@himmetkaan/remote-devtools": "workspace:*",
+    "@himmetkaan/remote-devtools-relay": "workspace:*",
+    "@types/node": "24.19.1",
+    "bonjour-service": "1.4.4",
+    "typescript": "7.0.2"
+  }
+}

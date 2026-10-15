@@ -19,6 +19,8 @@ now.
   when your IP changes.
 - Connect requests from the local network are allowed (`CONNECT_REQUESTS=local`), so development builds and
   simulators find the app by themselves; the SDK tries port `8787` first.
+- **Network → Advertise on Local Network (Bonjour)** announces the app on the Wi-Fi so physical development builds with
+  the [mDNS package](./connecting#mdns-discovery) find it without its address. Off by default; the choice is remembered.
 - Only connection metadata is stored (`~/Library/Application Support/Remote DevTools/relay-state.json`: the session,
   pairings and trusted devices). Devices come back with their stored pairing after the app restarts. Logs, requests
   and other data are never written to disk.

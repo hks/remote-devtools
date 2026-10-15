@@ -8,7 +8,7 @@ There are four ways for a device to join:
 | QR code | Physical devices, any network | Single-use token, valid for 2 minutes |
 | 6-digit code | No camera, or a web app | Single-use, short-lived, failed attempts are rate limited per IP |
 | Local discovery | Simulators, emulators, dev builds on your LAN | The UI must approve the connect request |
-| mDNS (planned) | LAN discovery without knowing the host | Same approval as local discovery |
+| mDNS (optional package) | Physical dev builds on the same Wi-Fi, without knowing the host | Same approval as local discovery |
 
 The QR code and the code are generated together and both become invalid as soon as one device uses them; the UI then
 shows a fresh pair.
@@ -37,6 +37,39 @@ The relay only accepts connect requests when `CONNECT_REQUESTS` allows it: `off`
 (loopback and private networks; the desktop app and `pnpm dev:relay` use this) or `any`.
 
 Trusted devices are listed on the pairing screen and can be removed there.
+
+## mDNS discovery
+
+Localhost discovery covers simulators and emulators. A physical phone needs the computer's address, unless the relay
+advertises itself on the network with Bonjour. The desktop app does so when **Network → Advertise on Local Network
+(Bonjour)** is checked (off by default), as `_remotedevtools._tcp` with TXT `v=2` and `path=/ws/device`.
+
+The optional `@himmetkaan/remote-devtools-mdns` package adds a discovery provider that browses for that service and then
+probes `/discovery` exactly like localhost discovery. It keeps native code out of the core SDK.
+
+```bash
+npx expo install @himmetkaan/remote-devtools-mdns react-native-zeroconf
+```
+
+```ts
+import Zeroconf from 'react-native-zeroconf';
+import {mdnsDiscovery, zeroconfBrowser} from '@himmetkaan/remote-devtools-mdns';
+
+RemoteDevTools.init({
+    // …
+    isDevelopment: __DEV__,
+    discovery: {providers: [mdnsDiscovery(zeroconfBrowser(new Zeroconf()))]},
+});
+```
+
+In Expo, add the config plugin; it adds the Bonjour service type and a local network usage text to `Info.plist` and the
+multicast permission on Android. mDNS needs native code, so it works in development builds, not in Expo Go.
+
+```json
+{"expo": {"plugins": [["@himmetkaan/remote-devtools-mdns/plugin", {"localNetworkUsage": "Finds Remote DevTools on your network."}]]}}
+```
+
+In Node (scripts, tests, Electron), use `mdnsDiscovery(bonjourBrowser(new Bonjour()))` with `bonjour-service`.
 
 ## Staying connected
 

@@ -20,7 +20,8 @@ functions and custom panels to drive the app from the same place.
 - **State**: Redux and Zustand state as a live JSON tree with a change timeline.
 - **Flags**: typed feature flags with overrides that persist on the device.
 - **Custom panels**: describe your own tabs with tables, stats, forms and buttons, without UI code.
-- **Pairing**: QR code, 6-digit code, or automatic discovery for simulators and development builds. Several devices at once.
+- **Pairing**: QR code, 6-digit code, or automatic discovery (localhost and optional mDNS) for simulators and development
+  builds. Several devices at once.
 - **Safe by default**: the SDK does nothing unless enabled; the UI keeps nothing on disk.
 
 ## Quick look
@@ -59,6 +60,7 @@ docker run --rm -p 8080:8080 -e CONNECT_REQUESTS=local ghcr.io/hks/remote-devtoo
 |---|---|
 | `packages/sdk-js` | `@himmetkaan/remote-devtools`, the JS SDK and its modules |
 | `packages/protocol` | `@himmetkaan/remote-devtools-protocol`, the wire protocol types and helpers |
+| `packages/mdns` | `@himmetkaan/remote-devtools-mdns`, optional mDNS discovery for React Native and Node |
 | `packages/relay` | The relay server (Node + ws) |
 | `packages/ui` | The web UI (React) |
 | `apps/desktop` | The Electron desktop app (relay and UI built in) |

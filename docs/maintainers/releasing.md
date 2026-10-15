@@ -2,7 +2,7 @@
 
 | Artifact | Where | How |
 |---|---|---|
-| `@himmetkaan/remote-devtools`, `@himmetkaan/remote-devtools-protocol` | npm | [Changesets](https://github.com/changesets/changesets) + the `Release` workflow |
+| `@himmetkaan/remote-devtools`, `@himmetkaan/remote-devtools-protocol`, `@himmetkaan/remote-devtools-mdns` | npm | [Changesets](https://github.com/changesets/changesets) + the `Release` workflow |
 | Relay + UI image | `ghcr.io/hks/remote-devtools` | The `Docker image` workflow, on version tags |
 | Documentation | GitHub Pages | The `Docs` workflow, on every push to `main` |
 | Desktop app | GitHub Releases (`desktop-vX.Y.Z`) | The `Desktop release` workflow, on `desktop-v*` tags; see [macOS signing](./macos-release) |
@@ -17,7 +17,7 @@ The relay and the UI are not published to npm; they ship inside the Docker image
    pnpm changeset
    ```
 
-   The SDK and the protocol package are versioned together.
+   The SDK and the protocol package are versioned together; the mDNS package has its own version.
 
 2. When changesets reach `main`, the `Release` workflow opens (or updates) a **Version packages** pull request that
    bumps versions and writes the changelogs.

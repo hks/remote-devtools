@@ -1,7 +1,9 @@
 import {app, BrowserWindow, clipboard, dialog, Menu, shell, type MenuItemConstructorOptions} from 'electron';
 import {join} from 'node:path';
 import {createRelay, loadConfig, type RunningServer} from '@himmetkaan/remote-devtools-relay';
+import {Advertiser} from './mdns.ts';
 import {listLanAddresses, type LanAddress} from './network.ts';
+import {loadSettings, saveSettings, type Settings} from './settings.ts';
 import {checkForUpdatesFromMenu, startAutoUpdates} from './updates.ts';
 
 // Fixed port: the UI's session info (localStorage) is tied to the origin (127.0.0.1:port).
@@ -17,6 +19,8 @@ let win: BrowserWindow | null = null;
 /** Interface chosen by the user; `null` = automatic. */
 let pinnedIface: string | null = null;
 let current: LanAddress | null = null;
+let settings: Settings;
+const advertiser = new Advertiser();
 
 function webDistDir(): string {
     return app.isPackaged ? join(process.resourcesPath, 'ui') : join(__dirname, '../../../packages/ui/dist');
@@ -62,6 +66,13 @@ function buildMenu() {
             },
         },
         {label: 'Refresh interfaces', click: () => refreshNetwork(true)},
+        {type: 'separator'},
+        {
+            label: 'Advertise on Local Network (Bonjour)',
+            type: 'checkbox',
+            checked: settings.advertiseOnLan,
+            click: (item) => setAdvertising(item.checked),
+        },
     ];
 
     const appMenu: MenuItemConstructorOptions = {
@@ -90,6 +101,15 @@ function buildMenu() {
     Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
+/** Development builds using @himmetkaan/remote-devtools-mdns find the relay without knowing its address. */
+function setAdvertising(on: boolean) {
+    settings = {...settings, advertiseOnLan: on};
+    saveSettings(settings);
+    if (on) advertiser.start(PORT);
+    else advertiser.stop();
+    buildMenu();
+}
+
 function selectIface(iface: string | null) {
     pinnedIface = iface;
     refreshNetwork(true);
@@ -102,6 +122,7 @@ function refreshNetwork(force = false) {
     current = next;
     if (changed || force) {
         running?.relay.setPublicUrl(phoneUrl(current));
+        if (changed) advertiser.restart();
         buildMenu();
         updateTitle();
         if (changed) win?.webContents.reload();
@@ -147,6 +168,7 @@ function createWindow() {
 }
 
 async function start() {
+    settings = loadSettings();
     current = pickAddress();
     try {
         running = await createRelay({
@@ -176,6 +198,7 @@ async function start() {
     // In the packaged app the icon comes from the bundle; in development show this in the Dock instead of the Electron icon.
     if (!app.isPackaged) app.dock?.setIcon(join(__dirname, '../build/icon.png'));
 
+    if (settings.advertiseOnLan) advertiser.start(PORT);
     buildMenu();
     createWindow();
     setInterval(() => refreshNetwork(), NETWORK_POLL_MS).unref();
@@ -198,6 +221,7 @@ if (!app.requestSingleInstanceLock()) {
         if (closing || !running) return;
         closing = true;
         event.preventDefault();
+        advertiser.stop();
         void running.close().finally(() => app.quit());
     });
 

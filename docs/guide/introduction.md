@@ -51,6 +51,7 @@ Several devices can be connected at once; pick one in the sidebar.
 |---|---|
 | `@himmetkaan/remote-devtools` | The JS SDK (React Native, browsers, Node) with all built-in modules |
 | `@himmetkaan/remote-devtools-protocol` | Message types, the field DSL and helpers shared by the SDK, relay and UI |
+| `@himmetkaan/remote-devtools-mdns` | Optional mDNS (Bonjour) discovery for React Native and Node |
 | Desktop app | macOS app with the relay and UI built in ([Desktop app](./desktop-app)) |
 | Docker image | Relay + UI for a server or your LAN ([Self-hosting](./self-hosting)) |
 

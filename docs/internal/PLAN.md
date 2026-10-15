@@ -278,8 +278,12 @@ tamamlanana kadar v1 olarak çalışmaya devam eder.
 - [x] `connectRequests: 'local'`; SDK yerel keşfi varsayılan olarak 8787 ve 8080'i dener
 - [x] Bağlantı metadata'sının diskte saklanması (`relay-state.json`, `0600`) + kalıcı UI oturumu; veri saklanmaz
 - [x] electron-builder (pnpm monorepo ile): ad-hoc imzalı `.dmg` + `.zip`, paketlenmiş uygulama doğrulandı
-- [ ] mDNS yayını (`_remotedevtools._tcp`), ayarlardan açılıp kapatılabilir; macOS Yerel Ağ izni metinleri
-- [ ] `@himmetkaan/remote-devtools-mdns` paketi (`DiscoveryProvider`; RN: zeroconf + Expo config plugin); opsiyonel, varsayılan kapalı
+- [x] mDNS yayını (`_remotedevtools._tcp`, TXT `v=2`, `path`, `name`; `bonjour-service`): Network menüsünde "Advertise on Local
+      Network (Bonjour)", varsayılan kapalı, tercih `userData/settings.json`'da; ağ değişince yeniden duyurulur.
+      macOS'un kendi Bonjour'u (`dns-sd`) ile görüldüğü doğrulandı. Info.plist: NSLocalNetworkUsageDescription + NSBonjourServices
+- [x] `@himmetkaan/remote-devtools-mdns` paketi: `mdnsDiscovery(browser)` (bulunan servisleri `/discovery` ile yoklar),
+      `zeroconfBrowser` (react-native-zeroconf), `bonjourBrowser` (Node); Expo config plugin `/plugin` (CJS; iOS Bonjour +
+      yerel ağ metni, Android multicast izni). 7 test (gerçek multicast testi CI'da atlanır). Pembe Panjur'a eklenmedi
 - [ ] İsteğe bağlı: gömülü relay yerine uzak (self-hosted) bir relay'e bağlanma modu
 - [x] Developer ID imzası (hardened runtime), notarization (App Store Connect API anahtarı), electron-updater (GitHub provider;
       açılışta ve 6 saatte bir kontrol, arka planda indirme, "Restart now / Later", menüde "Check for Updates…")
