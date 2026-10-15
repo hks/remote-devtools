@@ -1,7 +1,7 @@
 {
   "name": "@himmetkaan/remote-devtools-desktop",
   "productName": "Remote DevTools",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Remote DevTools: relay and UI in one desktop app (local network)",
   "private": true,
   "license": "MIT",
