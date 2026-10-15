@@ -369,15 +369,16 @@ Faz 6'nın bir kısmı (bkz. §4 işaretleri).
 - remote-devtools (bu repo, public `hks/remote-devtools`; eski geçmiş private `hks/remote-devtools-private`'ta):
   `main` güncel ve push'lu; CI (typecheck, test, build, docker build) yeşil.
   Faz 7 `main`'e birleştirildi ve push'landı.
-- mobile-app (Pembe Panjur): `~/WebstormProjects/experimental/iphone-duo`, dal `hks/remote-devtools-v2` (push'lu, PR yok), SDK `0.1.0-alpha.3`.
-  Entegrasyon: `helpers/developer/remote/RemoteDevtools.ts` (SDK kurulumu), `RemoteFunctions.ts` (17 fonksiyon),
+- mobile-app (Pembe Panjur): `~/WebstormProjects/experimental/iphone-duo`, dal `hks/remote-devtools-v2` (push'lu, PR yok).
+  SDK npm'den (`@himmetkaan/remote-devtools@0.1.0`). Entegrasyon: `helpers/developer/remote/RemoteDevtools.ts` (SDK kurulumu), `RemoteFunctions.ts` (17 fonksiyon),
   `RemoteNetwork.ts` (axios kancaları → `network.record()`), `RemoteStorage.ts`, `RemoteState.ts`, `RemoteFlags.ts`,
   `components/ui/developer/components/DeveloperRemotePanel.tsx`.
 
-**SDK'yı uygulamada güncellemek** (npm'e yayın yok):
-1. `packages/protocol` ve `packages/sdk-js` sürümünü artır (yarn tarball'ı içerik özetiyle önbelleğe alır) ve `SDK_VERSION`'ı eşitle.
-2. `pnpm pack:sdk ~/WebstormProjects/experimental/iphone-duo/vendor/remote-devtools`
-3. mobile-app `package.json`: bağımlılık + `resolutions` içindeki tarball adlarını güncelle, `yarn install`.
+**SDK'yı uygulamada güncellemek** (mobile-app 0.1.0'dan beri npm'den kurar):
+1. Bu repoda değişiklikle birlikte `pnpm changeset` ekle; "Version packages" PR'ı birleşince npm'e yayınlanır
+   (yeni sürümün npm'de okunabilir olması birkaç dakika sürebilir).
+2. mobile-app `package.json`'da `@himmetkaan/remote-devtools` sürümünü güncelle, `yarn install`; çalışan Metro'yu `-c` ile yeniden başlat.
+3. Yayınlamadan denemek için: `pnpm pack:sdk <klasör>` ile tarball üretip geçici olarak `file:` bağımlılığıyla kurulabilir.
 
 **Geliştirme komutları:** `pnpm dev:relay` (8080, `CONNECT_REQUESTS=local`), `pnpm dev:ui` (5173), `pnpm dev:example` (5174),
 `pnpm dev:desktop`, `pnpm dist:desktop`, `pnpm test`, `node packages/sdk-js/scripts/fake-device.ts dev 8080`.
