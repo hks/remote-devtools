@@ -90,7 +90,10 @@ describe('connect requests', () => {
             const second = await connect(port, WS_PATH_UI);
             second.send('session.resume', {sessionId: session.sessionId, uiSecret: session.uiSecret});
             const snapshot = (await second.next('session')).payload;
-            assert.deepEqual(snapshot.pendingRequests.map((r: any) => r.requestId), [request.requestId]);
+            assert.deepEqual(
+                snapshot.pendingRequests.map((r: any) => r.requestId),
+                [request.requestId],
+            );
 
             device.close();
             assert.equal((await ui.next('connect.resolved')).payload.outcome, 'cancelled');

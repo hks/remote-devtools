@@ -1,4 +1,3 @@
-import {create} from 'zustand';
 import type {
     Block,
     BlockData,
@@ -11,6 +10,7 @@ import type {
     PairingInfo,
     TrustedDevice,
 } from '@himmetkaan/remote-devtools-protocol';
+import {create} from 'zustand';
 
 export type RelayConnectionState = 'connecting' | 'open' | 'reconnecting';
 
@@ -125,7 +125,8 @@ export const useDevtoolsStore = create<DevtoolsState>((set) => ({
             const isNew = !previous;
             return {
                 devices,
-                selectedDeviceId: isNew && (s.showPairing || !s.selectedDeviceId) ? device.deviceId : pickSelection(devices, s.selectedDeviceId),
+                selectedDeviceId:
+                    isNew && (s.showPairing || !s.selectedDeviceId) ? device.deviceId : pickSelection(devices, s.selectedDeviceId),
                 showPairing: isNew ? false : s.showPairing,
             };
         }),
@@ -160,7 +161,9 @@ export const useDevtoolsStore = create<DevtoolsState>((set) => ({
             const panels = device?.hello?.capabilities.panels;
             if (!device?.hello || !Array.isArray(panels)) return {};
             const nextPanels = panels.map((panel) =>
-                panel.id !== panelId ? panel : {...panel, blocks: panel.blocks.map((block) => (block.id === blockId ? ({...block, ...data} as Block) : block))},
+                panel.id !== panelId
+                    ? panel
+                    : {...panel, blocks: panel.blocks.map((block) => (block.id === blockId ? ({...block, ...data} as Block) : block))},
             );
             const hello = {...device.hello, capabilities: {...device.hello.capabilities, panels: nextPanels}};
             return {devices: {...s.devices, [deviceId]: {...device, hello}}};
@@ -206,5 +209,5 @@ export function deviceName(device: DeviceSnapshot): string {
 }
 
 export function useSelectedDevice(): DeviceSnapshot | null {
-    return useDevtoolsStore((s) => (s.selectedDeviceId ? s.devices[s.selectedDeviceId] ?? null : null));
+    return useDevtoolsStore((s) => (s.selectedDeviceId ? (s.devices[s.selectedDeviceId] ?? null) : null));
 }

@@ -51,7 +51,10 @@ export function storageModule(options: StorageModuleOptions = {}): StorageModule
     const watch = (adapter: StorageAdapter) => {
         if (!ctx || !adapter.subscribe) return;
         const context = ctx;
-        unsubscribes.set(adapter.id, adapter.subscribe((key) => context.emit('module.storage.changed', {adapterId: adapter.id, key}, {buffer: false})));
+        unsubscribes.set(
+            adapter.id,
+            adapter.subscribe((key) => context.emit('module.storage.changed', {adapterId: adapter.id, key}, {buffer: false})),
+        );
     };
     const unwatch = (id: string) => {
         unsubscribes.get(id)?.();
@@ -237,7 +240,7 @@ export function mmkvAdapter(mmkv: MmkvLike, options: StorageAdapterOptions = {})
 export function webStorageAdapter(storage?: Storage, options: StorageAdapterOptions = {}): StorageAdapter {
     const target = storage ?? (globalThis as {localStorage?: Storage}).localStorage;
     if (!target) throw new Error('webStorageAdapter: no Web Storage available');
-    const events = (globalThis as {addEventListener?: Window['addEventListener']; removeEventListener?: Window['removeEventListener']});
+    const events = globalThis as {addEventListener?: Window['addEventListener']; removeEventListener?: Window['removeEventListener']};
     return {
         id: options.id ?? 'local-storage',
         title: options.title ?? 'localStorage',
@@ -265,7 +268,10 @@ type SecureStoreLike = {getItemAsync(key: string): Promise<string | null>};
  * expo-secure-store, read-only and masked. SecureStore can't list keys, so the keys to show must be provided;
  * keys without a value don't appear in the list.
  */
-export function secureStoreAdapter(secureStore: SecureStoreLike, options: StorageAdapterOptions & {keys: readonly string[]}): StorageAdapter {
+export function secureStoreAdapter(
+    secureStore: SecureStoreLike,
+    options: StorageAdapterOptions & {keys: readonly string[]},
+): StorageAdapter {
     return {
         id: options.id ?? 'secure-store',
         title: options.title ?? 'SecureStore',

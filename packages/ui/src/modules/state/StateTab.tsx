@@ -1,5 +1,5 @@
-import {memo, useEffect, useState} from 'react';
 import {STATE_SUBSCRIPTION_TTL_MS} from '@himmetkaan/remote-devtools-protocol';
+import {memo, useEffect, useState} from 'react';
 import {JsonTree} from '../../components/JsonTree.tsx';
 import {formatClock} from '../../lib/format.ts';
 import {relayClient} from '../../lib/relayClient.ts';
@@ -61,11 +61,15 @@ const Entry = memo(function Entry({entry}: {entry: TimelineEntry}) {
         <li className="timeline-entry">
             <header>
                 <span className="muted mono">{formatClock(entry.at).slice(0, 12)}</span>
-                <span className={`timeline-label${entry.actions.length ? ' is-action' : ''}`} title={label}>{label}</span>
+                <span className={`timeline-label${entry.actions.length ? ' is-action' : ''}`} title={label}>
+                    {label}
+                </span>
                 <span className="muted small">{entry.total} change(s)</span>
             </header>
             <ul className="change-lines">
-                {lines.map((line, i) => <Line key={i} line={line}/>)}
+                {lines.map((line, i) => (
+                    <Line key={i} line={line} />
+                ))}
             </ul>
             {hidden > 0 && (
                 <button className="jt-more" onClick={() => setExpanded((v) => !v)}>
@@ -77,7 +81,9 @@ const Entry = memo(function Entry({entry}: {entry: TimelineEntry}) {
 });
 
 export function StateTab({deviceId}: {deviceId: string}) {
-    const stores = useDevtoolsStore((s) => (s.devices[deviceId]?.hello?.capabilities.state?.stores as StoreInfo[] | undefined) ?? NO_STORES);
+    const stores = useDevtoolsStore(
+        (s) => (s.devices[deviceId]?.hello?.capabilities.state?.stores as StoreInfo[] | undefined) ?? NO_STORES,
+    );
     const unavailable = useUnavailable(deviceId);
     const [storeId, setStoreId] = useState<string | null>(null);
     const store = stores.find((s) => s.id === storeId) ?? stores[0] ?? null;
@@ -126,7 +132,12 @@ export function StateTab({deviceId}: {deviceId: string}) {
                 {stores.length > 1 ? (
                     <div className="chip-group" role="group" aria-label="Store">
                         {stores.map((s) => (
-                            <button key={s.id} className={`chip is-plain${s.id === store.id ? ' is-on' : ''}`} aria-pressed={s.id === store.id} onClick={() => setStoreId(s.id)}>
+                            <button
+                                key={s.id}
+                                className={`chip is-plain${s.id === store.id ? ' is-on' : ''}`}
+                                aria-pressed={s.id === store.id}
+                                onClick={() => setStoreId(s.id)}
+                            >
                                 {s.title}
                             </button>
                         ))}
@@ -134,12 +145,26 @@ export function StateTab({deviceId}: {deviceId: string}) {
                 ) : (
                     <strong>{store.title}</strong>
                 )}
-                <span className="toolbar-spacer"/>
-                {!unavailable && view.loaded && <span className="badge is-online"><span className="dot"/>Live</span>}
-                <button className="btn btn-small" disabled={Boolean(unavailable)} title={unavailable ?? 'Fetch the whole state again'} onClick={() => setRefreshToken((n) => n + 1)}>
+                <span className="toolbar-spacer" />
+                {!unavailable && view.loaded && (
+                    <span className="badge is-online">
+                        <span className="dot" />
+                        Live
+                    </span>
+                )}
+                <button
+                    className="btn btn-small"
+                    disabled={Boolean(unavailable)}
+                    title={unavailable ?? 'Fetch the whole state again'}
+                    onClick={() => setRefreshToken((n) => n + 1)}
+                >
                     ⟳ Refresh
                 </button>
-                <button className="btn btn-small" disabled={view.timeline.length === 0} onClick={() => useStateStore.getState().clearTimeline(key)}>
+                <button
+                    className="btn btn-small"
+                    disabled={view.timeline.length === 0}
+                    onClick={() => useStateStore.getState().clearTimeline(key)}
+                >
                     Clear changes
                 </button>
             </div>
@@ -147,11 +172,13 @@ export function StateTab({deviceId}: {deviceId: string}) {
             <div className="state-body">
                 <div className="state-tree">
                     {error ? (
-                        <p className="empty">Could not read {store.title}: {error}</p>
+                        <p className="empty">
+                            Could not read {store.title}: {error}
+                        </p>
                     ) : !view.loaded ? (
                         <p className="empty">{unavailable ?? 'Loading…'}</p>
                     ) : (
-                        <JsonTree value={view.state} defaultExpandDepth={1}/>
+                        <JsonTree value={view.state} defaultExpandDepth={1} />
                     )}
                 </div>
                 <aside className="state-timeline">
@@ -160,7 +187,9 @@ export function StateTab({deviceId}: {deviceId: string}) {
                         <p className="muted small">Changes show up here as the app updates the state.</p>
                     ) : (
                         <ol>
-                            {timeline.map((entry) => <Entry key={entry.id} entry={entry}/>)}
+                            {timeline.map((entry) => (
+                                <Entry key={entry.id} entry={entry} />
+                            ))}
                         </ol>
                     )}
                 </aside>

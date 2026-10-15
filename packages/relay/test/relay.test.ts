@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {after, before, describe, it} from 'node:test';
 import {createEnvelope, PROTOCOL_VERSION, WS_PATH_DEVICE, WS_PATH_UI} from '@himmetkaan/remote-devtools-protocol';
-import {startServer, type RunningServer} from '../src/server.ts';
+import {type RunningServer, startServer} from '../src/server.ts';
 import {connect, makeHello, newDeviceId, openUi, pairedDevice, testConfig} from './helpers.ts';
 
 describe('relay', () => {

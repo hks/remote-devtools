@@ -42,19 +42,20 @@ const JsonNode = memo(function JsonNode({name, value, depth, defaultExpandDepth,
     const [open, setOpen] = useState(depth < defaultExpandDepth);
     const [visible, setVisible] = useState(PAGE_SIZE);
 
-    const label = name === null ? null : (
-        <>
-            <span className={typeof name === 'number' ? 'jt-index' : 'jt-key'}>{typeof name === 'number' ? name : `"${name}"`}</span>
-            <span className="jt-punct">: </span>
-        </>
-    );
+    const label =
+        name === null ? null : (
+            <>
+                <span className={typeof name === 'number' ? 'jt-index' : 'jt-key'}>{typeof name === 'number' ? name : `"${name}"`}</span>
+                <span className="jt-punct">: </span>
+            </>
+        );
     const comma = isLast ? null : <span className="jt-punct">,</span>;
 
     if (!isObject) {
         return (
             <div className="jt-row">
                 {label}
-                <Primitive value={value}/>
+                <Primitive value={value} />
                 {comma}
             </div>
         );
@@ -69,7 +70,10 @@ const JsonNode = memo(function JsonNode({name, value, depth, defaultExpandDepth,
         return (
             <div className="jt-row">
                 {label}
-                <span className="jt-punct">{openBracket}{closeBracket}</span>
+                <span className="jt-punct">
+                    {openBracket}
+                    {closeBracket}
+                </span>
                 {comma}
             </div>
         );
@@ -121,7 +125,7 @@ const JsonNode = memo(function JsonNode({name, value, depth, defaultExpandDepth,
 export function JsonTree({value, defaultExpandDepth = 2}: {value: unknown; defaultExpandDepth?: number}) {
     return (
         <div className="json-tree">
-            <JsonNode name={null} value={value} depth={0} defaultExpandDepth={defaultExpandDepth} isLast/>
+            <JsonNode name={null} value={value} depth={0} defaultExpandDepth={defaultExpandDepth} isLast />
         </div>
     );
 }

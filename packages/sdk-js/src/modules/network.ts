@@ -170,7 +170,14 @@ export function networkModule(options: NetworkModuleOptions = {}): NetworkModule
         if (!ctx || ignored(url)) return null;
         const uuid = randomDeviceId();
         const startedAt = Date.now();
-        emitRequest({uuid, method: (input.method ?? 'GET').toUpperCase(), url, headers: normalizeHeaders(input.headers), body: describeBody(input.body), startedAt});
+        emitRequest({
+            uuid,
+            method: (input.method ?? 'GET').toUpperCase(),
+            url,
+            headers: normalizeHeaders(input.headers),
+            body: describeBody(input.body),
+            startedAt,
+        });
         return {uuid, startedAt};
     }
 
@@ -274,7 +281,7 @@ export function networkModule(options: NetworkModuleOptions = {}): NetworkModule
                         status,
                         headers: parseRawHeaders(this.getAllResponseHeaders() ?? ''),
                         body: responseBody,
-                        error: status === null ? state.failure ?? 'Network error' : null,
+                        error: status === null ? (state.failure ?? 'Network error') : null,
                     });
                 });
             }
@@ -321,10 +328,17 @@ export function networkModule(options: NetworkModuleOptions = {}): NetworkModule
         axios(instance) {
             const KEY = '__remoteDevtools';
             const requestId = instance.interceptors.request.use((config) => {
-                const url = config.baseURL && !/^https?:\/\//i.test(config.url ?? '') ? `${String(config.baseURL).replace(/\/+$/, '')}/${String(config.url ?? '').replace(/^\/+/, '')}` : config.url;
+                const url =
+                    config.baseURL && !/^https?:\/\//i.test(config.url ?? '')
+                        ? `${String(config.baseURL).replace(/\/+$/, '')}/${String(config.url ?? '').replace(/^\/+/, '')}`
+                        : config.url;
                 let full = String(url ?? '');
                 if (config.params && typeof config.params === 'object') {
-                    const query = new URLSearchParams(Object.entries(config.params).filter(([, v]) => v !== undefined && v !== null).map(([k, v]) => [k, String(v)])).toString();
+                    const query = new URLSearchParams(
+                        Object.entries(config.params)
+                            .filter(([, v]) => v !== undefined && v !== null)
+                            .map(([k, v]) => [k, String(v)]),
+                    ).toString();
                     if (query) full += (full.includes('?') ? '&' : '?') + query;
                 }
                 config[KEY] = start({method: config.method, url: full, headers: config.headers, body: config.data});
@@ -340,7 +354,10 @@ export function networkModule(options: NetworkModuleOptions = {}): NetworkModule
                     const started = error?.config?.[KEY];
                     if (started) {
                         const res = error.response;
-                        finish(started, res ? {status: res.status, headers: res.headers, body: res.data} : {error: error.message || 'Network error'});
+                        finish(
+                            started,
+                            res ? {status: res.status, headers: res.headers, body: res.data} : {error: error.message || 'Network error'},
+                        );
                     }
                     return Promise.reject(error);
                 },

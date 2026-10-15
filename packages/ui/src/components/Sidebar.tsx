@@ -15,7 +15,7 @@ export function Sidebar() {
         <aside className="sidebar">
             <header className="sidebar-head">
                 <span className="brand">🛠️ Remote DevTools</span>
-                <RelayBadge state={relay}/>
+                <RelayBadge state={relay} />
             </header>
             <nav className="device-list" aria-label="Devices">
                 {sortDevices(Object.values(devices)).map((device) => {
@@ -28,11 +28,13 @@ export function Sidebar() {
                             aria-current={active ? 'true' : undefined}
                             onClick={() => selectDevice(device.deviceId)}
                         >
-                            <StatusDot device={device}/>
+                            <StatusDot device={device} />
                             <span className="device-item-text">
                                 <span className="device-item-name">{deviceName(device)}</span>
                                 <span className="device-item-sub">
-                                    {hello ? `${hello.app.name} ${hello.app.version} · ${platformLabel(hello.device.platform)}` : 'Waiting for device info…'}
+                                    {hello
+                                        ? `${hello.app.name} ${hello.app.version} · ${platformLabel(hello.device.platform)}`
+                                        : 'Waiting for device info…'}
                                 </span>
                             </span>
                         </button>

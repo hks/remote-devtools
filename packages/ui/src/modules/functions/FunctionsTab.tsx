@@ -1,5 +1,5 @@
-import {memo, useMemo, useState} from 'react';
 import type {CommandDef} from '@himmetkaan/remote-devtools-protocol';
+import {memo, useMemo, useState} from 'react';
 import {FieldForm} from '../../components/FieldForm.tsx';
 import {type FormErrors, initialValues, toArgs} from '../../lib/fields.ts';
 import {formatClock, stringifyData} from '../../lib/format.ts';
@@ -27,12 +27,32 @@ async function invoke(deviceId: string, command: CommandDef, args: Record<string
     const hasResult = outcome.ok && outcome.result !== null && outcome.result !== undefined;
     useDevtoolsStore.getState().addLog(
         outcome.ok
-            ? {level: 'info', source: 'ui', message: `Ran ${command.title} (${durationMs} ms)`, data: hasResult ? outcome.result : undefined, deviceId}
-            : {level: 'error', source: 'ui', message: `${command.title} failed — ${outcome.error.message}`, data: outcome.error, deviceId},
+            ? {
+                  level: 'info',
+                  source: 'ui',
+                  message: `Ran ${command.title} (${durationMs} ms)`,
+                  data: hasResult ? outcome.result : undefined,
+                  deviceId,
+              }
+            : {
+                  level: 'error',
+                  source: 'ui',
+                  message: `${command.title} failed — ${outcome.error.message}`,
+                  data: outcome.error,
+                  deviceId,
+              },
     );
 }
 
-const CommandCard = memo(function CommandCard({deviceId, command, unavailable}: {deviceId: string; command: CommandDef; unavailable: string | null}) {
+const CommandCard = memo(function CommandCard({
+    deviceId,
+    command,
+    unavailable,
+}: {
+    deviceId: string;
+    command: CommandDef;
+    unavailable: string | null;
+}) {
     const key = commandKey(deviceId, command.id);
     const running = useCommandsStore((s) => Boolean(s.running[key]));
     const lastRun = useCommandsStore((s) => s.lastRun[key]);
@@ -109,7 +129,9 @@ export function FunctionsTab({deviceId}: {deviceId: string}) {
 
     const q = query.trim().toLowerCase();
     const groups = useMemo(() => {
-        const filtered = q ? commands.filter((c) => `${c.title} ${c.id} ${c.description ?? ''} ${c.group ?? ''}`.toLowerCase().includes(q)) : commands;
+        const filtered = q
+            ? commands.filter((c) => `${c.title} ${c.id} ${c.description ?? ''} ${c.group ?? ''}`.toLowerCase().includes(q))
+            : commands;
         // Groups in the order reported by the device.
         const byGroup = new Map<string, CommandDef[]>();
         for (const command of filtered) {
@@ -122,8 +144,14 @@ export function FunctionsTab({deviceId}: {deviceId: string}) {
     return (
         <section className="functions">
             <div className="toolbar">
-                <input className="input" type="search" placeholder="Search functions…" value={query} onChange={(e) => setQuery(e.target.value)}/>
-                <span className="toolbar-spacer"/>
+                <input
+                    className="input"
+                    type="search"
+                    placeholder="Search functions…"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                />
+                <span className="toolbar-spacer" />
                 <span className="muted small">{commands.length} function(s) registered by the app</span>
             </div>
 
@@ -133,7 +161,12 @@ export function FunctionsTab({deviceId}: {deviceId: string}) {
                         <h2>{group}</h2>
                         <div className="cmd-grid">
                             {items.map((command) => (
-                                <CommandCard key={`${command.id}:${JSON.stringify(command.args ?? {})}`} deviceId={deviceId} command={command} unavailable={unavailable}/>
+                                <CommandCard
+                                    key={`${command.id}:${JSON.stringify(command.args ?? {})}`}
+                                    deviceId={deviceId}
+                                    command={command}
+                                    unavailable={unavailable}
+                                />
                             ))}
                         </div>
                     </section>

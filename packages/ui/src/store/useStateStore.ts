@@ -1,5 +1,5 @@
-import {create} from 'zustand';
 import {applyPatch, diffJson, getAtPointer, type JsonPatchOp, type StateChange} from '@himmetkaan/remote-devtools-protocol';
+import {create} from 'zustand';
 
 export type ChangeLine = {op: JsonPatchOp['op']; path: string; from: unknown; to: unknown};
 
@@ -85,14 +85,29 @@ export const useStateStore = create<StateStore>((set, get) => {
             if (change.state !== undefined) {
                 update(key, (v) => ({
                     state: change.state,
-                    timeline: push(v.timeline, {at: change.at, actions: change.actions, kind: 'full', changes: [{op: 'replace', path: '', from: v.state, to: change.state}], total: 1}),
+                    timeline: push(v.timeline, {
+                        at: change.at,
+                        actions: change.actions,
+                        kind: 'full',
+                        changes: [{op: 'replace', path: '', from: v.state, to: change.state}],
+                        total: 1,
+                    }),
                 }));
                 return;
             }
             const patch = change.patch ?? [];
             try {
                 const {state, lines} = linesFor(view.state, patch);
-                update(key, (v) => ({state, timeline: push(v.timeline, {at: change.at, actions: change.actions, kind: 'patch', changes: lines, total: patch.length})}));
+                update(key, (v) => ({
+                    state,
+                    timeline: push(v.timeline, {
+                        at: change.at,
+                        actions: change.actions,
+                        kind: 'patch',
+                        changes: lines,
+                        total: patch.length,
+                    }),
+                }));
             } catch {
                 update(key, () => ({stale: true}));
             }

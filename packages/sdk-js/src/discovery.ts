@@ -28,7 +28,7 @@ export type LocalhostDiscoveryOptions = {
     timeoutMs?: number;
 };
 
-type DiscoveryInfo = { name?: string; protocol?: number; connectRequests?: string };
+type DiscoveryInfo = {name?: string; protocol?: number; connectRequests?: string};
 
 /** Probes local relays via `GET /discovery`; returns those that accept connect requests. */
 export function localhostDiscovery(options: LocalhostDiscoveryOptions = {}): DiscoveryProvider {

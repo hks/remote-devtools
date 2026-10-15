@@ -1,7 +1,16 @@
 import {memo, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {downloadText, timestampForFile, toHar, toJsonExport} from '../../lib/exporters.ts';
 import {formatClock} from '../../lib/format.ts';
-import {displayHost, displayPath, formatBytes, formatDuration, METHODS, type RowStatus, rowStatus, statusLabel} from '../../lib/requestFormat.ts';
+import {
+    displayHost,
+    displayPath,
+    formatBytes,
+    formatDuration,
+    METHODS,
+    type RowStatus,
+    rowStatus,
+    statusLabel,
+} from '../../lib/requestFormat.ts';
 import {type NetworkRow, useDeviceNetwork, useNetworkStore} from '../../store/useNetworkStore.ts';
 import {RequestDetail} from './RequestDetail.tsx';
 
@@ -24,7 +33,9 @@ const RequestRow = memo(function RequestRow({deviceId, row, selected}: {deviceId
             data-uuid={row.uuid}
             aria-selected={selected}
         >
-            <td><span className={`status-pill is-${status}`}>{statusLabel(row)}</span></td>
+            <td>
+                <span className={`status-pill is-${status}`}>{statusLabel(row)}</span>
+            </td>
             <td className="method">{request?.method ?? '—'}</td>
             <td className="req-path" title={request?.url ?? row.uuid}>
                 <span className="mono">{request ? displayPath(request) : '(request details missing)'}</span>
@@ -133,7 +144,9 @@ export function NetworkTab({deviceId}: {deviceId: string}) {
                 <select className="input select" value={method} onChange={(e) => setMethod(e.target.value)} aria-label="Method filter">
                     <option value="all">All methods</option>
                     {METHODS.map((m) => (
-                        <option key={m} value={m}>{m}</option>
+                        <option key={m} value={m}>
+                            {m}
+                        </option>
                     ))}
                 </select>
                 <div className="chip-group" role="group" aria-label="Result filter">
@@ -148,7 +161,7 @@ export function NetworkTab({deviceId}: {deviceId: string}) {
                         </button>
                     ))}
                 </div>
-                <span className="toolbar-spacer"/>
+                <span className="toolbar-spacer" />
                 <button
                     className={`btn btn-small${paused ? ' is-active' : ''}`}
                     onClick={() => setPaused(deviceId, !paused)}
@@ -157,7 +170,10 @@ export function NetworkTab({deviceId}: {deviceId: string}) {
                     {paused ? `▶ Resume${pausedCount ? ` (${pausedCount})` : ''}` : '⏸ Pause'}
                 </button>
                 <details className="menu">
-                    <summary className={`btn btn-small${visible.length === 0 ? ' is-disabled' : ''}`} title="Download the visible (filtered) requests">
+                    <summary
+                        className={`btn btn-small${visible.length === 0 ? ' is-disabled' : ''}`}
+                        title="Download the visible (filtered) requests"
+                    >
                         ⤓ Export
                     </summary>
                     <div className="menu-items" role="menu">
@@ -200,17 +216,19 @@ export function NetworkTab({deviceId}: {deviceId: string}) {
                 >
                     {visible.length === 0 ? (
                         <p className="empty">
-                            {rows.length === 0 ? 'No requests yet. They show up here as the app makes them.' : 'No requests match the filters.'}
+                            {rows.length === 0
+                                ? 'No requests yet. They show up here as the app makes them.'
+                                : 'No requests match the filters.'}
                         </p>
                     ) : (
                         <table className="req-table">
                             <colgroup>
-                                <col className="c-status"/>
-                                <col className="c-method"/>
-                                <col/>
-                                <col className="c-num"/>
-                                <col className="c-num"/>
-                                <col className="c-time"/>
+                                <col className="c-status" />
+                                <col className="c-method" />
+                                <col />
+                                <col className="c-num" />
+                                <col className="c-num" />
+                                <col className="c-time" />
                             </colgroup>
                             <thead>
                                 <tr>
@@ -224,14 +242,14 @@ export function NetworkTab({deviceId}: {deviceId: string}) {
                             </thead>
                             <tbody>
                                 {visible.map((row) => (
-                                    <RequestRow key={row.uuid} deviceId={deviceId} row={row} selected={row.uuid === selectedUuid}/>
+                                    <RequestRow key={row.uuid} deviceId={deviceId} row={row} selected={row.uuid === selectedUuid} />
                                 ))}
                             </tbody>
                         </table>
                     )}
                 </div>
 
-                {selectedRow && <RequestDetail row={selectedRow} onClose={() => select(deviceId, null)}/>}
+                {selectedRow && <RequestDetail row={selectedRow} onClose={() => select(deviceId, null)} />}
             </div>
 
             <footer className="statusbar">

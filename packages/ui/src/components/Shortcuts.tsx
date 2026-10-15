@@ -20,7 +20,9 @@ function isTyping(target: EventTarget | null): boolean {
 
 function moveDevice(step: number) {
     const {devices, selectedDeviceId, selectDevice} = useDevtoolsStore.getState();
-    const ids = Object.values(devices).sort((a, b) => a.pairedAt - b.pairedAt).map((d) => d.deviceId);
+    const ids = Object.values(devices)
+        .sort((a, b) => a.pairedAt - b.pairedAt)
+        .map((d) => d.deviceId);
     if (ids.length === 0) return;
     const idx = selectedDeviceId ? ids.indexOf(selectedDeviceId) : -1;
     selectDevice(ids[(idx + step + ids.length) % ids.length]!);
@@ -39,7 +41,7 @@ export function Shortcuts() {
             if (e.key === ']') return moveDevice(1);
             if (/^[1-9]$/.test(e.key)) {
                 const {devices, selectedDeviceId, setActiveTab} = useDevtoolsStore.getState();
-                const module = modulesFor(selectedDeviceId ? devices[selectedDeviceId] ?? null : null)[Number(e.key) - 1];
+                const module = modulesFor(selectedDeviceId ? (devices[selectedDeviceId] ?? null) : null)[Number(e.key) - 1];
                 if (module) setActiveTab(module.id);
                 return;
             }
@@ -54,7 +56,12 @@ export function Shortcuts() {
 
     return (
         <>
-            <button className="icon-btn shortcuts-btn" onClick={() => setOpen(true)} title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">
+            <button
+                className="icon-btn shortcuts-btn"
+                onClick={() => setOpen(true)}
+                title="Keyboard shortcuts (?)"
+                aria-label="Keyboard shortcuts"
+            >
                 ⌨︎
             </button>
             {open && (
@@ -62,13 +69,17 @@ export function Shortcuts() {
                     <div className="dialog" role="dialog" aria-label="Keyboard shortcuts" onClick={(e) => e.stopPropagation()}>
                         <header>
                             <h2>Keyboard shortcuts</h2>
-                            <button className="icon-btn" onClick={() => setOpen(false)} aria-label="Close">✕</button>
+                            <button className="icon-btn" onClick={() => setOpen(false)} aria-label="Close">
+                                ✕
+                            </button>
                         </header>
                         <table className="kv">
                             <tbody>
                                 {SHORTCUTS.map(([keys, desc]) => (
                                     <tr key={keys}>
-                                        <th><kbd>{keys}</kbd></th>
+                                        <th>
+                                            <kbd>{keys}</kbd>
+                                        </th>
                                         <td>{desc}</td>
                                     </tr>
                                 ))}

@@ -1,5 +1,5 @@
-import type {ComponentType} from 'react';
 import type {DeviceSnapshot, PanelDef} from '@himmetkaan/remote-devtools-protocol';
+import type {ComponentType} from 'react';
 import {FlagsTab} from './flags/FlagsTab.tsx';
 import {FunctionsTab} from './functions/FunctionsTab.tsx';
 import {LogsTab} from './logs/LogsTab.tsx';
@@ -42,14 +42,16 @@ export function modulesFor(device: DeviceSnapshot | null): UiModule[] {
     const panels = Array.isArray(capabilities.panels) ? (capabilities.panels as PanelDef[]) : [];
     return [
         ...builtIn,
-        ...panels.map((panel): UiModule => ({
-            id: `panel:${panel.id}`,
-            title: panel.title,
-            icon: panel.icon || DEFAULT_PANEL_ICON,
-            capability: 'panels',
-            Component: PanelTab,
-            panelId: panel.id,
-        })),
+        ...panels.map(
+            (panel): UiModule => ({
+                id: `panel:${panel.id}`,
+                title: panel.title,
+                icon: panel.icon || DEFAULT_PANEL_ICON,
+                capability: 'panels',
+                Component: PanelTab,
+                panelId: panel.id,
+            }),
+        ),
     ];
 }
 

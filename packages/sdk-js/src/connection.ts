@@ -3,9 +3,9 @@ import {
     createEnvelope,
     type Envelope,
     type Hello,
+    PROTOCOL_VERSION,
     parseEnvelope,
     parseQrPayload,
-    PROTOCOL_VERSION,
     type UnpairReason,
     WS_PATH_DEVICE,
 } from '@himmetkaan/remote-devtools-protocol';
@@ -26,7 +26,7 @@ export type ConnectionStatus =
     /** Connection lost; will retry with the stored pairing. */
     | 'reconnecting';
 
-export type ConnectionError = { code: string; message: string };
+export type ConnectionError = {code: string; message: string};
 
 export type ConnectionState = {
     status: ConnectionStatus;
@@ -90,7 +90,7 @@ const Close = {replaced: 4000, unpaired: 4002, unsupportedVersion: 4005} as cons
 /** A development device that loses its pairing for these reasons starts discovery again; not if the user removed it. */
 const REDISCOVER_AFTER: ReadonlySet<UnpairReason> = new Set(['expired', 'sessionNotFound', 'invalidSecret']);
 
-type FirstMessage = { type: 'pair.qr' | 'pair.code' | 'resume' | 'connect'; payload: unknown };
+type FirstMessage = {type: 'pair.qr' | 'pair.code' | 'resume' | 'connect'; payload: unknown};
 
 export function randomDeviceId(): string {
     const bytes = new Uint8Array(16);
@@ -467,7 +467,10 @@ export class Connection {
                 this.#set({
                     status: 'idle',
                     requestId: null,
-                    error: {code: `CONNECT_${reason.toUpperCase()}`, message: `Connect request ${reason === 'rejected' ? 'was rejected' : `failed: ${reason}`}`},
+                    error: {
+                        code: `CONNECT_${reason.toUpperCase()}`,
+                        message: `Connect request ${reason === 'rejected' ? 'was rejected' : `failed: ${reason}`}`,
+                    },
                 });
         }
     }
@@ -499,7 +502,10 @@ export class Connection {
         }
         if (code === Close.unpaired) return this.#onUnpaired('invalidSecret');
         if (code === Close.unsupportedVersion) {
-            this.#set({status: 'idle', error: {code: 'UNSUPPORTED_VERSION', message: `Relay does not speak protocol v${PROTOCOL_VERSION}`}});
+            this.#set({
+                status: 'idle',
+                error: {code: 'UNSUPPORTED_VERSION', message: `Relay does not speak protocol v${PROTOCOL_VERSION}`},
+            });
             return;
         }
         this.#afterSocketLost();

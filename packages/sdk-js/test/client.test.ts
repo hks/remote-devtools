@@ -4,7 +4,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {describe, it} from 'node:test';
 import {createRelay} from '@himmetkaan/remote-devtools-relay';
-import {defineModule, type LifecycleSource, localhostDiscovery, memoryStorage, ModuleError, RemoteDevTools} from '../src/index.ts';
+import {defineModule, type LifecycleSource, localhostDiscovery, ModuleError, memoryStorage, RemoteDevTools} from '../src/index.ts';
 import {createClient, openUi, relayUrl, sleep, waitForStatus, withRelay} from './helpers.ts';
 
 describe('disabled SDK', () => {
@@ -63,7 +63,12 @@ describe('pairing & connection', () => {
         await withRelay({}, async ({port}) => {
             const ui = await openUi(port);
             const client = createClient();
-            const qr = JSON.stringify({v: 2, url: `${relayUrl(port)}/ws/device`, sessionId: ui.session.sessionId, qrToken: ui.session.pairing.qrToken});
+            const qr = JSON.stringify({
+                v: 2,
+                url: `${relayUrl(port)}/ws/device`,
+                sessionId: ui.session.sessionId,
+                qrToken: ui.session.pairing.qrToken,
+            });
             await client.connection.pairWithQr(qr);
             await waitForStatus(client, 'connected');
             await assert.rejects(client.connection.pairWithQr('{"v":1}'), /QR/);
@@ -110,7 +115,13 @@ describe('pairing & connection', () => {
         await storage.setItem('remote-devtools:device-id', 'a'.repeat(32));
         await storage.setItem(
             'remote-devtools:pairing',
-            JSON.stringify({relayUrl: 'ws://127.0.0.1:1/ws/device', sessionId: 's', deviceSecret: 'x', idleTtlMs: 1000, lastActiveAt: Date.now() - 5000}),
+            JSON.stringify({
+                relayUrl: 'ws://127.0.0.1:1/ws/device',
+                sessionId: 's',
+                deviceSecret: 'x',
+                idleTtlMs: 1000,
+                lastActiveAt: Date.now() - 5000,
+            }),
         );
         const client = createClient({
             storage,
@@ -177,7 +188,10 @@ describe('pairing & connection', () => {
             try {
                 await waitForStatus(client, 'connected', 5000);
                 const ui2 = await openUi(port, {sessionId: ui.session.sessionId, uiSecret: ui.session.uiSecret});
-                assert.deepEqual(ui2.session.devices.map((d: any) => d.connected), [true]);
+                assert.deepEqual(
+                    ui2.session.devices.map((d: any) => d.connected),
+                    [true],
+                );
                 ui2.close();
             } finally {
                 client.destroy();
@@ -332,7 +346,11 @@ describe('logs, history and modules', () => {
             assert.equal(history.final, true);
             assert.deepEqual(
                 history.entries.map((e: any) => [e.type, e.payload.message ?? e.payload.n]),
-                [['module.tick.event', 2], ['log', 'three'], ['log', 'four']],
+                [
+                    ['module.tick.event', 2],
+                    ['log', 'three'],
+                    ['log', 'four'],
+                ],
             );
 
             client.log.info('live');
@@ -381,7 +399,13 @@ describe('logs, history and modules', () => {
             const items: string[] = [];
             let update = () => {};
             const client = createClient({
-                modules: [defineModule({name: 'list', capabilities: () => ({items: [...items]}), setup: (ctx) => void (update = ctx.updateCapabilities)})],
+                modules: [
+                    defineModule({
+                        name: 'list',
+                        capabilities: () => ({items: [...items]}),
+                        setup: (ctx) => void (update = ctx.updateCapabilities),
+                    }),
+                ],
             });
             await client.connection.pairWithCode(ui.session.pairing.code, relayUrl(port));
             assert.deepEqual((await ui.next('hello')).payload.capabilities.list, {items: []});

@@ -3,7 +3,8 @@ import {networkInterfaces} from 'node:os';
 export type LanAddress = {iface: string; address: string};
 
 // Virtual / tunnel interfaces: the phone cannot reach these.
-const VIRTUAL_IFACE = /^(lo|utun|awdl|llw|bridge|docker|veth|br-|vmnet|vboxnet|virbr|tun|tap|zt|tailscale|wg|anpi|ap\d)|vEthernet|VirtualBox|VMware|Hyper-V|Loopback/i;
+const VIRTUAL_IFACE =
+    /^(lo|utun|awdl|llw|bridge|docker|veth|br-|vmnet|vboxnet|virbr|tun|tap|zt|tailscale|wg|anpi|ap\d)|vEthernet|VirtualBox|VMware|Hyper-V|Loopback/i;
 // Preference order: macOS Wi-Fi/Ethernet, Linux, Windows names.
 const PREFERRED_IFACE = [/^en0$/, /^en\d+$/, /^(eth|enp|eno|ens|wlan|wlp)/, /^(Wi-?Fi|WLAN|Ethernet)/i];
 

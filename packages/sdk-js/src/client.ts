@@ -10,8 +10,8 @@ import {
     MODULE_TYPE_PREFIX,
 } from '@himmetkaan/remote-devtools-protocol';
 import {Connection, type ConnectionState, type WebSocketConstructor} from './connection.ts';
-import {detectDevice, type DeviceInfo} from './device.ts';
-import {type DiscoveryProvider, localhostDiscovery, type LocalhostDiscoveryOptions} from './discovery.ts';
+import {type DeviceInfo, detectDevice} from './device.ts';
+import {type DiscoveryProvider, type LocalhostDiscoveryOptions, localhostDiscovery} from './discovery.ts';
 import {HistoryBuffer} from './history.ts';
 import {browserLifecycle, type LifecycleSource} from './lifecycle.ts';
 import type {EmitOptions, Logger, LogOptions, ModuleContext, RemoteModule} from './module.ts';
@@ -255,7 +255,8 @@ export class RemoteDevTools {
         const connection = this.#connection!;
         const prefix = `${MODULE_TYPE_PREFIX}${module.name}.`;
         const assertType = (type: string) => {
-            if (!type.startsWith(prefix)) throw new Error(`Module "${module.name}" can only use "${prefix}*" message types (got "${type}")`);
+            if (!type.startsWith(prefix))
+                throw new Error(`Module "${module.name}" can only use "${prefix}*" message types (got "${type}")`);
         };
         return {
             get deviceId() {
@@ -268,7 +269,10 @@ export class RemoteDevTools {
             },
             handle: (type, handler) => {
                 assertType(type);
-                this.#handlers.set(type, (payload, message) => void this.#reply(`${prefix}result`, message, () => handler(payload as never, message as never)));
+                this.#handlers.set(
+                    type,
+                    (payload, message) => void this.#reply(`${prefix}result`, message, () => handler(payload as never, message as never)),
+                );
             },
             on: (type, listener) => {
                 assertType(type);
@@ -318,7 +322,10 @@ export class RemoteDevTools {
             payload = {ok: true, result: toSerializable(await run()) ?? null};
         } catch (err) {
             const e = err as {code?: unknown; message?: unknown};
-            payload = {ok: false, error: {code: typeof e?.code === 'string' ? e.code : 'HANDLER_ERROR', message: String(e?.message ?? err)}};
+            payload = {
+                ok: false,
+                error: {code: typeof e?.code === 'string' ? e.code : 'HANDLER_ERROR', message: String(e?.message ?? err)},
+            };
         }
         this.#connection?.send(JSON.stringify(createEnvelope(type, payload, {replyTo: request.id})));
     }

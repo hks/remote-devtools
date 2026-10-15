@@ -1,6 +1,6 @@
 import {hostname} from 'node:os';
-import {Bonjour} from 'bonjour-service';
 import {MDNS_SERVICE_TYPE, PROTOCOL_VERSION, WS_PATH_DEVICE} from '@himmetkaan/remote-devtools-protocol';
+import {Bonjour} from 'bonjour-service';
 
 // `_remotedevtools._tcp` → bonjour-service takes the bare type and protocol.
 const [, TYPE = 'remotedevtools', PROTOCOL = 'tcp'] = /^_([^.]+)\._(tcp|udp)$/.exec(MDNS_SERVICE_TYPE) ?? [];

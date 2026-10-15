@@ -1,5 +1,5 @@
-import {create} from 'zustand';
 import type {NetworkRequest, NetworkResponse} from '@himmetkaan/remote-devtools-protocol';
+import {create} from 'zustand';
 
 export type NetworkRow = {
     uuid: string;
@@ -13,7 +13,9 @@ export type NetworkRow = {
     origin: 'live' | 'history';
 };
 
-type LiveEvent = {kind: 'request'; payload: NetworkRequest; origin: NetworkRow['origin']} | {kind: 'response'; payload: NetworkResponse; origin: NetworkRow['origin']};
+type LiveEvent =
+    | {kind: 'request'; payload: NetworkRequest; origin: NetworkRow['origin']}
+    | {kind: 'response'; payload: NetworkResponse; origin: NetworkRow['origin']};
 
 export type DeviceNetwork = {
     rows: NetworkRow[];
@@ -65,7 +67,17 @@ function apply(rows: NetworkRow[], event: LiveEvent): NetworkRow[] {
             next[idx] = {...next[idx]!, request: event.payload};
             return next;
         }
-        return cap([...rows, {uuid: event.payload.uuid, request: event.payload, response: null, responseSize: null, receivedAt: Date.now(), origin: event.origin}]);
+        return cap([
+            ...rows,
+            {
+                uuid: event.payload.uuid,
+                request: event.payload,
+                response: null,
+                responseSize: null,
+                receivedAt: Date.now(),
+                origin: event.origin,
+            },
+        ]);
     }
     const responseSize = measure(event.payload.body);
     if (idx >= 0) {
@@ -73,7 +85,10 @@ function apply(rows: NetworkRow[], event: LiveEvent): NetworkRow[] {
         next[idx] = {...next[idx]!, response: event.payload, responseSize};
         return next;
     }
-    return cap([...rows, {uuid: event.payload.uuid, request: null, response: event.payload, responseSize, receivedAt: Date.now(), origin: event.origin}]);
+    return cap([
+        ...rows,
+        {uuid: event.payload.uuid, request: null, response: event.payload, responseSize, receivedAt: Date.now(), origin: event.origin},
+    ]);
 }
 
 export const useNetworkStore = create<NetworkState>((set, get) => {

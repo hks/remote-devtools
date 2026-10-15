@@ -1,8 +1,8 @@
 import {randomUUID} from 'node:crypto';
-import {WebSocket} from 'ws';
 import {createEnvelope, type Envelope, type Hello, WS_PATH_DEVICE, WS_PATH_UI} from '@himmetkaan/remote-devtools-protocol';
+import {WebSocket} from 'ws';
 import {defaultConfig, type RelayConfig} from '../src/config.ts';
-import {startServer, type RunningServer} from '../src/server.ts';
+import {type RunningServer, startServer} from '../src/server.ts';
 
 export const testConfig: RelayConfig = {
     ...defaultConfig,

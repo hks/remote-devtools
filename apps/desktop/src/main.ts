@@ -1,9 +1,9 @@
-import {app, BrowserWindow, clipboard, dialog, Menu, shell, type MenuItemConstructorOptions} from 'electron';
 import {join} from 'node:path';
 import {createRelay, loadConfig, type RunningServer} from '@himmetkaan/remote-devtools-relay';
+import {app, BrowserWindow, clipboard, dialog, Menu, type MenuItemConstructorOptions, shell} from 'electron';
 import {Advertiser} from './mdns.ts';
-import {listLanAddresses, type LanAddress} from './network.ts';
-import {loadSettings, saveSettings, type Settings} from './settings.ts';
+import {type LanAddress, listLanAddresses} from './network.ts';
+import {loadSettings, type Settings, saveSettings} from './settings.ts';
 import {checkForUpdatesFromMenu, startAutoUpdates} from './updates.ts';
 
 // Fixed port: the UI's session info (localStorage) is tied to the origin (127.0.0.1:port).

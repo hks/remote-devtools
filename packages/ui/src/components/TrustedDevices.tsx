@@ -13,7 +13,10 @@ export function TrustedDevices() {
                 {trusted.map((t) => (
                     <li key={t.deviceId}>
                         <span>
-                            <strong>{t.name}</strong> <span className="muted small">{t.appId} · added {formatRelative(t.trustedAt)}</span>
+                            <strong>{t.name}</strong>{' '}
+                            <span className="muted small">
+                                {t.appId} · added {formatRelative(t.trustedAt)}
+                            </span>
                         </span>
                         <button className="btn btn-small" onClick={() => relayClient.send('trusted.remove', {deviceId: t.deviceId})}>
                             Remove

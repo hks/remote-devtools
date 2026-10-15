@@ -68,13 +68,15 @@ function isEmptyBody(body: unknown): boolean {
 
 function Body({value, truncated}: {value: unknown; truncated?: {originalSize: number}}) {
     const notice = truncated && (
-        <p className="callout callout-warn">The body was too large ({formatBytes(truncated.originalSize)}) and was truncated on the device.</p>
+        <p className="callout callout-warn">
+            The body was too large ({formatBytes(truncated.originalSize)}) and was truncated on the device.
+        </p>
     );
     if (isEmptyBody(value)) return notice || <p className="muted small">Empty</p>;
     return (
         <>
             {notice}
-            {typeof value === 'string' ? <pre className="code-block">{value}</pre> : <JsonTree value={value}/>}
+            {typeof value === 'string' ? <pre className="code-block">{value}</pre> : <JsonTree value={value} />}
         </>
     );
 }
@@ -92,13 +94,21 @@ export function RequestDetail({row, onClose}: {row: NetworkRow; onClose: () => v
                 <span className="detail-url mono" title={request?.url ?? row.uuid}>
                     {request?.url ?? '(request details missing)'}
                 </span>
-                {request && <CopyButton label="cURL" text={() => toCurl(request)}/>}
-                <CopyButton label="JSON" text={() => toEntryJson(row)}/>
-                <button className="icon-btn" onClick={onClose} aria-label="Close" title="Close (Esc)">✕</button>
+                {request && <CopyButton label="cURL" text={() => toCurl(request)} />}
+                <CopyButton label="JSON" text={() => toEntryJson(row)} />
+                <button className="icon-btn" onClick={onClose} aria-label="Close" title="Close (Esc)">
+                    ✕
+                </button>
             </header>
 
             <nav className="detail-tabs" role="tablist">
-                {([['summary', 'Summary'], ['request', 'Request'], ['response', 'Response']] as const).map(([id, title]) => (
+                {(
+                    [
+                        ['summary', 'Summary'],
+                        ['request', 'Request'],
+                        ['response', 'Response'],
+                    ] as const
+                ).map(([id, title]) => (
                     <button
                         key={id}
                         role="tab"
@@ -120,7 +130,11 @@ export function RequestDetail({row, onClose}: {row: NetworkRow; onClose: () => v
                                     URL: request?.url ?? '—',
                                     Method: request?.method ?? '—',
                                     'HTTP status': response?.status ?? (response ? 'Network error' : 'Waiting'),
-                                    Result: response ? (response.result === 'success' ? 'Success' : `Error — ${response.errorMessage ?? ''}`) : 'Waiting',
+                                    Result: response
+                                        ? response.result === 'success'
+                                            ? 'Success'
+                                            : `Error — ${response.errorMessage ?? ''}`
+                                        : 'Waiting',
                                     Duration: formatDuration(response?.durationMs),
                                     'Response size': formatBytes(row.responseSize),
                                     Started: request?.startedAt ? formatClock(request.startedAt) : 'Unknown',
@@ -130,10 +144,10 @@ export function RequestDetail({row, onClose}: {row: NetworkRow; onClose: () => v
                             />
                         </Section>
                         <Section title="Request headers">
-                            <KeyValueTable data={request?.headers}/>
+                            <KeyValueTable data={request?.headers} />
                         </Section>
                         <Section title="Response headers">
-                            <KeyValueTable data={response?.headers}/>
+                            <KeyValueTable data={response?.headers} />
                         </Section>
                     </>
                 )}
@@ -141,32 +155,31 @@ export function RequestDetail({row, onClose}: {row: NetworkRow; onClose: () => v
                 {tab === 'request' && (
                     <>
                         <Section title="Query parameters">
-                            <KeyValueTable data={queryParams(request?.url)}/>
+                            <KeyValueTable data={queryParams(request?.url)} />
                         </Section>
                         <Section
                             title="Body"
-                            actions={!isEmptyBody(request?.body) && <CopyButton label="Copy" text={() => stringifyData(request?.body)}/>}
+                            actions={!isEmptyBody(request?.body) && <CopyButton label="Copy" text={() => stringifyData(request?.body)} />}
                         >
-                            <Body value={request?.body}/>
+                            <Body value={request?.body} />
                         </Section>
                     </>
                 )}
 
-                {tab === 'response' && (
-                    response ? (
+                {tab === 'response' &&
+                    (response ? (
                         <Section
                             title="Body"
-                            actions={!isEmptyBody(response.body) && <CopyButton label="Copy" text={() => stringifyData(response.body)}/>}
+                            actions={!isEmptyBody(response.body) && <CopyButton label="Copy" text={() => stringifyData(response.body)} />}
                         >
                             {response.errorMessage && (
                                 <p className={`callout ${response.result === 'error' ? 'callout-err' : ''}`}>{response.errorMessage}</p>
                             )}
-                            <Body value={response.body} truncated={response.bodyTruncated}/>
+                            <Body value={response.body} truncated={response.bodyTruncated} />
                         </Section>
                     ) : (
                         <p className="empty">Waiting for the response…</p>
-                    )
-                )}
+                    ))}
             </div>
         </aside>
     );

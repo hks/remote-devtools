@@ -28,8 +28,8 @@ import {
     networkModule,
     panelsModule,
     RemoteDevTools,
-    stateModule,
     type StorageAdapter,
+    stateModule,
     storageModule,
 } from '../src/index.ts';
 
@@ -73,7 +73,10 @@ functions.register({
 });
 
 // Storage: an in-memory store (reports changes to the UI).
-const fakeStore = new Map<string, string>([['user', JSON.stringify({id: 1234567, name: 'Fake User'})], ['onboarding.done', 'true']]);
+const fakeStore = new Map<string, string>([
+    ['user', JSON.stringify({id: 1234567, name: 'Fake User'})],
+    ['onboarding.done', 'true'],
+]);
 const storeListeners = new Set<(key: string | null) => void>();
 const memoryAdapter: StorageAdapter = {
     id: 'memory',
@@ -158,7 +161,11 @@ createInterface({input: process.stdin}).on('line', (line) => {
     else if (cmd === 'fg') setLifecycle('active');
     else if (cmd in LOG_COMMANDS) devtools.log[LOG_COMMANDS[cmd]!](text || cmd, {example: true});
     else if (cmd === 'name') devtools.updateMeta({user: text});
-    else if (cmd === 'net') void fetch(text || 'https://example.com').then((r) => console.log(`  ${r.status} ${r.url}`), (e: Error) => console.log(`  ✖ ${e.message}`));
+    else if (cmd === 'net')
+        void fetch(text || 'https://example.com').then(
+            (r) => console.log(`  ${r.status} ${r.url}`),
+            (e: Error) => console.log(`  ✖ ${e.message}`),
+        );
     else if (cmd === 'set' && rest[0]) memoryAdapter.set!(rest[0], rest.slice(1).join(' '));
     else if (cmd === 'inc') inc();
     else if (cmd === 'flags') console.log(`  checkout.v2=${flags.get('checkout.v2')} api.timeout=${flags.get('api.timeout')}`);
@@ -168,5 +175,8 @@ createInterface({input: process.stdin}).on('line', (line) => {
     else if (cmd === 'quit') {
         devtools.destroy();
         process.exit(0);
-    } else if (cmd) console.log('  commands: bg, fg, log/debug/warn/err <message>, name <text>, net <url>, set <key> <value>, inc, flags, drop, resume, unpair, quit');
+    } else if (cmd)
+        console.log(
+            '  commands: bg, fg, log/debug/warn/err <message>, name <text>, net <url>, set <key> <value>, inc, flags, drop, resume, unpair, quit',
+        );
 });

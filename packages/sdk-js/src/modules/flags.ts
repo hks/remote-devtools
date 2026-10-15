@@ -10,7 +10,9 @@ export type FlagValue<F extends Field> = F extends {type: 'boolean'}
       : F extends {type: 'text'}
         ? string
         : F extends {type: 'select'; options: readonly (infer O)[]}
-          ? O extends {value: infer V} ? V : O
+          ? O extends {value: infer V}
+              ? V
+              : O
           : unknown;
 
 export type FlagOptions<F extends Field = Field> = {

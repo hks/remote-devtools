@@ -102,11 +102,12 @@ export function panelsModule(): PanelsModule {
     return defineModule({
         name: 'panels',
 
-        capabilities: () => [...panels.values()].map(({id, title, icon, blocks}): PanelDef => {
-            const def: PanelDef = {id, title, blocks: blocks.map(toWire)};
-            if (icon) def.icon = icon;
-            return def;
-        }),
+        capabilities: () =>
+            [...panels.values()].map(({id, title, icon, blocks}): PanelDef => {
+                const def: PanelDef = {id, title, blocks: blocks.map(toWire)};
+                if (icon) def.icon = icon;
+                return def;
+            }),
 
         setup(context: ModuleContext) {
             ctx = context;
@@ -130,7 +131,9 @@ export function panelsModule(): PanelsModule {
                             if (actionId !== FORM_SUBMIT_ID) throw unknownAction();
                             const validation = validateArgs(block.fields, values);
                             if (!validation.ok) {
-                                const details = Object.entries(validation.errors).map(([key, msg]) => `${key} ${msg}`).join(', ');
+                                const details = Object.entries(validation.errors)
+                                    .map(([key, msg]) => `${key} ${msg}`)
+                                    .join(', ');
                                 throw new ModuleError('INVALID_ARGS', `Invalid values: ${details}`);
                             }
                             return block.submit.handler(validation.args);
@@ -163,7 +166,11 @@ export function panelsModule(): PanelsModule {
                     panel.blocks[index] = next;
                     // Only the changed fields are sent (with handlers stripped).
                     const wire = toWire(next) as Record<string, unknown>;
-                    const payload = Object.fromEntries(Object.keys(data).filter((key) => key in wire).map((key) => [key, wire[key]]));
+                    const payload = Object.fromEntries(
+                        Object.keys(data)
+                            .filter((key) => key in wire)
+                            .map((key) => [key, wire[key]]),
+                    );
                     ctx?.emit('module.panels.update', {panelId: panel.id, blockId, data: payload}, {buffer: false});
                 },
                 setBlocks(blocks) {

@@ -5,7 +5,18 @@ import {FailureLimiter, isLocalAddress} from '../src/net.ts';
 import {randomCode} from '../src/secrets.ts';
 
 describe('isLocalAddress', () => {
-    const local = ['127.0.0.1', '::1', '::ffff:127.0.0.1', '10.1.2.3', '172.16.0.1', '172.31.255.255', '192.168.1.5', '169.254.0.1', 'fd12::1', 'fe80::1'];
+    const local = [
+        '127.0.0.1',
+        '::1',
+        '::ffff:127.0.0.1',
+        '10.1.2.3',
+        '172.16.0.1',
+        '172.31.255.255',
+        '192.168.1.5',
+        '169.254.0.1',
+        'fd12::1',
+        'fe80::1',
+    ];
     const remote = ['8.8.8.8', '172.15.0.1', '172.32.0.1', '192.169.0.1', '2001:db8::1', '::ffff:8.8.8.8', ''];
     for (const ip of local) it(`treats ${ip} as local`, () => assert.equal(isLocalAddress(ip), true));
     for (const ip of remote) it(`treats ${ip || '(empty)'} as remote`, () => assert.equal(isLocalAddress(ip), false));

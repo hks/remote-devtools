@@ -3,8 +3,8 @@ import {mkdtemp, readFile, rm, stat} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {describe, it} from 'node:test';
-import {WebSocket} from 'ws';
 import {createEnvelope, WS_PATH_DEVICE, WS_PATH_UI} from '@himmetkaan/remote-devtools-protocol';
+import {WebSocket} from 'ws';
 import {startServer} from '../src/server.ts';
 import {connect, newDeviceId, openUi, pairedDevice, sleep, testConfig, withServer} from './helpers.ts';
 
@@ -111,7 +111,11 @@ describe('relay timing & limits', () => {
             // A device that does not answer pings (e.g. suspended in the background).
             const silent = new WebSocket(`ws://127.0.0.1:${port}${WS_PATH_DEVICE}`, {autoPong: false});
             await new Promise((r) => silent.once('open', r));
-            silent.send(JSON.stringify(createEnvelope('pair.qr', {sessionId: session.sessionId, qrToken: session.pairing.qrToken, deviceId: newDeviceId()})));
+            silent.send(
+                JSON.stringify(
+                    createEnvelope('pair.qr', {sessionId: session.sessionId, qrToken: session.pairing.qrToken, deviceId: newDeviceId()}),
+                ),
+            );
             assert.equal((await ui.next('device.status')).payload.state, 'connected');
             assert.equal((await ui.next('device.status', 1000)).payload.state, 'disconnected');
             ui.close();
@@ -220,7 +224,10 @@ describe('relay timing & limits', () => {
                 const ui2 = await connect(second.port, WS_PATH_UI);
                 ui2.send('session.resume', {sessionId: session.sessionId, uiSecret: session.uiSecret});
                 const restored = (await ui2.next('session')).payload;
-                assert.deepEqual(restored.devices.map((d: any) => [d.deviceId, d.connected]), [[deviceId, false]]);
+                assert.deepEqual(
+                    restored.devices.map((d: any) => [d.deviceId, d.connected]),
+                    [[deviceId, false]],
+                );
 
                 const back = await connect(second.port, WS_PATH_DEVICE);
                 back.send('resume', {sessionId: session.sessionId, deviceId, deviceSecret});

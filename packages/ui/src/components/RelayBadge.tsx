@@ -9,7 +9,7 @@ const LABEL: Record<RelayConnectionState, string> = {
 export function RelayBadge({state}: {state: RelayConnectionState}) {
     return (
         <span className={`badge badge-relay is-${state}`} title={LABEL[state]}>
-            <span className="dot"/>
+            <span className="dot" />
             {LABEL[state]}
         </span>
     );

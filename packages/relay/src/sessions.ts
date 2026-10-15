@@ -34,13 +34,13 @@ export type Session = {
 export type PairFailure = 'SESSION_NOT_FOUND' | 'INVALID_PAIR_TOKEN' | 'PAIR_TOKEN_EXPIRED' | 'INVALID_CODE' | 'DEVICE_LIMIT';
 
 /** `replaced`: the record previously paired with the same `deviceId` (the caller must close its socket, if any). */
-export type AddedDevice = { device: DeviceRecord; replaced: DeviceRecord | null };
+export type AddedDevice = {device: DeviceRecord; replaced: DeviceRecord | null};
 
-export type PairResult = ({ ok: true; session: Session } & AddedDevice) | { ok: false; code: PairFailure };
+export type PairResult = ({ok: true; session: Session} & AddedDevice) | {ok: false; code: PairFailure};
 
 export type DeviceAuthResult =
-    | { ok: true; session: Session; device: DeviceRecord }
-    | { ok: false; reason: 'sessionNotFound' | 'invalidSecret' | 'expired' };
+    | {ok: true; session: Session; device: DeviceRecord}
+    | {ok: false; reason: 'sessionNotFound' | 'invalidSecret' | 'expired'};
 
 /** A socket-free session snapshot that can be written to disk. */
 export type PersistedSession = {
@@ -129,7 +129,8 @@ export class SessionStore {
     issuePairing(session: Session): PairingInfo {
         this.#codes.delete(session.pairing.code);
         let code: string;
-        do code = randomCode(); while (this.#codes.has(code));
+        do code = randomCode();
+        while (this.#codes.has(code));
         this.#codes.set(code, session.id);
         session.pairing = {qrToken: randomToken(16), code, expiresAt: this.#now() + this.#opts.pairingTtlMs};
         return session.pairing;
@@ -284,9 +285,9 @@ export class SessionStore {
     }
 
     /** Removes disconnected devices whose idle timeout has elapsed from their sessions and returns them. */
-    collectExpiredDevices(): { session: Session; device: DeviceRecord }[] {
+    collectExpiredDevices(): {session: Session; device: DeviceRecord}[] {
         const now = this.#now();
-        const expired: { session: Session; device: DeviceRecord }[] = [];
+        const expired: {session: Session; device: DeviceRecord}[] = [];
         for (const session of this.#sessions.values()) {
             for (const device of session.devices.values()) {
                 if (device.socket === null && device.expiresAt <= now) {

@@ -1,6 +1,13 @@
 import {createEnvelope, type Envelope, WS_PATH_UI} from '@himmetkaan/remote-devtools-protocol';
 import {createRelay, type RelayConfig, type RunningServer} from '@himmetkaan/remote-devtools-relay';
-import {type ConnectionStatus, memoryStorage, RemoteDevTools, type RemoteDevToolsOptions, type RemoteModule, staticLifecycle} from '../src/index.ts';
+import {
+    type ConnectionStatus,
+    memoryStorage,
+    RemoteDevTools,
+    type RemoteDevToolsOptions,
+    type RemoteModule,
+    staticLifecycle,
+} from '../src/index.ts';
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -100,7 +107,11 @@ export function waitForStatus(client: RemoteDevTools, status: ConnectionStatus, 
         let unsubscribe: () => void = () => {};
         const timer = setTimeout(() => {
             unsubscribe();
-            reject(new Error(`Timed out waiting for status "${status}" (now "${client.connection.state.status}", error ${JSON.stringify(client.connection.state.error)})`));
+            reject(
+                new Error(
+                    `Timed out waiting for status "${status}" (now "${client.connection.state.status}", error ${JSON.stringify(client.connection.state.error)})`,
+                ),
+            );
         }, timeoutMs);
         unsubscribe = client.connection.subscribe((state) => {
             if (state.status !== status) return;
@@ -112,7 +123,11 @@ export function waitForStatus(client: RemoteDevTools, status: ConnectionStatus, 
 }
 
 /** Sets up a UI + paired client, runs the test, cleans up. */
-export async function withPairedClient(modules: RemoteModule[], fn: (ui: Ui, deviceId: string) => Promise<void>, extra: Partial<RemoteDevToolsOptions> = {}) {
+export async function withPairedClient(
+    modules: RemoteModule[],
+    fn: (ui: Ui, deviceId: string) => Promise<void>,
+    extra: Partial<RemoteDevToolsOptions> = {},
+) {
     await withRelay({}, async ({port}) => {
         const ui = await openUi(port);
         const client = createClient({modules, ...extra});

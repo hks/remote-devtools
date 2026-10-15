@@ -116,7 +116,10 @@ describe('JSON patch', () => {
     it('does not mutate the original document', () => {
         const doc = {list: [1, 2], nested: {x: 1}};
         const copy = structuredClone(doc);
-        const out = applyPatch(doc, [{op: 'add', path: '/list/1', value: 9}, {op: 'remove', path: '/nested/x'}]);
+        const out = applyPatch(doc, [
+            {op: 'add', path: '/list/1', value: 9},
+            {op: 'remove', path: '/nested/x'},
+        ]);
         assert.deepEqual(doc, copy);
         assert.deepEqual(out, {list: [1, 9, 2], nested: {}});
     });
@@ -128,14 +131,26 @@ describe('storageModule', () => {
         const storage = storageModule({adapters: [asyncStorageAdapter(async)]});
         await withPairedClient([storage], async (ui, deviceId) => {
             const {result} = await call(ui, deviceId, 'module.storage.list', {adapterId: 'async-storage'});
-            assert.deepEqual(result.entries.map((e: any) => e.key), ['a', 'b']);
+            assert.deepEqual(
+                result.entries.map((e: any) => e.key),
+                ['a', 'b'],
+            );
             assert.equal(result.entries[0].size, 500);
             assert.equal(result.entries[0].preview.length, 120);
 
-            assert.deepEqual(await call(ui, deviceId, 'module.storage.get', {adapterId: 'async-storage', key: 'b'}), {ok: true, result: {value: 'two'}});
-            assert.deepEqual(await call(ui, deviceId, 'module.storage.get', {adapterId: 'async-storage', key: 'zzz'}), {ok: true, result: {value: null}});
+            assert.deepEqual(await call(ui, deviceId, 'module.storage.get', {adapterId: 'async-storage', key: 'b'}), {
+                ok: true,
+                result: {value: 'two'},
+            });
+            assert.deepEqual(await call(ui, deviceId, 'module.storage.get', {adapterId: 'async-storage', key: 'zzz'}), {
+                ok: true,
+                result: {value: null},
+            });
 
-            assert.equal((await call(ui, deviceId, 'module.storage.set', {adapterId: 'async-storage', key: 'c', value: '{"n":1}'})).ok, true);
+            assert.equal(
+                (await call(ui, deviceId, 'module.storage.set', {adapterId: 'async-storage', key: 'c', value: '{"n":1}'})).ok,
+                true,
+            );
             assert.equal(async.data.get('c'), '{"n":1}');
             // AsyncStorage doesn't report changes, so the module reports its own writes (for other UI windows).
             assert.deepEqual((await ui.next('module.storage.changed')).payload, {adapterId: 'async-storage', key: 'c'});
@@ -156,7 +171,14 @@ describe('storageModule', () => {
         const storage = storageModule({adapters: [mmkvAdapter(mmkv)]});
         await withPairedClient([storage], async (ui, deviceId) => {
             const {result} = await call(ui, deviceId, 'module.storage.list', {adapterId: 'mmkv'});
-            assert.deepEqual(result.entries.map((e: any) => [e.key, e.preview]), [['count', '3'], ['enabled', 'false'], ['token', 'abc']]);
+            assert.deepEqual(
+                result.entries.map((e: any) => [e.key, e.preview]),
+                [
+                    ['count', '3'],
+                    ['enabled', 'false'],
+                    ['token', 'abc'],
+                ],
+            );
             mmkv.set('token', 'changed in app');
             assert.deepEqual((await ui.next('module.storage.changed')).payload, {adapterId: 'mmkv', key: 'token'});
             await call(ui, deviceId, 'module.storage.remove', {adapterId: 'mmkv', key: 'count'});
@@ -169,12 +191,19 @@ describe('storageModule', () => {
     it('keeps SecureStore read-only and masked', async () => {
         const secure = {getItemAsync: async (key: string) => (key === 'auth.token' ? 'secret' : null)};
         const storage = storageModule({adapters: [secureStoreAdapter(secure, {keys: ['auth.token', 'missing']})]});
-        assert.deepEqual((storage.capabilities!() as any).adapters, [{id: 'secure-store', title: 'SecureStore', editable: false, masked: true}]);
+        assert.deepEqual((storage.capabilities!() as any).adapters, [
+            {id: 'secure-store', title: 'SecureStore', editable: false, masked: true},
+        ]);
         await withPairedClient([storage], async (ui, deviceId) => {
             const {result} = await call(ui, deviceId, 'module.storage.list', {adapterId: 'secure-store'});
             assert.deepEqual(result.entries, [{key: 'auth.token', size: 6, preview: ''}]);
-            assert.deepEqual((await call(ui, deviceId, 'module.storage.get', {adapterId: 'secure-store', key: 'auth.token'})).result, {value: 'secret'});
-            assert.equal((await call(ui, deviceId, 'module.storage.remove', {adapterId: 'secure-store', key: 'auth.token'})).error.code, 'READ_ONLY');
+            assert.deepEqual((await call(ui, deviceId, 'module.storage.get', {adapterId: 'secure-store', key: 'auth.token'})).result, {
+                value: 'secret',
+            });
+            assert.equal(
+                (await call(ui, deviceId, 'module.storage.remove', {adapterId: 'secure-store', key: 'auth.token'})).error.code,
+                'READ_ONLY',
+            );
         });
     });
 
@@ -193,8 +222,12 @@ describe('storageModule', () => {
         const storage = storageModule();
         await withPairedClient([storage], async (ui, deviceId) => {
             const unregister = storage.register(webStorageAdapter(fakeStorage, {id: 'session', title: 'sessionStorage'}));
-            assert.deepEqual((await ui.next('capabilities.update')).payload.storage.adapters, [{id: 'session', title: 'sessionStorage', editable: true}]);
-            assert.deepEqual((await call(ui, deviceId, 'module.storage.list', {adapterId: 'session'})).result.entries, [{key: 'theme', size: 4, preview: 'dark'}]);
+            assert.deepEqual((await ui.next('capabilities.update')).payload.storage.adapters, [
+                {id: 'session', title: 'sessionStorage', editable: true},
+            ]);
+            assert.deepEqual((await call(ui, deviceId, 'module.storage.list', {adapterId: 'session'})).result.entries, [
+                {key: 'theme', size: 4, preview: 'dark'},
+            ]);
             unregister();
             assert.deepEqual((await ui.next('capabilities.update')).payload.storage.adapters, []);
         });
@@ -268,7 +301,11 @@ describe('flagsModule', () => {
         const flags = flagsModule();
         const checkout = flags.define({key: 'checkout.v2', title: 'New checkout', field: {type: 'boolean'}});
         const timeout = flags.define({key: 'api.timeout', field: {type: 'number', min: 1, max: 60, default: 30}});
-        const variant = flags.define({key: 'home.variant', field: {type: 'select', options: ['a', 'b'] as const, default: 'a'}, value: 'b'});
+        const variant = flags.define({
+            key: 'home.variant',
+            field: {type: 'select', options: ['a', 'b'] as const, default: 'a'},
+            value: 'b',
+        });
         assert.equal(checkout.get(), false);
         assert.equal(variant.get(), 'b');
 
@@ -276,29 +313,40 @@ describe('flagsModule', () => {
         checkout.subscribe((value) => seen.push(value));
 
         const storage = memoryStorage();
-        await withPairedClient([flags], async (ui, deviceId) => {
-            const set = await call(ui, deviceId, 'module.flags.set', {key: 'checkout.v2', value: true});
-            assert.deepEqual(set.result, {key: 'checkout.v2', title: 'New checkout', field: {type: 'boolean'}, value: true, baseValue: false, overridden: true});
-            assert.equal(checkout.get(), true);
-            assert.deepEqual(seen, [true]);
-            const update = (await ui.next('capabilities.update')).payload.flags.flags;
-            assert.equal(update.find((f: any) => f.key === 'checkout.v2').overridden, true);
+        await withPairedClient(
+            [flags],
+            async (ui, deviceId) => {
+                const set = await call(ui, deviceId, 'module.flags.set', {key: 'checkout.v2', value: true});
+                assert.deepEqual(set.result, {
+                    key: 'checkout.v2',
+                    title: 'New checkout',
+                    field: {type: 'boolean'},
+                    value: true,
+                    baseValue: false,
+                    overridden: true,
+                });
+                assert.equal(checkout.get(), true);
+                assert.deepEqual(seen, [true]);
+                const update = (await ui.next('capabilities.update')).payload.flags.flags;
+                assert.equal(update.find((f: any) => f.key === 'checkout.v2').overridden, true);
 
-            assert.equal((await call(ui, deviceId, 'module.flags.set', {key: 'api.timeout', value: 99})).error.code, 'INVALID_VALUE');
-            assert.equal((await call(ui, deviceId, 'module.flags.set', {key: 'nope', value: 1})).error.code, 'UNKNOWN_FLAG');
-            await call(ui, deviceId, 'module.flags.set', {key: 'api.timeout', value: 5});
-            assert.equal(timeout.get(), 5);
+                assert.equal((await call(ui, deviceId, 'module.flags.set', {key: 'api.timeout', value: 99})).error.code, 'INVALID_VALUE');
+                assert.equal((await call(ui, deviceId, 'module.flags.set', {key: 'nope', value: 1})).error.code, 'UNKNOWN_FLAG');
+                await call(ui, deviceId, 'module.flags.set', {key: 'api.timeout', value: 5});
+                assert.equal(timeout.get(), 5);
 
-            // The override stays in effect even if the app's value changes.
-            flags.setValue('api.timeout', 10);
-            assert.equal(timeout.get(), 5);
+                // The override stays in effect even if the app's value changes.
+                flags.setValue('api.timeout', 10);
+                assert.equal(timeout.get(), 5);
 
-            await call(ui, deviceId, 'module.flags.reset', {key: 'checkout.v2'});
-            assert.equal(checkout.get(), false);
-            await call(ui, deviceId, 'module.flags.reset', {});
-            assert.equal(timeout.get(), 10);
-            assert.equal(flags.isOverridden('api.timeout'), false);
-        }, {storage});
+                await call(ui, deviceId, 'module.flags.reset', {key: 'checkout.v2'});
+                assert.equal(checkout.get(), false);
+                await call(ui, deviceId, 'module.flags.reset', {});
+                assert.equal(timeout.get(), 10);
+                assert.equal(flags.isOverridden('api.timeout'), false);
+            },
+            {storage},
+        );
     });
 
     it('persists overrides across restarts and ignores them while disabled', async () => {

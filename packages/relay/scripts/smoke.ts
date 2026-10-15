@@ -4,8 +4,8 @@
  *   node scripts/smoke.ts wss://devtools.example.com
  */
 import {randomUUID} from 'node:crypto';
-import {WebSocket} from 'ws';
 import {createEnvelope, type Envelope, WS_PATH_DEVICE, WS_PATH_UI} from '@himmetkaan/remote-devtools-protocol';
+import {WebSocket} from 'ws';
 
 const base = (process.argv[2] ?? 'ws://127.0.0.1:8080').replace(/\/+$/, '');
 

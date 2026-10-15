@@ -1,5 +1,5 @@
-import {memo, useMemo, useState} from 'react';
 import type {FlagDef} from '@himmetkaan/remote-devtools-protocol';
+import {memo, useMemo, useState} from 'react';
 import {FieldForm} from '../../components/FieldForm.tsx';
 import {type FormErrors, type FormValues, toArgs, toFormValue} from '../../lib/fields.ts';
 import {stringifyData} from '../../lib/format.ts';
@@ -15,7 +15,13 @@ async function send(deviceId: string, type: 'module.flags.set' | 'module.flags.r
     useDevtoolsStore.getState().addLog(
         outcome.ok
             ? {level: 'info', source: 'ui', message: `Flags: ${description}`, deviceId}
-            : {level: 'error', source: 'ui', message: `Flags: ${description} failed — ${outcome.error.message}`, data: outcome.error, deviceId},
+            : {
+                  level: 'error',
+                  source: 'ui',
+                  message: `Flags: ${description} failed — ${outcome.error.message}`,
+                  data: outcome.error,
+                  deviceId,
+              },
     );
     return outcome;
 }
@@ -38,7 +44,12 @@ const FlagCard = memo(function FlagCard({deviceId, flag, unavailable}: {deviceId
         setErrors(nextErrors);
         if (Object.keys(nextErrors).length > 0) return;
         setBusy(true);
-        const outcome = await send(deviceId, 'module.flags.set', {key: flag.key, value: args.value ?? null}, `set ${flag.title ?? flag.key} to ${display(args.value)}`);
+        const outcome = await send(
+            deviceId,
+            'module.flags.set',
+            {key: flag.key, value: args.value ?? null},
+            `set ${flag.title ?? flag.key} to ${display(args.value)}`,
+        );
         setBusy(false);
         if (!outcome.ok) setErrors({value: outcome.error.message});
     };
@@ -69,7 +80,7 @@ const FlagCard = memo(function FlagCard({deviceId, flag, unavailable}: {deviceId
                         title={unavailable ?? undefined}
                         onChange={(e) => void apply({value: e.target.checked})}
                     />
-                    <span className="switch-track" aria-hidden/>
+                    <span className="switch-track" aria-hidden />
                     <span>{flag.value === true ? 'On' : 'Off'}</span>
                 </label>
             ) : (
@@ -80,14 +91,31 @@ const FlagCard = memo(function FlagCard({deviceId, flag, unavailable}: {deviceId
                         void apply(values);
                     }}
                 >
-                    <FieldForm fields={fields} values={values} errors={errors} disabled={disabled} onChange={setValues} idPrefix={`flag-${flag.key}`}/>
+                    <FieldForm
+                        fields={fields}
+                        values={values}
+                        errors={errors}
+                        disabled={disabled}
+                        onChange={setValues}
+                        idPrefix={`flag-${flag.key}`}
+                    />
                     <div className="cmd-actions">
                         {dirty && (
-                            <button type="button" className="btn btn-small" onClick={() => (setValues(initial), setErrors({}))} disabled={busy}>
+                            <button
+                                type="button"
+                                className="btn btn-small"
+                                onClick={() => (setValues(initial), setErrors({}))}
+                                disabled={busy}
+                            >
                                 Undo
                             </button>
                         )}
-                        <button type="submit" className="btn btn-small btn-primary" disabled={disabled || !dirty} title={unavailable ?? undefined}>
+                        <button
+                            type="submit"
+                            className="btn btn-small btn-primary"
+                            disabled={disabled || !dirty}
+                            title={unavailable ?? undefined}
+                        >
                             Apply
                         </button>
                     </div>
@@ -96,9 +124,16 @@ const FlagCard = memo(function FlagCard({deviceId, flag, unavailable}: {deviceId
             {field.type === 'boolean' && errors.value && <span className="field-error">{errors.value}</span>}
 
             <footer className="flag-foot">
-                <span className="muted small" title={display(flag.baseValue)}>App value: <code>{display(flag.baseValue)}</code></span>
+                <span className="muted small" title={display(flag.baseValue)}>
+                    App value: <code>{display(flag.baseValue)}</code>
+                </span>
                 {flag.overridden && (
-                    <button className="btn btn-small" onClick={() => void reset()} disabled={disabled} title={unavailable ?? 'Remove the override'}>
+                    <button
+                        className="btn btn-small"
+                        onClick={() => void reset()}
+                        disabled={disabled}
+                        title={unavailable ?? 'Remove the override'}
+                    >
                         Reset
                     </button>
                 )}
@@ -134,26 +169,46 @@ export function FlagsTab({deviceId}: {deviceId: string}) {
     return (
         <section className="functions">
             <div className="toolbar">
-                <input className="input" type="search" placeholder="Search flags…" value={query} onChange={(e) => setQuery(e.target.value)}/>
+                <input
+                    className="input"
+                    type="search"
+                    placeholder="Search flags…"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                />
                 <label className="toggle">
-                    <input type="checkbox" checked={onlyOverridden} onChange={(e) => setOnlyOverridden(e.target.checked)}/>
+                    <input type="checkbox" checked={onlyOverridden} onChange={(e) => setOnlyOverridden(e.target.checked)} />
                     Overridden only
                 </label>
-                <span className="toolbar-spacer"/>
-                <span className="muted small">{flags.length} flag(s) · {overridden} overridden</span>
-                <button className="btn btn-small btn-danger" disabled={overridden === 0 || Boolean(unavailable)} title={unavailable ?? undefined} onClick={resetAll}>
+                <span className="toolbar-spacer" />
+                <span className="muted small">
+                    {flags.length} flag(s) · {overridden} overridden
+                </span>
+                <button
+                    className="btn btn-small btn-danger"
+                    disabled={overridden === 0 || Boolean(unavailable)}
+                    title={unavailable ?? undefined}
+                    onClick={resetAll}
+                >
                     Reset all
                 </button>
             </div>
 
             <div className="functions-body">
-                <p className="muted small flags-note">Overrides are saved on the device and stay in effect after the app restarts, until you reset them.</p>
+                <p className="muted small flags-note">
+                    Overrides are saved on the device and stay in effect after the app restarts, until you reset them.
+                </p>
                 {groups.map(([group, items]) => (
                     <section key={group} className="cmd-group">
                         <h2>{group}</h2>
                         <div className="cmd-grid">
                             {items.map((flag) => (
-                                <FlagCard key={`${flag.key}:${JSON.stringify(flag.field)}:${JSON.stringify(flag.value)}`} deviceId={deviceId} flag={flag} unavailable={unavailable}/>
+                                <FlagCard
+                                    key={`${flag.key}:${JSON.stringify(flag.field)}:${JSON.stringify(flag.value)}`}
+                                    deviceId={deviceId}
+                                    flag={flag}
+                                    unavailable={unavailable}
+                                />
                             ))}
                         </div>
                     </section>

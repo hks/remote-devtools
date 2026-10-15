@@ -1,5 +1,5 @@
-import {memo, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {LogLevel} from '@himmetkaan/remote-devtools-protocol';
+import {memo, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {formatClock, stringifyData} from '../../lib/format.ts';
 import {type LogEntry, type LogSource, useDevtoolsStore} from '../../store/useDevtoolsStore.ts';
 
@@ -132,26 +132,35 @@ export function LogsTab({deviceId}: {deviceId: string}) {
                         </button>
                     ))}
                 </div>
-                <select className="input select" value={source} onChange={(e) => setSource(e.target.value as LogSource | 'all')} aria-label="Source filter">
+                <select
+                    className="input select"
+                    value={source}
+                    onChange={(e) => setSource(e.target.value as LogSource | 'all')}
+                    aria-label="Source filter"
+                >
                     {SOURCES.map((s) => (
-                        <option key={s.id} value={s.id}>{s.label}</option>
+                        <option key={s.id} value={s.id}>
+                            {s.label}
+                        </option>
                     ))}
                 </select>
                 {tags.length > 0 && (
                     <select className="input select" value={tag} onChange={(e) => setTag(e.target.value)} aria-label="Tag filter">
                         <option value="all">All tags</option>
                         {tags.map((t) => (
-                            <option key={t} value={t}>{t}</option>
+                            <option key={t} value={t}>
+                                {t}
+                            </option>
                         ))}
                     </select>
                 )}
-                <span className="toolbar-spacer"/>
+                <span className="toolbar-spacer" />
                 <label className="toggle" title="Relay and UI events that are not tied to a device">
-                    <input type="checkbox" checked={showSession} onChange={(e) => setShowSession(e.target.checked)}/>
+                    <input type="checkbox" checked={showSession} onChange={(e) => setShowSession(e.target.checked)} />
                     Session events
                 </label>
                 <label className="toggle">
-                    <input type="checkbox" checked={autoScroll} onChange={(e) => setAutoScroll(e.target.checked)}/>
+                    <input type="checkbox" checked={autoScroll} onChange={(e) => setAutoScroll(e.target.checked)} />
                     Auto-scroll
                 </label>
                 <button className="btn btn-small" onClick={() => clearLogs(deviceId)} disabled={logs.length === 0}>
@@ -173,7 +182,7 @@ export function LogsTab({deviceId}: {deviceId: string}) {
                 ) : (
                     <ol>
                         {visible.map((entry) => (
-                            <LogRow key={entry.id} entry={entry}/>
+                            <LogRow key={entry.id} entry={entry} />
                         ))}
                     </ol>
                 )}

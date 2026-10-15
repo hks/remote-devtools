@@ -31,13 +31,13 @@ export function DeviceHeader({device}: {device: DeviceSnapshot}) {
             <div className="device-title">
                 <h1>{deviceName(device)}</h1>
                 <span className={`badge badge-status is-${status}`} title={lastSeen ? `Last seen ${lastSeen}` : undefined}>
-                    <span className="dot"/>
+                    <span className="dot" />
                     {STATUS_LABEL[status]}
                     {lastSeen && <span className="badge-sub"> · {lastSeen}</span>}
                 </span>
                 {hello?.isDevelopment && <span className="badge">dev</span>}
-                <span className="toolbar-spacer"/>
-                <Shortcuts/>
+                <span className="toolbar-spacer" />
+                <Shortcuts />
                 <button
                     className="btn btn-small btn-danger"
                     disabled={relay !== 'open'}

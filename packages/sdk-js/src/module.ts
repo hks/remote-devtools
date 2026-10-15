@@ -1,7 +1,7 @@
 import type {Envelope, LogLevel} from '@himmetkaan/remote-devtools-protocol';
 import type {KeyValueStorage} from './storage.ts';
 
-export type LogOptions = { tag?: string };
+export type LogOptions = {tag?: string};
 
 export type Logger = Record<LogLevel, (message: string, data?: unknown, options?: LogOptions) => void>;
 

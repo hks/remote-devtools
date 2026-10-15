@@ -19,7 +19,7 @@ export function App() {
     if (!session) {
         return (
             <div className="boot">
-                <RelayBadge state={relay}/>
+                <RelayBadge state={relay} />
             </div>
         );
     }
@@ -29,9 +29,9 @@ export function App() {
             <div className="solo">
                 <header className="solo-head">
                     <span className="brand">🛠️ Remote DevTools</span>
-                    <RelayBadge state={relay}/>
+                    <RelayBadge state={relay} />
                 </header>
-                <PairingPanel/>
+                <PairingPanel />
             </div>
         );
     }
@@ -42,19 +42,19 @@ export function App() {
 
     return (
         <div className="workspace">
-            <Sidebar/>
+            <Sidebar />
             <main className="main">
                 {showPairing || !device ? (
                     <div className="main-scroll">
-                        <PairingPanel/>
+                        <PairingPanel />
                     </div>
                 ) : (
                     <>
-                        <ConnectRequests/>
-                        <DeviceHeader device={device}/>
-                        <TabBar modules={modules} active={active.id}/>
+                        <ConnectRequests />
+                        <DeviceHeader device={device} />
+                        <TabBar modules={modules} active={active.id} />
                         <div className="tab-content">
-                            <active.Component key={`${device.deviceId}:${active.id}`} deviceId={device.deviceId} panelId={active.panelId}/>
+                            <active.Component key={`${device.deviceId}:${active.id}`} deviceId={device.deviceId} panelId={active.panelId} />
                         </div>
                     </>
                 )}

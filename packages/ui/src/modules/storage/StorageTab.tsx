@@ -1,8 +1,8 @@
-import {type ReactNode, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState} from 'react';
 import type {ModuleResult, StorageAdapterInfo, StorageEntry} from '@himmetkaan/remote-devtools-protocol';
+import {type ReactNode, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState} from 'react';
 import {JsonTree} from '../../components/JsonTree.tsx';
-import {formatBytes} from '../../lib/requestFormat.ts';
 import {relayClient} from '../../lib/relayClient.ts';
+import {formatBytes} from '../../lib/requestFormat.ts';
 import {useUnavailable} from '../../lib/useUnavailable.ts';
 import {useDevtoolsStore} from '../../store/useDevtoolsStore.ts';
 
@@ -30,11 +30,19 @@ function request<R>(deviceId: string, type: string, payload: unknown): Promise<M
 
 function logFailure(deviceId: string, action: string, outcome: ModuleResult) {
     if (outcome.ok) return;
-    useDevtoolsStore.getState().addLog({level: 'error', source: 'ui', message: `Storage: ${action} failed — ${outcome.error.message}`, data: outcome.error, deviceId});
+    useDevtoolsStore.getState().addLog({
+        level: 'error',
+        source: 'ui',
+        message: `Storage: ${action} failed — ${outcome.error.message}`,
+        data: outcome.error,
+        deviceId,
+    });
 }
 
 export function StorageTab({deviceId}: {deviceId: string}) {
-    const adapters = useDevtoolsStore((s) => (s.devices[deviceId]?.hello?.capabilities.storage?.adapters as StorageAdapterInfo[] | undefined) ?? NO_ADAPTERS);
+    const adapters = useDevtoolsStore(
+        (s) => (s.devices[deviceId]?.hello?.capabilities.storage?.adapters as StorageAdapterInfo[] | undefined) ?? NO_ADAPTERS,
+    );
     const unavailable = useUnavailable(deviceId);
     const [adapterId, setAdapterId] = useState<string | null>(null);
     const adapter = adapters.find((a) => a.id === adapterId) ?? adapters[0] ?? null;
@@ -141,7 +149,9 @@ export function StorageTab({deviceId}: {deviceId: string}) {
         setBusy(false);
         logFailure(deviceId, `deleting "${key}"`, outcome);
         if (!outcome.ok) return;
-        useDevtoolsStore.getState().addLog({level: 'info', source: 'ui', message: `Storage: deleted "${key}" from ${adapter.title}`, deviceId});
+        useDevtoolsStore
+            .getState()
+            .addLog({level: 'info', source: 'ui', message: `Storage: deleted "${key}" from ${adapter.title}`, deviceId});
         setSelection(null);
         void loadList();
     };
@@ -164,24 +174,50 @@ export function StorageTab({deviceId}: {deviceId: string}) {
                 {adapters.length > 1 && (
                     <div className="chip-group" role="group" aria-label="Storage">
                         {adapters.map((a) => (
-                            <button key={a.id} className={`chip is-plain${a.id === adapter.id ? ' is-on' : ''}`} aria-pressed={a.id === adapter.id} onClick={() => setAdapterId(a.id)}>
+                            <button
+                                key={a.id}
+                                className={`chip is-plain${a.id === adapter.id ? ' is-on' : ''}`}
+                                aria-pressed={a.id === adapter.id}
+                                onClick={() => setAdapterId(a.id)}
+                            >
                                 {a.title}
                             </button>
                         ))}
                     </div>
                 )}
-                <input className="input" type="search" placeholder="Filter keys and values…" value={query} onChange={(e) => setQuery(e.target.value)}/>
-                <span className="toolbar-spacer"/>
+                <input
+                    className="input"
+                    type="search"
+                    placeholder="Filter keys and values…"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                />
+                <span className="toolbar-spacer" />
                 {!adapter.editable && <span className="badge">Read-only</span>}
-                <button className="btn btn-small" onClick={() => void loadList()} disabled={Boolean(unavailable) || loading} title={unavailable ?? 'Reload the keys'}>
+                <button
+                    className="btn btn-small"
+                    onClick={() => void loadList()}
+                    disabled={Boolean(unavailable) || loading}
+                    title={unavailable ?? 'Reload the keys'}
+                >
                     {loading ? <span className="spin">⟳</span> : '⟳'} Refresh
                 </button>
                 {adapter.editable && (
                     <>
-                        <button className="btn btn-small" disabled={!editable} title={unavailable ?? 'Add a new key'} onClick={() => setSelection({mode: 'new', key: '', draft: ''})}>
+                        <button
+                            className="btn btn-small"
+                            disabled={!editable}
+                            title={unavailable ?? 'Add a new key'}
+                            onClick={() => setSelection({mode: 'new', key: '', draft: ''})}
+                        >
                             ＋ Add
                         </button>
-                        <button className="btn btn-small btn-danger" disabled={!editable || busy || !entries?.length} title={unavailable ?? 'Delete every key'} onClick={() => void clearAll()}>
+                        <button
+                            className="btn btn-small btn-danger"
+                            disabled={!editable || busy || !entries?.length}
+                            title={unavailable ?? 'Delete every key'}
+                            onClick={() => void clearAll()}
+                        >
                             Clear all
                         </button>
                     </>
@@ -191,7 +227,9 @@ export function StorageTab({deviceId}: {deviceId: string}) {
             <div className="split-body">
                 <div className="req-list">
                     {error ? (
-                        <p className="empty">Could not read {adapter.title}: {error}</p>
+                        <p className="empty">
+                            Could not read {adapter.title}: {error}
+                        </p>
                     ) : entries === null ? (
                         <p className="empty">{unavailable ?? 'Loading…'}</p>
                     ) : visible.length === 0 ? (
@@ -199,9 +237,9 @@ export function StorageTab({deviceId}: {deviceId: string}) {
                     ) : (
                         <table className="req-table">
                             <colgroup>
-                                <col className="c-key"/>
-                                <col className="c-num"/>
-                                <col/>
+                                <col className="c-key" />
+                                <col className="c-num" />
+                                <col />
                             </colgroup>
                             <thead>
                                 <tr>
@@ -220,9 +258,13 @@ export function StorageTab({deviceId}: {deviceId: string}) {
                                             void loadValue(entry.key);
                                         }}
                                     >
-                                        <td className="mono" title={entry.key}>{entry.key}</td>
+                                        <td className="mono" title={entry.key}>
+                                            {entry.key}
+                                        </td>
                                         <td className="num">{formatBytes(entry.size)}</td>
-                                        <td className="mono muted" title={adapter.masked ? undefined : entry.preview}>{adapter.masked ? '••••••••' : entry.preview}</td>
+                                        <td className="mono muted" title={adapter.masked ? undefined : entry.preview}>
+                                            {adapter.masked ? '••••••••' : entry.preview}
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -236,9 +278,13 @@ export function StorageTab({deviceId}: {deviceId: string}) {
                             {selection.mode === 'new' ? (
                                 <strong>New key</strong>
                             ) : (
-                                <code className="detail-url" title={selection.key}>{selection.key}</code>
+                                <code className="detail-url" title={selection.key}>
+                                    {selection.key}
+                                </code>
                             )}
-                            <button className="icon-btn" onClick={() => setSelection(null)} aria-label="Close">✕</button>
+                            <button className="icon-btn" onClick={() => setSelection(null)} aria-label="Close">
+                                ✕
+                            </button>
                         </header>
                         <div className="detail-body">
                             {selection.mode === 'view' ? (
@@ -249,16 +295,30 @@ export function StorageTab({deviceId}: {deviceId: string}) {
                                     actions={
                                         <>
                                             {selection.value !== null && (
-                                                <button className="btn btn-small" onClick={() => void navigator.clipboard?.writeText(selection.value ?? '')} disabled={Boolean(adapter.masked) && !revealed}>
+                                                <button
+                                                    className="btn btn-small"
+                                                    onClick={() => void navigator.clipboard?.writeText(selection.value ?? '')}
+                                                    disabled={Boolean(adapter.masked) && !revealed}
+                                                >
                                                     Copy
                                                 </button>
                                             )}
                                             {adapter.editable && (
                                                 <>
-                                                    <button className="btn btn-small" disabled={!editable || selection.loading} onClick={() => setSelection({mode: 'edit', key: selection.key, draft: selection.value ?? ''})}>
+                                                    <button
+                                                        className="btn btn-small"
+                                                        disabled={!editable || selection.loading}
+                                                        onClick={() =>
+                                                            setSelection({mode: 'edit', key: selection.key, draft: selection.value ?? ''})
+                                                        }
+                                                    >
                                                         Edit
                                                     </button>
-                                                    <button className="btn btn-small btn-danger" disabled={!editable || busy} onClick={() => void remove(selection.key)}>
+                                                    <button
+                                                        className="btn btn-small btn-danger"
+                                                        disabled={!editable || busy}
+                                                        onClick={() => void remove(selection.key)}
+                                                    >
                                                         Delete
                                                     </button>
                                                 </>
@@ -289,7 +349,17 @@ export function StorageTab({deviceId}: {deviceId: string}) {
     );
 }
 
-function ValueView({selection, masked, onReveal, actions}: {selection: Extract<Selection, {mode: 'view'}>; masked: boolean; onReveal(): void; actions: ReactNode}) {
+function ValueView({
+    selection,
+    masked,
+    onReveal,
+    actions,
+}: {
+    selection: Extract<Selection, {mode: 'view'}>;
+    masked: boolean;
+    onReveal(): void;
+    actions: ReactNode;
+}) {
     const [raw, setRaw] = useState(false);
     const json = useMemo(() => (selection.value === null ? undefined : parseJson(selection.value)), [selection.value]);
 
@@ -299,7 +369,9 @@ function ValueView({selection, masked, onReveal, actions}: {selection: Extract<S
                 <h3>Value{selection.value !== null && ` · ${formatBytes(selection.value.length)}`}</h3>
                 <div className="row-actions">
                     {json !== undefined && !masked && (
-                        <button className="btn btn-small" onClick={() => setRaw((v) => !v)}>{raw ? 'Tree' : 'Raw'}</button>
+                        <button className="btn btn-small" onClick={() => setRaw((v) => !v)}>
+                            {raw ? 'Tree' : 'Raw'}
+                        </button>
                     )}
                     {actions}
                 </div>
@@ -311,10 +383,12 @@ function ValueView({selection, masked, onReveal, actions}: {selection: Extract<S
             ) : masked ? (
                 <div className="masked">
                     <span className="mono">••••••••••••</span>
-                    <button className="btn btn-small" onClick={onReveal}>Reveal</button>
+                    <button className="btn btn-small" onClick={onReveal}>
+                        Reveal
+                    </button>
                 </div>
             ) : json !== undefined && !raw ? (
-                <JsonTree value={json} defaultExpandDepth={2}/>
+                <JsonTree value={json} defaultExpandDepth={2} />
             ) : (
                 <pre className="code-block">{selection.value}</pre>
             )}
@@ -322,7 +396,15 @@ function ValueView({selection, masked, onReveal, actions}: {selection: Extract<S
     );
 }
 
-function Editor({selection, busy, disabled, exists, onChange, onCancel, onSave}: {
+function Editor({
+    selection,
+    busy,
+    disabled,
+    exists,
+    onChange,
+    onCancel,
+    onSave,
+}: {
     selection: Extract<Selection, {mode: 'edit' | 'new'}>;
     busy: boolean;
     disabled: boolean;
@@ -337,13 +419,23 @@ function Editor({selection, busy, disabled, exists, onChange, onCancel, onSave}:
         <section className="detail-section storage-editor">
             {selection.mode === 'new' && (
                 <div className="field">
-                    <label className="field-label" htmlFor="storage-new-key">Key</label>
-                    <input id="storage-new-key" className="input mono" autoFocus value={selection.key} onChange={(e) => onChange({...selection, key: e.target.value})}/>
+                    <label className="field-label" htmlFor="storage-new-key">
+                        Key
+                    </label>
+                    <input
+                        id="storage-new-key"
+                        className="input mono"
+                        autoFocus
+                        value={selection.key}
+                        onChange={(e) => onChange({...selection, key: e.target.value})}
+                    />
                     {exists && <span className="field-error is-warn">This key exists and will be overwritten.</span>}
                 </div>
             )}
             <div className="field">
-                <label className="field-label" htmlFor="storage-value">Value</label>
+                <label className="field-label" htmlFor="storage-value">
+                    Value
+                </label>
                 <textarea
                     id="storage-value"
                     className="input textarea mono"
@@ -353,14 +445,20 @@ function Editor({selection, busy, disabled, exists, onChange, onCancel, onSave}:
                     value={selection.draft}
                     onChange={(e) => onChange({...selection, draft: e.target.value})}
                 />
-                {looksJson && json === undefined && <span className="field-error is-warn">Not valid JSON — it will be saved as plain text.</span>}
+                {looksJson && json === undefined && (
+                    <span className="field-error is-warn">Not valid JSON — it will be saved as plain text.</span>
+                )}
             </div>
             <div className="row-actions">
                 {json !== undefined && (
-                    <button className="btn btn-small" onClick={() => onChange({...selection, draft: JSON.stringify(json, null, 2)})}>Format JSON</button>
+                    <button className="btn btn-small" onClick={() => onChange({...selection, draft: JSON.stringify(json, null, 2)})}>
+                        Format JSON
+                    </button>
                 )}
-                <span className="toolbar-spacer"/>
-                <button className="btn btn-small" onClick={onCancel}>Cancel</button>
+                <span className="toolbar-spacer" />
+                <button className="btn btn-small" onClick={onCancel}>
+                    Cancel
+                </button>
                 <button className="btn btn-small btn-primary" disabled={disabled || busy || !selection.key.trim()} onClick={onSave}>
                     {busy ? <span className="spin">⟳</span> : null} Save
                 </button>

@@ -12,14 +12,26 @@ import {join} from 'node:path';
 import {build} from 'esbuild';
 
 const cwd = process.cwd();
-const pkg = JSON.parse(readFileSync(join(cwd, 'package.json'), 'utf8')) as {name: string; dependencies?: Record<string, string>; peerDependencies?: Record<string, string>};
+const pkg = JSON.parse(readFileSync(join(cwd, 'package.json'), 'utf8')) as {
+    name: string;
+    dependencies?: Record<string, string>;
+    peerDependencies?: Record<string, string>;
+};
 const external = [...Object.keys(pkg.dependencies ?? {}), ...Object.keys(pkg.peerDependencies ?? {})];
 const outdir = join(cwd, 'dist');
 
 rmSync(outdir, {recursive: true, force: true});
 
 // ES2020 for React Native (Hermes) and older browsers: syntax like private fields and `??=` is downleveled.
-const common = {entryPoints: ['src/index.ts'], bundle: true, external, target: 'es2020', platform: 'neutral', sourcemap: true, logLevel: 'warning'} as const;
+const common = {
+    entryPoints: ['src/index.ts'],
+    bundle: true,
+    external,
+    target: 'es2020',
+    platform: 'neutral',
+    sourcemap: true,
+    logLevel: 'warning',
+} as const;
 await build({...common, format: 'esm', outfile: join(outdir, 'index.js')});
 await build({...common, format: 'cjs', outfile: join(outdir, 'index.cjs')});
 

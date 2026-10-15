@@ -4,7 +4,7 @@ import {dirname} from 'node:path';
 import {log} from './log.ts';
 import type {PersistedSession} from './sessions.ts';
 
-type StateFile = { version: 1; sessions: PersistedSession[] };
+type StateFile = {version: 1; sessions: PersistedSession[]};
 
 /** Returns an empty list if the file is missing or unreadable (the relay still starts). */
 export function loadState(path: string): PersistedSession[] {

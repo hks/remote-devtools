@@ -9,5 +9,5 @@ export const STATUS_LABEL: Record<DeviceStatus, string> = {
 
 export function StatusDot({device}: {device: DeviceSnapshot}) {
     const status = getDeviceStatus(device);
-    return <span className={`status-dot is-${status}`} title={STATUS_LABEL[status]} aria-label={STATUS_LABEL[status]}/>;
+    return <span className={`status-dot is-${status}`} title={STATUS_LABEL[status]} aria-label={STATUS_LABEL[status]} />;
 }

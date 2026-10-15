@@ -81,7 +81,13 @@ functions.register({
     handler: () => ({url: location.href, userAgent: navigator.userAgent, viewport: `${innerWidth}×${innerHeight}`}),
 });
 
-functions.register({id: 'echo.json', title: 'Echo JSON', group: 'Page', args: {value: {type: 'json', label: 'Value', default: {hello: 'world'}}}, handler: ({value}) => value});
+functions.register({
+    id: 'echo.json',
+    title: 'Echo JSON',
+    group: 'Page',
+    args: {value: {type: 'json', label: 'Value', default: {hello: 'world'}}},
+    handler: ({value}) => value,
+});
 
 functions.register({
     id: 'fail',
@@ -129,7 +135,12 @@ const state = stateModule({stores: [zustandAdapter(todoStore, {id: 'todos', titl
 
 const flags = flagsModule();
 const bannerVisible = flags.define({key: 'banner.visible', title: 'Show banner', group: 'Page', field: {type: 'boolean', default: true}});
-const bannerText = flags.define({key: 'banner.text', title: 'Banner text', group: 'Page', field: {type: 'text', default: 'Welcome to the example!'}});
+const bannerText = flags.define({
+    key: 'banner.text',
+    title: 'Banner text',
+    group: 'Page',
+    field: {type: 'text', default: 'Welcome to the example!'},
+});
 const accent = flags.define({
     key: 'theme.accent',
     title: 'Accent colour',
@@ -173,13 +184,21 @@ const todoPanel = panels.define({
     title: 'Todo panel',
     icon: '✅',
     blocks: [
-        {id: 'note', type: 'text', tone: 'info', text: 'A custom panel defined by the page with panelsModule(). It updates live as the todo list changes.'},
+        {
+            id: 'note',
+            type: 'text',
+            tone: 'info',
+            text: 'A custom panel defined by the page with panelsModule(). It updates live as the todo list changes.',
+        },
         {id: 'stats', type: 'stats', items: initial.stats},
         {
             id: 'list',
             type: 'table',
             title: 'Todos',
-            columns: [{key: 'title', title: 'Title'}, {key: 'status', title: 'Status'}],
+            columns: [
+                {key: 'title', title: 'Title'},
+                {key: 'status', title: 'Status'},
+            ],
             rows: initial.rows,
             rowActions: [
                 {id: 'toggle', label: 'Toggle', handler: (row: TodoRow) => todoStore.getState().toggle(row.id)},
@@ -196,7 +215,10 @@ const todoPanel = panels.define({
             id: 'add',
             type: 'form',
             title: 'Add a todo',
-            fields: {title: {type: 'text', label: 'Title', required: true, placeholder: 'Water the plants'}, count: {type: 'number', label: 'How many', min: 1, max: 5, default: 1}},
+            fields: {
+                title: {type: 'text', label: 'Title', required: true, placeholder: 'Water the plants'},
+                count: {type: 'number', label: 'How many', min: 1, max: 5, default: 1},
+            },
             submit: {
                 label: 'Add',
                 handler: ({title, count}: {title: string; count: number}) => {
@@ -210,7 +232,11 @@ const todoPanel = panels.define({
             type: 'actions',
             title: 'Tools',
             actions: [
-                {id: 'complete', label: 'Complete all', handler: () => todoStore.setState((s) => ({todos: s.todos.map((t) => ({...t, done: true}))}))},
+                {
+                    id: 'complete',
+                    label: 'Complete all',
+                    handler: () => todoStore.setState((s) => ({todos: s.todos.map((t) => ({...t, done: true}))})),
+                },
                 {
                     id: 'clearDone',
                     label: 'Remove done',
@@ -279,7 +305,8 @@ $('dev').onchange = (e) => {
 };
 for (const button of document.querySelectorAll<HTMLButtonElement>('[data-log]')) {
     const level = button.dataset.log as 'debug' | 'info' | 'warn' | 'error';
-    button.onclick = () => devtools.log[level](`A ${level} message from the example page`, {clickedAt: new Date().toISOString()}, {tag: 'example'});
+    button.onclick = () =>
+        devtools.log[level](`A ${level} message from the example page`, {clickedAt: new Date().toISOString()}, {tag: 'example'});
 }
 $('console').onclick = () => console.warn('console.warn from the example page', {captured: true});
 
@@ -289,7 +316,11 @@ const relayHttp = () => $<HTMLInputElement>('relay').value.replace(/^ws/, 'http'
 $('net-ok').onclick = () => void fetch(`${relayHttp()}/health`).then((r) => r.json());
 $('net-404').onclick = () => void fetch(`${relayHttp()}/does-not-exist`).catch(() => {});
 $('net-post').onclick = () =>
-    void fetch('https://httpbin.org/post', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({counter})}).catch(() => {});
+    void fetch('https://httpbin.org/post', {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({counter}),
+    }).catch(() => {});
 $('net-fail').onclick = () => void fetch('http://127.0.0.1:1/unreachable').catch(() => {});
 $('net-xhr').onclick = () => {
     const xhr = new XMLHttpRequest();

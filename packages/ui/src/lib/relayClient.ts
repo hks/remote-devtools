@@ -209,7 +209,12 @@ class RelayClient {
                 const isNew = p.sessionId !== this.#creds?.sessionId;
                 this.#creds = {sessionId: p.sessionId, uiSecret: p.uiSecret};
                 writeCredentials(this.#creds);
-                store.setSession({sessionId: p.sessionId, deviceWsUrl: p.deviceWsUrl, pairing: p.pairing}, p.devices, p.pendingRequests, p.trustedDevices);
+                store.setSession(
+                    {sessionId: p.sessionId, deviceWsUrl: p.deviceWsUrl, pairing: p.pairing},
+                    p.devices,
+                    p.pendingRequests,
+                    p.trustedDevices,
+                );
                 const online = p.devices.filter((d) => d.connected).length;
                 store.addLog({
                     level: 'info',
@@ -246,12 +251,23 @@ class RelayClient {
                 break;
             case 'error':
                 if (relayMsg.payload.code === 'SESSION_NOT_FOUND' && msg.replyTo === this.#pendingResumeId) {
-                    store.addLog({level: 'warn', source: 'relay', message: 'Previous session not found (it may have expired); starting a new one', deviceId: null});
+                    store.addLog({
+                        level: 'warn',
+                        source: 'relay',
+                        message: 'Previous session not found (it may have expired); starting a new one',
+                        deviceId: null,
+                    });
                     this.#creds = null;
                     writeCredentials(null);
                     this.send('session.create', {});
                 } else {
-                    store.addLog({level: 'error', source: 'relay', message: `${relayMsg.payload.code}: ${relayMsg.payload.message}`, data: relayMsg.payload, deviceId: null});
+                    store.addLog({
+                        level: 'error',
+                        source: 'relay',
+                        message: `${relayMsg.payload.code}: ${relayMsg.payload.message}`,
+                        data: relayMsg.payload,
+                        deviceId: null,
+                    });
                 }
                 break;
         }
@@ -281,7 +297,14 @@ class RelayClient {
             case 'hello': {
                 const known = store.devices[deviceId]?.hello;
                 store.setHello(deviceId, msg.payload);
-                if (!known) store.addLog({level: 'info', source: 'device', message: `Device info received — ${describeDevice(msg.payload)}`, data: msg.payload, deviceId});
+                if (!known)
+                    store.addLog({
+                        level: 'info',
+                        source: 'device',
+                        message: `Device info received — ${describeDevice(msg.payload)}`,
+                        data: msg.payload,
+                        deviceId,
+                    });
                 break;
             }
             case 'capabilities.update':
@@ -292,13 +315,24 @@ class RelayClient {
                 const previous = store.devices[deviceId]?.lifecycle;
                 store.setLifecycle(deviceId, msg.payload.state);
                 if (msg.payload.state === previous) break;
-                if (msg.payload.state === 'background') store.addLog({level: 'warn', source: 'device', message: 'App moved to the background', deviceId});
-                else if (msg.payload.state === 'active' && previous === 'background') store.addLog({level: 'info', source: 'device', message: 'App returned to the foreground', deviceId});
+                if (msg.payload.state === 'background')
+                    store.addLog({level: 'warn', source: 'device', message: 'App moved to the background', deviceId});
+                else if (msg.payload.state === 'active' && previous === 'background')
+                    store.addLog({level: 'info', source: 'device', message: 'App returned to the foreground', deviceId});
                 break;
             }
             case 'log': {
                 const p = msg.payload;
-                const entry = {level: p.level, source: 'device' as const, message: p.message, data: p.data, tag: p.tag, ts: p.at ?? msg.ts, deviceId, historic: msg.historic};
+                const entry = {
+                    level: p.level,
+                    source: 'device' as const,
+                    message: p.message,
+                    data: p.data,
+                    tag: p.tag,
+                    ts: p.at ?? msg.ts,
+                    deviceId,
+                    historic: msg.historic,
+                };
                 if (msg.historic) store.addLogs([entry]);
                 else store.addLog(entry);
                 break;
@@ -325,7 +359,10 @@ class RelayClient {
             store.addLog({
                 level: 'warn',
                 source: 'relay',
-                message: previous?.lifecycle === 'background' ? 'Device disconnected (app was in the background)' : 'Device disconnected (app closed or network lost)',
+                message:
+                    previous?.lifecycle === 'background'
+                        ? 'Device disconnected (app was in the background)'
+                        : 'Device disconnected (app closed or network lost)',
                 deviceId,
             });
         }

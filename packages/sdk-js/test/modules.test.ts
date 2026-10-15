@@ -32,7 +32,13 @@ describe('validateArgs', () => {
 describe('functionsModule', () => {
     it('lists registered functions (without handlers) in hello and runs them', async () => {
         const functions = functionsModule();
-        functions.register({id: 'add', title: 'Add', group: 'Math', args: {a: {type: 'number', required: true}, b: {type: 'number', default: 10}}, handler: ({a, b}) => a + b});
+        functions.register({
+            id: 'add',
+            title: 'Add',
+            group: 'Math',
+            args: {a: {type: 'number', required: true}, b: {type: 'number', default: 10}},
+            handler: ({a, b}) => a + b,
+        });
         await withPairedClient([functions], async (ui, deviceId) => {
             ui.send('module.functions.invoke', {commandId: 'add', args: {a: 2}}, {deviceId});
             assert.deepEqual((await ui.next('module.functions.result')).payload, {ok: true, result: 12});
@@ -50,14 +56,21 @@ describe('functionsModule', () => {
     it('reports handler errors and async results', async () => {
         const functions = functionsModule();
         functions.register({id: 'slow', title: 'Slow', handler: async () => (await sleep(20), 'done')});
-        functions.register({id: 'boom', title: 'Boom', handler: () => {
-            throw new Error('kaboom');
-        }});
+        functions.register({
+            id: 'boom',
+            title: 'Boom',
+            handler: () => {
+                throw new Error('kaboom');
+            },
+        });
         await withPairedClient([functions], async (ui, deviceId) => {
             ui.send('module.functions.invoke', {commandId: 'slow', args: {}}, {deviceId});
             assert.deepEqual((await ui.next('module.functions.result')).payload, {ok: true, result: 'done'});
             ui.send('module.functions.invoke', {commandId: 'boom', args: {}}, {deviceId});
-            assert.deepEqual((await ui.next('module.functions.result')).payload, {ok: false, error: {code: 'HANDLER_ERROR', message: 'kaboom'}});
+            assert.deepEqual((await ui.next('module.functions.result')).payload, {
+                ok: false,
+                error: {code: 'HANDLER_ERROR', message: 'kaboom'},
+            });
         });
     });
 
@@ -65,7 +78,10 @@ describe('functionsModule', () => {
         const functions = functionsModule();
         await withPairedClient([functions], async (ui) => {
             const unregister = functions.register({id: 'later', title: 'Later', handler: () => 1});
-            assert.deepEqual((await ui.next('capabilities.update')).payload.functions.commands.map((c: any) => c.id), ['later']);
+            assert.deepEqual(
+                (await ui.next('capabilities.update')).payload.functions.commands.map((c: any) => c.id),
+                ['later'],
+            );
             assert.equal('handler' in (await Promise.resolve(functions.capabilities!() as any)).commands[0], false);
             unregister();
             assert.deepEqual((await ui.next('capabilities.update')).payload.functions.commands, []);
@@ -104,7 +120,11 @@ describe('networkModule', () => {
         const original = globalThis.fetch;
         await withPairedClient([networkModule()], async (ui, deviceId) => {
             assert.notEqual(globalThis.fetch, original);
-            const res = await fetch(`${base}/json`, {method: 'POST', headers: {'content-type': 'application/json', 'x-token': 'abc'}, body: JSON.stringify({n: 1})});
+            const res = await fetch(`${base}/json`, {
+                method: 'POST',
+                headers: {'content-type': 'application/json', 'x-token': 'abc'},
+                body: JSON.stringify({n: 1}),
+            });
             assert.deepEqual(await res.json(), {hello: 'world', echo: {n: 1}});
 
             const request = await ui.next('module.network.request');
@@ -130,7 +150,10 @@ describe('networkModule', () => {
             await fetch(`${base}/missing`);
             await ui.next('module.network.request');
             const notFound = (await ui.next('module.network.response')).payload;
-            assert.deepEqual([notFound.status, notFound.result, notFound.errorMessage, notFound.body], [404, 'error', 'HTTP 404', 'not found']);
+            assert.deepEqual(
+                [notFound.status, notFound.result, notFound.errorMessage, notFound.body],
+                [404, 'error', 'HTTP 404', 'not found'],
+            );
 
             await assert.rejects(fetch('http://127.0.0.1:1/unreachable'));
             await ui.next('module.network.request');
@@ -181,7 +204,10 @@ describe('networkModule', () => {
                 await client.connection.pairWithCode(ui.session.pairing.code, relayUrl(port));
                 await ui.next('hello');
                 const history = (await ui.next('history')).payload;
-                assert.deepEqual(history.entries.map((e: any) => e.type), ['module.network.request', 'module.network.response']);
+                assert.deepEqual(
+                    history.entries.map((e: any) => e.type),
+                    ['module.network.request', 'module.network.response'],
+                );
             } finally {
                 client.destroy();
                 ui.close();
@@ -200,9 +226,15 @@ describe('networkModule', () => {
                 xhr.setRequestHeader('Authorization', 'Bearer t');
                 xhr.send('{"name":"x"}');
                 const request = (await ui.next('module.network.request')).payload;
-                assert.deepEqual([request.method, request.url, request.headers.Authorization, request.body], ['PUT', 'https://api.example.com/items/7', 'Bearer t', {name: 'x'}]);
+                assert.deepEqual(
+                    [request.method, request.url, request.headers.Authorization, request.body],
+                    ['PUT', 'https://api.example.com/items/7', 'Bearer t', {name: 'x'}],
+                );
                 const response = (await ui.next('module.network.response')).payload;
-                assert.deepEqual([response.status, response.result, response.headers['x-id'], response.body], [201, 'success', '7', {created: true}]);
+                assert.deepEqual(
+                    [response.status, response.result, response.headers['x-id'], response.body],
+                    [201, 'success', '7', {created: true}],
+                );
 
                 const failing = new FakeXhr();
                 FakeXhr.next = {status: 0, headers: '', body: '', event: 'timeout'};
@@ -228,7 +260,10 @@ describe('networkModule', () => {
 
             const axios = fakeAxios();
             const eject = network.axios(axios);
-            await axios.run({method: 'get', baseURL: 'https://api.example.com/', url: '/users', params: {page: 2}}, {status: 200, data: [1, 2], headers: {'x-a': 'b'}});
+            await axios.run(
+                {method: 'get', baseURL: 'https://api.example.com/', url: '/users', params: {page: 2}},
+                {status: 200, data: [1, 2], headers: {'x-a': 'b'}},
+            );
             const request = (await ui.next('module.network.request')).payload;
             assert.equal(request.url, 'https://api.example.com/users?page=2');
             const response = (await ui.next('module.network.response')).payload;
@@ -285,7 +320,10 @@ function fakeAxios() {
         handlers,
         interceptors: {
             request: {use: (fn: (c: any) => any) => handlers.request.push(fn) - 1, eject: () => void handlers.request.pop()},
-            response: {use: (ok: (r: any) => any, err: (e: any) => any) => handlers.response.push([ok, err]) - 1, eject: () => void handlers.response.pop()},
+            response: {
+                use: (ok: (r: any) => any, err: (e: any) => any) => handlers.response.push([ok, err]) - 1,
+                eject: () => void handlers.response.pop(),
+            },
         },
         async run(config: any, outcome: any) {
             for (const fn of handlers.request) config = fn(config);
@@ -304,7 +342,9 @@ function fakeAxios() {
 describe('package', () => {
     it('SDK_VERSION matches package.json', async () => {
         const {SDK_VERSION} = await import('../src/index.ts');
-        const pkg = JSON.parse(await import('node:fs/promises').then((fs) => fs.readFile(new URL('../package.json', import.meta.url), 'utf8')));
+        const pkg = JSON.parse(
+            await import('node:fs/promises').then((fs) => fs.readFile(new URL('../package.json', import.meta.url), 'utf8')),
+        );
         assert.equal(SDK_VERSION, pkg.version);
     });
 });

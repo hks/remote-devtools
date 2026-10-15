@@ -1,6 +1,5 @@
 import type {IncomingMessage, Server} from 'node:http';
 import type {Duplex} from 'node:stream';
-import {WebSocket, WebSocketServer} from 'ws';
 import {
     type ConnectOutcome,
     type ConnectRejectReason,
@@ -15,14 +14,15 @@ import {
     isValidDeviceId,
     type Lifecycle,
     type MessageOf,
-    parseEnvelope,
     PROTOCOL_VERSION,
+    parseEnvelope,
     type RelayToDevice,
     type RelayToUi,
     type UnpairReason,
     WS_PATH_DEVICE,
     WS_PATH_UI,
 } from '@himmetkaan/remote-devtools-protocol';
+import {WebSocket, WebSocketServer} from 'ws';
 import type {RelayConfig} from './config.ts';
 import {log} from './log.ts';
 import {clientAddress, FailureLimiter, isLocalAddress} from './net.ts';
@@ -41,7 +41,7 @@ type SocketState = {
     pendingRequestId: string | null;
     alive: boolean;
     authTimer: NodeJS.Timeout | null;
-    rate: { windowStart: number; count: number; dropped: number };
+    rate: {windowStart: number; count: number; dropped: number};
 };
 
 type Pending = {
@@ -245,8 +245,7 @@ export function attachRelay(server: Server, config: RelayConfig): Relay {
     }
 
     function handleConnect(ws: WebSocket, state: SocketState, msg: Envelope, payload: Record<string, unknown>) {
-        const allowed =
-            config.connectRequests === 'any' || (config.connectRequests === 'local' && isLocalAddress(state.address));
+        const allowed = config.connectRequests === 'any' || (config.connectRequests === 'local' && isLocalAddress(state.address));
         if (!allowed) return rejectConnect(ws, null, 'disabled', msg.id);
         if (!isValidDeviceId(payload.deviceId) || !isHello(payload.hello)) {
             return rejectDevice(ws, 'BAD_MESSAGE', 'deviceId and hello are required', msg.id);
@@ -412,7 +411,12 @@ export function attachRelay(server: Server, config: RelayConfig): Relay {
         if (state.rate.dropped++ === 0 && state.session && state.device) {
             const warning = createEnvelope(
                 'log',
-                {level: 'warn', message: `Relay is dropping messages: more than ${config.deviceMaxMessagesPerSec}/s`, tag: 'relay', at: now},
+                {
+                    level: 'warn',
+                    message: `Relay is dropping messages: more than ${config.deviceMaxMessagesPerSec}/s`,
+                    tag: 'relay',
+                    at: now,
+                },
                 {deviceId: state.device.deviceId},
             );
             broadcastRawToUis(state.session, JSON.stringify(warning));

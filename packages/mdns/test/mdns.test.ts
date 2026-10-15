@@ -3,8 +3,8 @@ import {EventEmitter} from 'node:events';
 import {createRequire} from 'node:module';
 import {describe, it} from 'node:test';
 import {Bonjour} from 'bonjour-service';
-import {bonjourBrowser, type MdnsBrowser, mdnsDiscovery, type MdnsService, zeroconfBrowser} from '../src/index.ts';
 import {createClient, openUi, waitForStatus, withRelay} from '../../sdk-js/test/helpers.ts';
+import {bonjourBrowser, type MdnsBrowser, type MdnsService, mdnsDiscovery, zeroconfBrowser} from '../src/index.ts';
 
 /** Browser that "finds" the given services right away. */
 function fakeBrowser(services: MdnsService[], seen: string[] = []): MdnsBrowser {
@@ -26,7 +26,13 @@ describe('mdnsDiscovery', () => {
             const urls = await find(
                 fakeBrowser(
                     [
-                        {name: 'Remote DevTools (mac)', host: 'no-such-host.invalid.', port, addresses: ['fe80::1', '127.0.0.1'], txt: {v: '2', path: '/ws/device'}},
+                        {
+                            name: 'Remote DevTools (mac)',
+                            host: 'no-such-host.invalid.',
+                            port,
+                            addresses: ['fe80::1', '127.0.0.1'],
+                            txt: {v: '2', path: '/ws/device'},
+                        },
                         {name: 'Duplicate announcement', host: 'no-such-host.invalid.', port, addresses: ['127.0.0.1']},
                     ],
                     seen,
@@ -72,7 +78,10 @@ describe('zeroconfBrowser', () => {
         stop();
         zeroconf.emit('resolved', {name: 'b', port: 1});
         assert.deepEqual(calls, [['scan', 'remotedevtools', 'tcp', 'local.'], ['stop']]);
-        assert.deepEqual(found.map((s) => s.name), ['a']);
+        assert.deepEqual(
+            found.map((s) => s.name),
+            ['a'],
+        );
     });
 });
 
@@ -91,10 +100,10 @@ describe('Expo config plugin', () => {
         const manifest = {manifest: {'uses-permission': [{$: {'android:name': 'android.permission.INTERNET'}}]}};
         plugin.applyAndroidManifest(manifest);
         plugin.applyAndroidManifest(manifest);
-        assert.deepEqual(manifest.manifest['uses-permission'].map((p: {$: Record<string, string>}) => p.$['android:name']), [
-            'android.permission.INTERNET',
-            'android.permission.CHANGE_WIFI_MULTICAST_STATE',
-        ]);
+        assert.deepEqual(
+            manifest.manifest['uses-permission'].map((p: {$: Record<string, string>}) => p.$['android:name']),
+            ['android.permission.INTERNET', 'android.permission.CHANGE_WIFI_MULTICAST_STATE'],
+        );
     });
 });
 

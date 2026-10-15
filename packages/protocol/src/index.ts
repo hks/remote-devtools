@@ -36,19 +36,19 @@ export type Envelope<T extends string = string, P = unknown> = {
 };
 
 /** Builds the union of all possible envelopes from a `{ type: payload }` map. */
-export type MessageOf<M> = { [K in keyof M & string]: Envelope<K, M[K]> }[keyof M & string];
+export type MessageOf<M> = {[K in keyof M & string]: Envelope<K, M[K]>}[keyof M & string];
 
 // ─── Field DSL ───────────────────────────────────────────────────────────────
 
-export type SelectOption = string | { label: string; value: string | number };
+export type SelectOption = string | {label: string; value: string | number};
 
 /** Shared field definition for command arguments, flags and form blocks. */
 export type Field =
-    | { type: 'text'; label?: string; placeholder?: string; multiline?: boolean; default?: string; required?: boolean }
-    | { type: 'number'; label?: string; min?: number; max?: number; step?: number; default?: number; required?: boolean }
-    | { type: 'boolean'; label?: string; default?: boolean }
-    | { type: 'select'; label?: string; options: readonly SelectOption[]; default?: string | number; required?: boolean }
-    | { type: 'json'; label?: string; default?: unknown };
+    | {type: 'text'; label?: string; placeholder?: string; multiline?: boolean; default?: string; required?: boolean}
+    | {type: 'number'; label?: string; min?: number; max?: number; step?: number; default?: number; required?: boolean}
+    | {type: 'boolean'; label?: string; default?: boolean}
+    | {type: 'select'; label?: string; options: readonly SelectOption[]; default?: string | number; required?: boolean}
+    | {type: 'json'; label?: string; default?: unknown};
 
 /** Key = argument name; order is preserved. */
 export type Fields = Record<string, Field>;
@@ -59,7 +59,7 @@ export type Lifecycle = 'active' | 'background' | 'inactive';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-export type LogEntry = { level: LogLevel; message: string; data?: unknown; tag?: string; at: number };
+export type LogEntry = {level: LogLevel; message: string; data?: unknown; tag?: string; at: number};
 
 export type CommandDef = {
     id: string;
@@ -94,52 +94,52 @@ export type StorageAdapterInfo = {
     masked?: boolean;
 };
 
-export type ActionDef = { id: string; label: string; confirm?: string; danger?: boolean };
+export type ActionDef = {id: string; label: string; confirm?: string; danger?: boolean};
 
 export type BlockTone = 'info' | 'success' | 'warn' | 'error';
 
-export type StatItem = { label: string; value: string | number; hint?: string; tone?: BlockTone };
+export type StatItem = {label: string; value: string | number; hint?: string; tone?: BlockTone};
 
 /** Custom panel building blocks. `id` is unique within a panel; `module.panels.update` finds blocks by `id`. */
 export type Block =
-    | { id: string; type: 'text'; title?: string; text: string; tone?: BlockTone }
-    | { id: string; type: 'stats'; title?: string; items: StatItem[] }
-    | { id: string; type: 'keyValue'; title?: string; data: Record<string, string | number | boolean | null> }
+    | {id: string; type: 'text'; title?: string; text: string; tone?: BlockTone}
+    | {id: string; type: 'stats'; title?: string; items: StatItem[]}
+    | {id: string; type: 'keyValue'; title?: string; data: Record<string, string | number | boolean | null>}
     | {
           id: string;
           type: 'table';
           title?: string;
-          columns: { key: string; title: string }[];
+          columns: {key: string; title: string}[];
           rows: Record<string, unknown>[];
           rowActions?: ActionDef[];
       }
-    | { id: string; type: 'json'; title?: string; data: unknown }
-    | { id: string; type: 'actions'; title?: string; actions: ActionDef[] }
-    | { id: string; type: 'form'; title?: string; fields: Fields; submit: { actionId: string; label: string; danger?: boolean } };
+    | {id: string; type: 'json'; title?: string; data: unknown}
+    | {id: string; type: 'actions'; title?: string; actions: ActionDef[]}
+    | {id: string; type: 'form'; title?: string; fields: Fields; submit: {actionId: string; label: string; danger?: boolean}};
 
 export type BlockType = Block['type'];
 
 /** A block's fields other than `id` and `type` (partial update). */
-export type BlockData = { [T in BlockType]: Partial<Omit<Extract<Block, { type: T }>, 'id' | 'type'>> }[BlockType];
+export type BlockData = {[T in BlockType]: Partial<Omit<Extract<Block, {type: T}>, 'id' | 'type'>>}[BlockType];
 
-export type PanelDef = { id: string; title: string; icon?: string; blocks: Block[] };
+export type PanelDef = {id: string; title: string; icon?: string; blocks: Block[]};
 
 export type Capabilities = {
-    network?: { autoCapture: boolean };
-    functions?: { commands: CommandDef[] };
-    storage?: { adapters: StorageAdapterInfo[] };
-    state?: { stores: { id: string; title: string }[] };
-    flags?: { flags: FlagDef[] };
+    network?: {autoCapture: boolean};
+    functions?: {commands: CommandDef[]};
+    storage?: {adapters: StorageAdapterInfo[]};
+    state?: {stores: {id: string; title: string}[]};
+    flags?: {flags: FlagDef[]};
     panels?: PanelDef[];
     /** Modules to be added later. The UI ignores keys it does not recognize. */
     [custom: string]: unknown;
 };
 
 export type Hello = {
-    app: { id: string; name: string; version: string; build?: string };
-    device: { platform: string; os: string; model?: string; name?: string };
+    app: {id: string; name: string; version: string; build?: string};
+    device: {platform: string; os: string; model?: string; name?: string};
     /** e.g. `{ name: '@himmetkaan/remote-devtools', version: '0.1.0' }` */
-    sdk: { name: string; version: string };
+    sdk: {name: string; version: string};
     isDevelopment: boolean;
     /** Free-form developer fields (userId, apiEndpoint, env…). The UI shows them on the device card. */
     meta: Record<string, string>;
@@ -158,7 +158,7 @@ export type QrPayload = {
 };
 
 /** The QR token and the 6-digit code are generated together; both are single-use and expire at the same time. */
-export type PairingInfo = { qrToken: string; code: string; expiresAt: number };
+export type PairingInfo = {qrToken: string; code: string; expiresAt: number};
 
 export type ConnectVia = 'local' | 'remote';
 
@@ -183,7 +183,7 @@ export type DeviceSnapshot = {
     lifecycle: Lifecycle | null;
 };
 
-export type TrustedDevice = { deviceId: string; appId: string; name: string; trustedAt: number };
+export type TrustedDevice = {deviceId: string; appId: string; name: string; trustedAt: number};
 
 export type UnpairReason = 'byUi' | 'byDevice' | 'expired' | 'sessionNotFound' | 'invalidSecret' | 'replaced';
 
@@ -207,19 +207,19 @@ export type ErrorCode =
     | 'REQUEST_NOT_FOUND'
     | 'UNKNOWN_TYPE';
 
-export type ErrorPayload = { code: ErrorCode; message: string };
+export type ErrorPayload = {code: ErrorCode; message: string};
 
 // ─── UI ↔ Relay ──────────────────────────────────────────────────────────────
 
 export type UiToRelay = {
     'session.create': Record<string, never>;
-    'session.resume': { sessionId: string; uiSecret: string };
+    'session.resume': {sessionId: string; uiSecret: string};
     /** Invalidates the current QR token and code and generates new ones. */
     'pairing.refresh': Record<string, never>;
     /** With `trust: true` the device is added to trusted devices and is not asked for approval on later requests. */
-    'connect.respond': { requestId: string; approve: boolean; trust: boolean };
-    'device.unpair': { deviceId: string };
-    'trusted.remove': { deviceId: string };
+    'connect.respond': {requestId: string; approve: boolean; trust: boolean};
+    'device.unpair': {deviceId: string};
+    'trusted.remove': {deviceId: string};
 };
 
 export type RelayToUi = {
@@ -242,45 +242,45 @@ export type RelayToUi = {
     };
     'connect.request': ConnectRequest;
     /** A pending request leaves the list (answered in another UI tab, expired, or abandoned by the device). */
-    'connect.resolved': { requestId: string; outcome: ConnectOutcome };
-    trusted: { devices: TrustedDevice[] };
+    'connect.resolved': {requestId: string; outcome: ConnectOutcome};
+    trusted: {devices: TrustedDevice[]};
     error: ErrorPayload;
 };
 
 // ─── Device ↔ Relay ──────────────────────────────────────────────────────────
 
 export type DeviceToRelay = {
-    'pair.qr': { sessionId: string; qrToken: string; deviceId: string };
-    'pair.code': { code: string; deviceId: string };
+    'pair.qr': {sessionId: string; qrToken: string; deviceId: string};
+    'pair.code': {code: string; deviceId: string};
     /** Only `isDevelopment` devices (localhost / LAN discovery). The relay asks the UI for approval. */
-    connect: { deviceId: string; hello: Hello };
-    resume: { sessionId: string; deviceId: string; deviceSecret: string };
+    connect: {deviceId: string; hello: Hello};
+    resume: {sessionId: string; deviceId: string; deviceSecret: string};
     unpair: Record<string, never>;
 };
 
 export type RelayToDevice = {
-    paired: { sessionId: string; deviceSecret: string; expiresAt: number };
-    resumed: { sessionId: string; expiresAt: number };
-    'connect.pending': { requestId: string; expiresAt: number };
-    'connect.rejected': { requestId: string | null; reason: ConnectRejectReason };
+    paired: {sessionId: string; deviceSecret: string; expiresAt: number};
+    resumed: {sessionId: string; expiresAt: number};
+    'connect.pending': {requestId: string; expiresAt: number};
+    'connect.rejected': {requestId: string | null; reason: ConnectRejectReason};
     /** The device should delete its stored connection info. */
-    unpaired: { reason: UnpairReason };
+    unpaired: {reason: UnpairReason};
     error: ErrorPayload;
 };
 
 // ─── Device → UI core messages (forwarded by relay) ──────────────────────────
 
 /** A message buffered before connecting: the `type` + `payload` that would normally be sent live. */
-export type HistoryEntry = { type: string; payload: unknown; ts: number };
+export type HistoryEntry = {type: string; payload: unknown; ts: number};
 
 /** Order is preserved; large buffers are split into multiple chunks, the last one has `final: true`. */
-export type HistoryChunk = { entries: HistoryEntry[]; final: boolean };
+export type HistoryChunk = {entries: HistoryEntry[]; final: boolean};
 
 export type DeviceToUi = {
     /** The device's first message after every connect/resume. */
     hello: Hello;
     'capabilities.update': Partial<Capabilities>;
-    lifecycle: { state: Lifecycle };
+    lifecycle: {state: Lifecycle};
     log: LogEntry;
     /** If `history.enabled`, the pre-connection buffer is sent in chunks once connected. */
     history: HistoryChunk;
@@ -294,7 +294,7 @@ export const DEVICE_TO_UI_TYPES: readonly (keyof DeviceToUi)[] = ['hello', 'capa
 export const MODULE_TYPE_PREFIX = 'module.';
 
 /** Common reply shape for UI → Device requests (returned with `replyTo`). */
-export type ModuleResult<R = unknown> = { ok: true; result: R } | { ok: false; error: { code: string; message: string } };
+export type ModuleResult<R = unknown> = {ok: true; result: R} | {ok: false; error: {code: string; message: string}};
 
 export type NetworkRequest = {
     uuid: string;
@@ -313,61 +313,61 @@ export type NetworkResponse = {
     durationMs: number | null;
     result: 'success' | 'error';
     errorMessage: string | null;
-    bodyTruncated?: { originalSize: number };
+    bodyTruncated?: {originalSize: number};
 };
 
 /** `size`: character count of the value. `preview`: truncated value (empty for masked adapters). */
-export type StorageEntry = { key: string; size: number; preview: string };
+export type StorageEntry = {key: string; size: number; preview: string};
 
-export type JsonPatchOp = { op: 'add' | 'remove' | 'replace'; path: string; value?: unknown };
+export type JsonPatchOp = {op: 'add' | 'remove' | 'replace'; path: string; value?: unknown};
 
 /**
  * State change. `patch` is the diff against the last sent state; if the diff is too large, the full `state` is sent instead.
  * `actions`: action names reported by the adapter in this interval (Redux), empty if unknown.
  */
-export type StateChange = { storeId: string; at: number; actions: string[]; patch?: JsonPatchOp[]; state?: unknown };
+export type StateChange = {storeId: string; at: number; actions: string[]; patch?: JsonPatchOp[]; state?: unknown};
 
 export type ModuleMessages = {
     'module.network.request': NetworkRequest;
     'module.network.response': NetworkResponse;
 
-    'module.functions.invoke': { commandId: string; args: Record<string, unknown> };
+    'module.functions.invoke': {commandId: string; args: Record<string, unknown>};
     'module.functions.result': ModuleResult;
 
     /** → `{ entries: StorageEntry[] }` */
-    'module.storage.list': { adapterId: string };
+    'module.storage.list': {adapterId: string};
     /** → `{ value: string | null }` */
-    'module.storage.get': { adapterId: string; key: string };
-    'module.storage.set': { adapterId: string; key: string; value: string };
-    'module.storage.remove': { adapterId: string; key: string };
-    'module.storage.clear': { adapterId: string };
+    'module.storage.get': {adapterId: string; key: string};
+    'module.storage.set': {adapterId: string; key: string; value: string};
+    'module.storage.remove': {adapterId: string; key: string};
+    'module.storage.clear': {adapterId: string};
     'module.storage.result': ModuleResult;
     /** `key: null` → multiple keys changed (e.g. clear), the list should be refetched. */
-    'module.storage.changed': { adapterId: string; key: string | null };
+    'module.storage.changed': {adapterId: string; key: string | null};
 
     /** → `{ state }` */
-    'module.state.snapshot': { storeId: string };
+    'module.state.snapshot': {storeId: string};
     /**
      * Starts the change stream or extends its lifetime (`STATE_SUBSCRIPTION_TTL_MS`). → `{ state }`;
      * with `renew: true` only the lifetime is extended and no `state` is sent.
      */
-    'module.state.subscribe': { storeId: string; renew?: boolean };
-    'module.state.unsubscribe': { storeId: string };
+    'module.state.subscribe': {storeId: string; renew?: boolean};
+    'module.state.unsubscribe': {storeId: string};
     'module.state.result': ModuleResult;
     'module.state.change': StateChange;
 
     /** Sets an override. → `FlagDef`. Values and override state also arrive via `capabilities.update`. */
-    'module.flags.set': { key: string; value: unknown };
+    'module.flags.set': {key: string; value: unknown};
     /** Without `key`, all overrides are removed. */
-    'module.flags.reset': { key?: string };
+    'module.flags.reset': {key?: string};
     'module.flags.result': ModuleResult;
 
     /** Replaces the given fields of a block (e.g. a table's `rows`). If the panel definition changes, `capabilities.update` is sent. */
-    'module.panels.update': { panelId: string; blockId: string; data: BlockData };
+    'module.panels.update': {panelId: string; blockId: string; data: BlockData};
     /**
      * Action (`actions` block), row action (`table`, with `row`) or form submit (with `values`). → the handler's return value.
      */
-    'module.panels.action': { panelId: string; blockId: string; actionId: string; row?: unknown; values?: Record<string, unknown> };
+    'module.panels.action': {panelId: string; blockId: string; actionId: string; row?: unknown; values?: Record<string, unknown>};
     'module.panels.result': ModuleResult;
 };
 
@@ -397,7 +397,7 @@ export function createMessageId(): string {
 export function createEnvelope<T extends string, P>(
     type: T,
     payload: P,
-    extra: { replyTo?: string; deviceId?: string } = {},
+    extra: {replyTo?: string; deviceId?: string} = {},
 ): Envelope<T, P> {
     const env: Envelope<T, P> = {v: PROTOCOL_VERSION, type, id: createMessageId(), ts: Date.now(), payload};
     if (extra.replyTo !== undefined) env.replyTo = extra.replyTo;
@@ -449,9 +449,9 @@ export function parseQrPayload(raw: string): QrPayload | null {
 
 // ─── Field DSL validation ────────────────────────────────────────────────────
 
-export type ArgsValidation = { ok: true; args: Record<string, unknown> } | { ok: false; errors: Record<string, string> };
+export type ArgsValidation = {ok: true; args: Record<string, unknown>} | {ok: false; errors: Record<string, string>};
 
-function optionValues(field: Extract<Field, { type: 'select' }>): (string | number)[] {
+function optionValues(field: Extract<Field, {type: 'select'}>): (string | number)[] {
     return field.options.map((o) => (typeof o === 'string' ? o : o.value));
 }
 
@@ -522,7 +522,10 @@ function escapePointer(segment: string | number): string {
 
 export function parsePointer(path: string): string[] {
     if (path === '') return [];
-    return path.slice(1).split('/').map((s) => s.replace(/~1/g, '/').replace(/~0/g, '~'));
+    return path
+        .slice(1)
+        .split('/')
+        .map((s) => s.replace(/~1/g, '/').replace(/~0/g, '~'));
 }
 
 /**

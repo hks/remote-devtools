@@ -27,4 +27,8 @@ for (const pkg of ['packages/protocol', 'packages/sdk-js']) {
     execFileSync('pnpm', ['run', 'build'], {cwd, stdio: 'inherit'});
     execFileSync('pnpm', ['pack', '--pack-destination', out], {cwd, stdio: 'inherit'});
 }
-console.log(`\nTarballs in ${out}:\n${readdirSync(out).filter((f) => f.endsWith('.tgz')).join('\n')}`);
+console.log(
+    `\nTarballs in ${out}:\n${readdirSync(out)
+        .filter((f) => f.endsWith('.tgz'))
+        .join('\n')}`,
+);
