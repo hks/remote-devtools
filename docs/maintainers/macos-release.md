@@ -1,86 +1,90 @@
 # macOS signing and notarization
 
-The desktop app is not distributed through the App Store. It is signed with a **Developer ID**, **notarized** by Apple and
-downloaded from GitHub Releases, so users do not see a Gatekeeper warning when they open it. Updates are delivered through
-GitHub Releases as well, using `electron-updater`.
+The desktop app is not distributed through the App Store. Release builds are signed with a **Developer ID**,
+**notarized** by Apple and published on GitHub Releases, so users do not see a Gatekeeper warning. The app updates
+itself from the same releases with `electron-updater`.
 
-::: warning Status
-Developer ID signing, notarization, `electron-updater` and the release workflow described below are **planned** and not
-implemented yet. The one-time steps can be done ahead of time so the secrets are in place when the release setup lands.
-:::
+## One-time setup
 
----
-
-## One-time steps for the maintainer
+You need a paid Apple Developer Program membership.
 
 ### 1. Developer ID Application certificate
+
 1. developer.apple.com → Certificates, IDs & Profiles → Certificates → **+**
-2. Choose **Developer ID Application** (not "Apple Distribution"; this one is for distribution outside the App Store).
-3. On a Mac, create a CSR with Keychain Access → Certificate Assistant → *Request a Certificate From a Certificate Authority* and upload it.
+2. Choose **Developer ID Application** (not "Apple Distribution", which is for the App Store).
+3. Create a CSR with Keychain Access → Certificate Assistant → *Request a Certificate From a Certificate Authority*
+   and upload it.
 4. Double-click the downloaded certificate to add it to the Keychain.
-5. In the Keychain, select the certificate **together with its private key** → Export → save as `.p12` and set a strong password.
-6. Convert it to Base64 (you will paste the output into a GitHub secret):
-   ```bash
-   base64 -i DeveloperID.p12 | pbcopy
-   ```
+5. In Keychain Access, select the certificate **together with its private key** → Export → save as `.p12` with a strong
+   password.
 
-### 2. App Store Connect API key for notarization
+### 2. App Store Connect API key (notarization)
+
 1. appstoreconnect.apple.com → Users and Access → **Integrations** → App Store Connect API → **Team Keys** → **+**
-2. Role: **Developer**. The downloaded `AuthKey_XXXXXX.p8` file can only be downloaded once; store it securely.
-3. Note the **Key ID** and **Issuer ID** shown on the page.
+2. Role: **Developer**. The `AuthKey_XXXXXXXXXX.p8` file can only be downloaded once; keep it safe.
+3. Note the **Key ID** and the **Issuer ID** shown on the page.
 
-### 3. Team ID
-developer.apple.com → Membership details → **Team ID** (10 characters).
+### 3. Repository secrets
 
-### 4. GitHub repository secrets
 Repository → Settings → Secrets and variables → Actions:
 
 | Secret | Value |
 |---|---|
-| `CSC_LINK` | Base64 `.p12` content from step 1 |
-| `CSC_KEY_PASSWORD` | `.p12` password |
-| `APPLE_API_KEY_BASE64` | Output of `base64 -i AuthKey_XXXXXX.p8` |
+| `CSC_LINK` | Base64 of the `.p12`: `base64 -i DeveloperID.p12 \| pbcopy` |
+| `CSC_KEY_PASSWORD` | The `.p12` password |
+| `APPLE_API_KEY_BASE64` | Base64 of the `.p8`: `base64 -i AuthKey_XXXXXXXXXX.p8 \| pbcopy` |
 | `APPLE_API_KEY_ID` | Key ID |
 | `APPLE_API_ISSUER` | Issuer ID |
-| `APPLE_TEAM_ID` | Team ID |
 
-::: tip Local signing
-For local testing you can put the same values in a `.env.release` file (it is git-ignored). As long as the certificate is in
-the Keychain, local signing also works without `CSC_LINK`.
+## Releasing a version
+
+1. Bump `version` in `apps/desktop/package.json` and commit it to `main`.
+2. Push a matching tag:
+
+   ```bash
+   git tag desktop-v0.2.0 && git push origin desktop-v0.2.0
+   ```
+
+The **Desktop release** workflow (macOS runner) checks that the tag matches the version, builds the app, signs it with
+the certificate from `CSC_LINK`, notarizes and staples it, publishes `RemoteDevTools-<version>-mac-arm64.dmg`, the
+`.zip` and `latest-mac.yml` as a GitHub release, and finally verifies the signature with `codesign`, `spctl` and
+`stapler`.
+
+Releases are published directly. Installed apps check for updates on launch and every six hours, download the update in
+the background and offer **Restart now** or **Later** (the update then installs when the app quits). **Check for
+Updates…** in the app menu checks on demand.
+
+::: warning Only desktop releases on GitHub Releases
+`electron-updater` reads the repository's **latest** release. Other workflows must not create GitHub releases (the npm
+workflow sets `createGithubReleases: false`), otherwise installed apps cannot find their update.
 :::
 
----
+## Building locally
 
-## What the release setup does
+```bash
+pnpm dist:desktop
+```
 
-The following is the planned configuration.
+builds an **unsigned** package (ad-hoc signature, which Apple Silicon requires) in `apps/desktop/release/`, whatever
+certificates are in your keychain.
 
-- **electron-builder** configuration
-  - `mac.target`: `dmg` + `zip` (the zip is required by `electron-updater`), `arch: arm64`
-  - `hardenedRuntime: true`, `gatekeeperAssess: false`, `entitlements` (`allow-jit` and `allow-unsigned-executable-memory` for Electron)
-  - `notarize: true` (notarytool + API key)
-  - `publish: { provider: 'github' }`
-- **Info.plist** additions: `NSLocalNetworkUsageDescription` and `NSBonjourServices: ["_remotedevtools._tcp"]`.
-  macOS's Local Network permission relies on these for mDNS advertising and for incoming LAN connections.
-- **GitHub Actions** (`.github/workflows/release-desktop.yml`)
-  - Trigger: a `desktop-v*` tag
-  - Runner: `macos-14` (Apple Silicon)
-  - Steps: pnpm install → build → write the `.p8` from the secret to a file → `electron-builder --mac --arm64 --publish always`
-  - Output: a draft GitHub Release (`.dmg`, `.zip`, `latest-mac.yml`). The maintainer reviews and publishes it.
-- **Auto-update:** `electron-updater` checks for a new version on startup and periodically, and prompts the user.
+For a signed build on your Mac, name the certificate explicitly (your keychain may contain other teams' certificates) and,
+to notarize, point to the API key:
 
-## Verification
+```bash
+export CSC_NAME="Developer ID Application: Your Name (TEAMID)"
+export APPLE_API_KEY=~/keys/AuthKey_XXXXXXXXXX.p8 APPLE_API_KEY_ID=XXXXXXXXXX APPLE_API_ISSUER=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+pnpm dist:desktop:signed
+```
+
+Without the `APPLE_API_*` variables the build is signed but not notarized.
+
+## Checking a build
 
 ```bash
 codesign --verify --deep --strict --verbose=2 "/Applications/Remote DevTools.app"
+spctl -a -vvv -t execute "/Applications/Remote DevTools.app"
+xcrun stapler validate "/Applications/Remote DevTools.app"
 ```
 
-```bash
-spctl -a -vvv -t install "/Applications/Remote DevTools.app"
-```
-
-```bash
-xcrun stapler validate "Remote DevTools.dmg"
-```
-
-The `spctl` output should show `source=Notarized Developer ID`.
+`spctl` should report `source=Notarized Developer ID`.

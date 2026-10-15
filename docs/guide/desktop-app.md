@@ -4,16 +4,12 @@ The desktop app runs the relay and the UI in one window, so nothing needs to be 
 computer over the local network; the phone and the computer must be on the same network.
 
 Currently built for macOS on Apple Silicon. Download the `.dmg` from the
-[GitHub releases](https://github.com/hks/remote-devtools/releases).
+[latest release](https://github.com/hks/remote-devtools/releases/latest). Releases are signed with a Developer ID and
+notarized by Apple.
 
-::: warning Unsigned builds
-Until the app is signed with a Developer ID and notarized, macOS blocks the first launch. Right-click the app and
-choose **Open**. If macOS says the app is damaged, run:
-
-```bash
-xattr -cr "/Applications/Remote DevTools.app"
-```
-:::
+The app keeps itself up to date: it checks for a new version on launch and every six hours, downloads it in the
+background and asks you to restart (or installs it when you quit). Use **Remote DevTools → Check for Updates…** to check
+now.
 
 ## How it behaves
 
@@ -33,5 +29,9 @@ xattr -cr "/Applications/Remote DevTools.app"
 ```bash
 pnpm install
 pnpm dev:desktop      # build the UI and main process and open Electron
-pnpm dist:desktop     # .dmg and .zip in apps/desktop/release/ (Apple Silicon)
+pnpm dist:desktop     # unsigned .dmg and .zip in apps/desktop/release/ (Apple Silicon)
 ```
+
+Packages you build yourself are not signed, so macOS blocks the first launch: right-click the app and choose **Open**.
+If macOS says the app is damaged, run `xattr -cr "/Applications/Remote DevTools.app"`. Signed builds are described in
+[macOS signing](../maintainers/macos-release).

@@ -1,0 +1,56 @@
+name: Desktop release
+
+on:
+  push:
+    tags: ['desktop-v*']
+
+permissions:
+  contents: write   # create the GitHub release and upload the packages
+
+jobs:
+  macos:
+    runs-on: macos-15   # Apple Silicon
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Check that the tag matches the app version
+        run: |
+          version=$(node -p "require('./apps/desktop/package.json').version")
+          if [ "$GITHUB_REF_NAME" != "desktop-v$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match apps/desktop/package.json version $version"
+            exit 1
+          fi
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Write the App Store Connect API key
+        env:
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+        run: |
+          echo "$APPLE_API_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+          echo "APPLE_API_KEY=$RUNNER_TEMP/AuthKey.p8" >> "$GITHUB_ENV"
+
+      # Signs with the Developer ID certificate, notarizes, staples, and publishes dmg + zip + latest-mac.yml.
+      - run: pnpm --filter @himmetkaan/remote-devtools-desktop release
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify the signature and notarization
+        run: |
+          app="apps/desktop/release/mac-arm64/Remote DevTools.app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          spctl -a -vvv -t execute "$app"   # expects "source=Notarized Developer ID"
+          xcrun stapler validate "$app"
+
+      - name: Remove the API key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/AuthKey.p8"

@@ -5,7 +5,7 @@
 | `@himmetkaan/remote-devtools`, `@himmetkaan/remote-devtools-protocol` | npm | [Changesets](https://github.com/changesets/changesets) + the `Release` workflow |
 | Relay + UI image | `ghcr.io/hks/remote-devtools` | The `Docker image` workflow, on version tags |
 | Documentation | GitHub Pages | The `Docs` workflow, on every push to `main` |
-| Desktop app | GitHub Releases | Built locally for now; see [macOS signing](./macos-release) |
+| Desktop app | GitHub Releases (`desktop-vX.Y.Z`) | The `Desktop release` workflow, on `desktop-v*` tags; see [macOS signing](./macos-release) |
 
 The relay and the UI are not published to npm; they ship inside the Docker image and the desktop app.
 
@@ -22,7 +22,8 @@ The relay and the UI are not published to npm; they ship inside the Docker image
 2. When changesets reach `main`, the `Release` workflow opens (or updates) a **Version packages** pull request that
    bumps versions and writes the changelogs.
 
-3. Merging that pull request publishes the new versions to npm with provenance.
+3. Merging that pull request publishes the new versions to npm with provenance and tags them. No GitHub release is
+   created: the desktop app's auto-update reads the repository's latest release, which must stay a desktop release.
 
 The workflow needs an `NPM_TOKEN` repository secret: an npm **granular access token** with read and write access to
 the `@himmetkaan` packages. Prereleases can be made with `pnpm changeset pre enter alpha`.

@@ -2,6 +2,7 @@ import {app, BrowserWindow, clipboard, dialog, Menu, shell, type MenuItemConstru
 import {join} from 'node:path';
 import {createRelay, loadConfig, type RunningServer} from '@himmetkaan/remote-devtools-relay';
 import {listLanAddresses, type LanAddress} from './network.ts';
+import {checkForUpdatesFromMenu, startAutoUpdates} from './updates.ts';
 
 // Fixed port: the UI's session info (localStorage) is tied to the origin (127.0.0.1:port).
 const PORT = Number(process.env.DEVTOOLS_PORT) || 8787;
@@ -63,8 +64,24 @@ function buildMenu() {
         {label: 'Refresh interfaces', click: () => refreshNetwork(true)},
     ];
 
+    const appMenu: MenuItemConstructorOptions = {
+        label: app.name,
+        submenu: [
+            {role: 'about'},
+            {label: 'Check for Updates…', click: checkForUpdatesFromMenu},
+            {type: 'separator'},
+            {role: 'services'},
+            {type: 'separator'},
+            {role: 'hide'},
+            {role: 'hideOthers'},
+            {role: 'unhide'},
+            {type: 'separator'},
+            {role: 'quit'},
+        ],
+    };
+
     const template: MenuItemConstructorOptions[] = [
-        ...(process.platform === 'darwin' ? [{role: 'appMenu' as const}] : [{role: 'fileMenu' as const}]),
+        ...(process.platform === 'darwin' ? [appMenu] : [{role: 'fileMenu' as const}]),
         {role: 'editMenu'},
         {role: 'viewMenu'},
         {label: 'Network', submenu: networkMenu},
@@ -162,6 +179,7 @@ async function start() {
     buildMenu();
     createWindow();
     setInterval(() => refreshNetwork(), NETWORK_POLL_MS).unref();
+    startAutoUpdates();
 }
 
 if (!app.requestSingleInstanceLock()) {

@@ -2,7 +2,7 @@
   "name": "@himmetkaan/remote-devtools-desktop",
   "productName": "Remote DevTools",
   "version": "0.1.0",
-  "description": "Remote DevTools — relay and UI in one desktop app (local network)",
+  "description": "Remote DevTools: relay and UI in one desktop app (local network)",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -11,7 +11,9 @@
     "build": "pnpm --filter @himmetkaan/remote-devtools-ui build && node scripts/bundle.mjs",
     "start": "pnpm run build && electron .",
     "typecheck": "tsc --noEmit -p .",
-    "dist": "pnpm run build && electron-builder --mac"
+    "dist": "pnpm run build && electron-builder --mac --publish never -c.mac.identity=null",
+    "release": "node scripts/require-signing-env.mjs && pnpm run build && electron-builder --mac --publish always",
+    "dist:signed": "node scripts/require-signing-env.mjs && pnpm run build && electron-builder --mac --publish never"
   },
   "devDependencies": {
     "@himmetkaan/remote-devtools-relay": "workspace:*",
@@ -19,6 +21,7 @@
     "@types/node": "24.19.1",
     "electron": "44.4.5",
     "electron-builder": "26.15.3",
+    "electron-updater": "6.8.9",
     "esbuild": "0.28.2",
     "typescript": "7.0.2"
   }

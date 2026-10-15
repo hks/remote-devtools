@@ -1,4 +1,6 @@
-# Remote DevTools desktop packages — unsigned distribution (signed/notarized release: docs/maintainers/macos-release.md, Phase 6).
+# Remote DevTools desktop packages. Signing and notarization: docs/maintainers/macos-release.md.
+# With a Developer ID certificate (keychain or CSC_LINK) the app is signed; with APPLE_API_KEY / APPLE_API_KEY_ID /
+# APPLE_API_ISSUER it is also notarized. Without them the build stays ad-hoc signed (local, unsigned packages).
 appId: com.himmetkaan.remote-devtools
 productName: Remote DevTools
 artifactName: RemoteDevTools-${version}-${os}-${arch}.${ext}
@@ -24,12 +26,25 @@ mac:
     - target: zip
       arch: [arm64]
   category: public.app-category.developer-tools
-  # Certificate signing is off: otherwise any Apple certificate in the keychain would be picked automatically.
-  # scripts/after-pack.mjs applies the ad-hoc signature Apple Silicon requires.
-  identity: null
-  hardenedRuntime: false
+  # `pnpm dist` passes identity=null (ad-hoc signature from scripts/after-pack.mjs, which Apple Silicon requires);
+  # `dist:signed` / `release` require CSC_NAME or CSC_LINK so no other certificate in the keychain gets picked.
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     NSLocalNetworkUsageDescription: Remote DevTools connects to apps on devices in your local network.
+    NSBonjourServices:
+      - _remotedevtools._tcp
+
+# Releases (and the auto-update feed, latest-mac.yml) live on GitHub Releases of the public repository, tagged
+# desktop-vX.Y.Z. electron-updater reads the repository's *latest* release, so no other workflow creates releases.
+publish:
+  provider: github
+  owner: hks
+  repo: remote-devtools
+  releaseType: release
+  tagNamePrefix: desktop-v
 
 # Windows and Linux are not part of the release for now (the npm scripts only call --mac).
 # To re-enable: npx electron-builder --win / --linux

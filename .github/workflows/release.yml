@@ -32,6 +32,8 @@ jobs:
           publish: pnpm release
           title: Version packages
           commit: Version packages
+          # The desktop app's auto-update reads the latest GitHub release; npm versions are tracked in the CHANGELOGs.
+          createGithubReleases: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
