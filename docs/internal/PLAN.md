@@ -281,8 +281,11 @@ tamamlanana kadar v1 olarak çalışmaya devam eder.
 - [ ] mDNS yayını (`_remotedevtools._tcp`), ayarlardan açılıp kapatılabilir; macOS Yerel Ağ izni metinleri
 - [ ] `@himmetkaan/remote-devtools-mdns` paketi (`DiscoveryProvider`; RN: zeroconf + Expo config plugin); opsiyonel, varsayılan kapalı
 - [ ] İsteğe bağlı: gömülü relay yerine uzak (self-hosted) bir relay'e bağlanma modu
-- [ ] Developer ID imzası, notarization, electron-updater (GitHub provider)
-- [ ] GitHub Actions release iş akışı ([macos-release.md](../maintainers/macos-release.md))
+- [x] Developer ID imzası (hardened runtime), notarization (App Store Connect API anahtarı), electron-updater (GitHub provider;
+      açılışta ve 6 saatte bir kontrol, arka planda indirme, "Restart now / Later", menüde "Check for Updates…")
+- [x] `Desktop release` workflow'u (`desktop-v*` tag'i, macOS runner): taslak release → imza + notarization → doğrulama → yayın.
+      `pnpm dist:desktop` imzasız; imzalı yerel build `CSC_NAME` ister (Keychain'de başka şirketlerin sertifikaları var).
+      npm workflow'u artık GitHub release açmıyor (güncelleyici repodaki "latest" release'e bakıyor). İlk imzalı sürüm: 0.2.0
 - [x] `appId`: `com.himmetkaan.remote-devtools` (imzalama kişisel Apple Developer hesabıyla yapılacak)
 
 ### Faz 7 — Storage, State, Flags modülleri
