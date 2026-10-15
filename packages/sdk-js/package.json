@@ -1,6 +1,6 @@
 {
   "name": "@himmetkaan/remote-devtools",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0",
   "description": "Remote DevTools SDK for React Native, Expo, browsers and Node: logs, network, state, storage, flags and custom panels in a desktop or web UI.",
   "keywords": [
     "remote-devtools",

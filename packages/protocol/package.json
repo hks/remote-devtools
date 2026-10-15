@@ -1,6 +1,6 @@
 {
   "name": "@himmetkaan/remote-devtools-protocol",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0",
   "description": "Wire protocol types, field DSL and helpers for Remote DevTools (relay, UI and SDKs).",
   "keywords": [
     "remote-devtools",
